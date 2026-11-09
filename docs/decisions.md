@@ -69,3 +69,11 @@ than delete when a decision is reversed.
   session also refetched the session itself (its key started with `courses`),
   which replaced the summary with the empty state. Study queries now use a
   `["study", …]` key.
+
+## 2026-11-09: Dedicated repository and verification strategy
+
+- [ADR 0001](adr/0001-dedicated-repository.md): the prototype moves to its own
+  repository. Merge gates, branch protection, preview deploys and secrets need it.
+- [Verification strategy](verification.md): target state for checks at every
+  stage, organised along three axes (kept vs throwaway, targeted vs complete,
+  heuristic vs realistic). A `/verify` skill will be written from it.

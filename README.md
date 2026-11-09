@@ -30,7 +30,7 @@ db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
 db/seed          Sample course CSV
 scripts/         db-check.sh (CI schema guard)
-docs/            decisions.md
+docs/            decisions.md, verification.md, adr/
 ```
 
 ## Getting started
