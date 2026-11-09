@@ -4,7 +4,7 @@ Prototype suite of spaced-repetition (SRS) language-learning tools. The first
 tool is a **typed-recall vocabulary trainer**: it introduces new words, has you
 type each one, then schedules reviews with [FSRS](https://github.com/open-spaced-repetition/ts-fsrs).
 
-Branch: `ccr-7f8b4c24-u0wnj2`. See [`docs/decisions.md`](docs/decisions.md) for why things are the way they are.
+See [`docs/decisions.md`](docs/decisions.md) for why things are the way they are.
 
 ## Stack
 

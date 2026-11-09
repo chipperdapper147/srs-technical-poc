@@ -1,6 +1,6 @@
 # ADR 0001: Move the prototype to a dedicated repository
 
-- **Status:** Accepted, not yet done
+- **Status:** Accepted; code moved 2026-11-09, repository setup pending
 - **Date:** 2026-11-09
 
 ## Context
@@ -27,19 +27,22 @@ verification process in [`../verification.md`](../verification.md) enforced ther
 
 ## Consequences
 
-- **History:** carry it over with `git push <new-remote> ccr-7f8b4c24-u0wnj2:main`.
+- **History:** done, into `chipperdapper147/srs-technical-poc`. That repo already
+  had a GitHub-created initial commit, so the branch's commits were replayed on
+  top of it rather than pushed over it. The branch's first commit (removing the
+  knowledge-base scaffolding) was dropped because it has no meaning here.
 - **On the new repo**, set up:
   - branch protection on `main`;
   - required CI checks;
   - optionally a merge queue (verification stage 4);
   - environment secrets for Auth0 and the deploy target.
-- **Docs:** update the links in `README.md` and `CLAUDE.md` that name this branch.
+- **Docs:** done. The branch name was only in `README.md`.
 - **Until then:** CI runs as it does now, merge-gate stages stay on paper, and
   nothing is enforced.
 
 ## Open questions
 
-- Repository name.
+- ~~Repository name.~~ `srs-technical-poc`.
 - Deploy target (Vercel / Fly / Railway / other). This decides whether preview
   environments, and the real-integration tier that runs against them, are possible.
 - Pre-commit hooks (e.g. lefthook) vs CI-only enforcement.
