@@ -44,6 +44,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+          # Node only: no pnpm here, so don't let setup-node look for its cache.
+          package-manager-cache: false
 
       - name: Behaviour changes come with tests (or a Verify-Waive trailer)
         run: node scripts/verify/cli.ts obligations --committed --base "origin/$GITHUB_BASE_REF"
