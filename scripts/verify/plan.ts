@@ -160,3 +160,19 @@ export function parseWaivers(lines: readonly string[]): {
   }
   return { waivers, unknown };
 }
+
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/** Hosts of the database URLs checks write to, if any is not local. */
+export function remoteDatabases(env: Record<string, string | undefined>): string[] {
+  return ["DATABASE_URL", "TEST_DATABASE_URL"].flatMap((name) => {
+    const value = env[name];
+    if (!value) return [];
+    try {
+      const { hostname } = new URL(value);
+      return LOCAL_HOSTS.has(hostname) ? [] : [`${name} → ${hostname}`];
+    } catch {
+      return [`${name} (not a valid URL)`];
+    }
+  });
+}

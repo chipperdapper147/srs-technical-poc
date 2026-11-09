@@ -17,6 +17,14 @@ with a log path. Don't install toolchains by hand; if something is missing,
 rerun the script, and fix the script rather than working around it, so the
 next session gets the fix. Elsewhere, follow "Getting started" in `README.md`.
 
+**Neon (deployed Postgres)** lives only in the git-ignored `.env.neon`
+(`neon env pull --file .env.neon`). Never let Neon variables into `.env`:
+local dev, seeds and tests migrate and truncate whatever `DATABASE_URL`
+points at, so `pnpm verify` refuses non-local databases. `neon init` writes
+into `.env` by itself; restore `.env` from `.env.example` after running it.
+Cloud sessions can't reach Neon over Postgres TCP (only HTTPS leaves the
+container); migrations against Neon run from CI or the deploy.
+
 ## Ground rules
 
 - **Schema changes go through Atlas.** Edit `db/schema.sql`, run
