@@ -29,8 +29,9 @@ packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
 db/seed          Sample course CSV
+scripts/verify/  `pnpm verify`: change classes and verification rules (rules.ts), runner
 scripts/         db-check.sh (CI schema guard), check-commit-messages.sh (no session links)
-.githooks/       commit-msg and pre-push guards, enabled by `pnpm install`
+.githooks/       pre-commit (Biome), commit-msg and pre-push guards, enabled by `pnpm install`
 docs/            decisions.md, verification.md, adr/
 ```
 
@@ -52,6 +53,7 @@ pnpm dev             # API on :4000 (docs at /docs), web on :3000
 | Command                                        | What it does                                                                          |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `pnpm dev`                                     | Run API and web in watch mode                                                         |
+| `pnpm verify` / `pnpm verify plan`             | Run / show the checks this diff requires (see `docs/verification.md`)                 |
 | `pnpm test`                                    | All tests (API tests use `TEST_DATABASE_URL`; Postgres must be running)               |
 | `pnpm e2e`                                     | Playwright browser tests (starts API + web unless already running; needs a seeded DB) |
 | `pnpm e2e:scratch [file]`                      | Throwaway specs in `apps/e2e/scratch/` (git-ignored, never in CI); see its README     |
@@ -61,6 +63,7 @@ pnpm dev             # API on :4000 (docs at /docs), web on :3000
 | `pnpm db:codegen`                              | Regenerate `apps/api/src/db/types.ts` from the migrated DB                            |
 | `pnpm db:check`                                | Validate migrations and confirm they match `schema.sql` (runs in CI)                  |
 | `pnpm db:seed`                                 | Load the sample course (idempotent)                                                   |
+| `pnpm api:openapi`                             | Regenerate the committed OpenAPI snapshot `apps/api/openapi.json`                     |
 
 First e2e run: `pnpm --filter @app/e2e exec playwright install chromium`, or set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium binary.

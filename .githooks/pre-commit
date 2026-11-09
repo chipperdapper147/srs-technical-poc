@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Verification stage 1: Biome on the staged files (lint + format), < 5 s.
+# Fix with `pnpm format`. Bypass once with `git commit --no-verify`.
+set -euo pipefail
+if ! pnpm exec biome --version >/dev/null 2>&1; then
+  echo "pre-commit: Biome is not installed (run pnpm install); skipping" >&2
+  exit 0
+fi
+exec pnpm exec biome check --staged --no-errors-on-unmatched --files-ignore-unknown=true

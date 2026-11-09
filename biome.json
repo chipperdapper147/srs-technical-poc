@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/src/db/types.ts", "!db/migrations"]
+    "includes": ["**", "!**/src/db/types.ts", "!apps/api/openapi.json", "!db/migrations"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -59,6 +59,22 @@
             "noConfusingVoidType": "off"
           }
         }
+      }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUndeclaredEnvVars": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/SKILL.md"],
+      "formatter": {
+        "enabled": false
       }
     }
   ]

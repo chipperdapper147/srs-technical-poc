@@ -33,7 +33,7 @@ verification process in [`../verification.md`](../verification.md) enforced ther
   knowledge-base scaffolding) was dropped because it has no meaning here.
 - **On the new repo**, set up:
   - branch protection on `main`;
-  - required CI checks;
+  - required CI check (`check`, which aggregates every CI job);
   - optionally a merge queue (verification stage 4);
   - environment secrets for Auth0 and the deploy target.
 - **Docs:** done. The branch name was only in `README.md`.
@@ -45,4 +45,5 @@ verification process in [`../verification.md`](../verification.md) enforced ther
 - ~~Repository name.~~ `srs-technical-poc`.
 - Deploy target (Vercel / Fly / Railway / other). This decides whether preview
   environments, and the real-integration tier that runs against them, are possible.
-- Pre-commit hooks (e.g. lefthook) vs CI-only enforcement.
+- ~~Pre-commit hooks (e.g. lefthook) vs CI-only enforcement.~~ Plain
+  `.githooks/` plus CI, provisionally (decisions log, 2026-11-09).

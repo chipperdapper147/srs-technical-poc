@@ -1,0 +1,425 @@
+/**
+ * The verification rules, as data. This file is the source of truth for
+ * "what is sufficient verification for this change"; the tables in
+ * docs/verification.md are generated from it (`pnpm verify docs`).
+ *
+ * How a change is judged:
+ *  1. Every changed path is put in exactly one change class: the first class
+ *     whose `paths` match. A path no class matches is `unclassified`, which
+ *     requires the full run (fail safe).
+ *  2. The required checks are the union of the classes' checks. Each check is
+ *     a command that passes or fails.
+ *  3. Each class can carry obligations: "this kind of change must come with a
+ *     change to that kind of test". An obligation is met when some changed path
+ *     matches it, or waived with a `Verify-Waive: <id>: <reason>` commit trailer.
+ *  4. Each class can require manual evidence: things only a person or agent
+ *     can judge (screenshots, reviewing a diff). The report lists them.
+ */
+
+export type CheckId =
+  | "lint"
+  | "typecheck"
+  | "test:scripts"
+  | "rules-drift"
+  | "shell-syntax"
+  | "db:check"
+  | "codegen-drift"
+  | "openapi-drift"
+  | "test:shared"
+  | "test:web"
+  | "test:api"
+  | "db:seed"
+  | "build:web"
+  | "e2e";
+
+export type Need = "postgres" | "atlas" | "docker";
+
+export interface Check {
+  id: CheckId;
+  title: string;
+  /** Shell command, run from the repo root. `e2e` gets spec files appended. */
+  command: string;
+  needs?: Need[];
+  /**
+   * Generated files this check rewrites. The check fails if any of them
+   * differs afterwards: the committed copy was stale.
+   */
+  drift?: string[];
+}
+
+/** In run order. */
+export const CHECKS: Check[] = [
+  { id: "lint", title: "Biome lint and format", command: "pnpm lint" },
+  { id: "typecheck", title: "TypeScript, all packages", command: "pnpm typecheck" },
+  { id: "test:scripts", title: "Repo script tests", command: "pnpm test:scripts" },
+  {
+    id: "rules-drift",
+    title: "Rule tables in docs/verification.md match rules.ts",
+    command: "pnpm verify docs",
+    drift: ["docs/verification.md"],
+  },
+  {
+    id: "shell-syntax",
+    title: "Shell scripts and git hooks parse",
+    command: 'for f in scripts/*.sh .githooks/*; do bash -n "$f" || exit 1; done',
+  },
+  {
+    id: "db:check",
+    title: "Migrations valid and in sync with db/schema.sql",
+    command: "pnpm db:check",
+    needs: ["atlas", "docker"],
+  },
+  {
+    id: "codegen-drift",
+    title: "Kysely types match the migrated schema",
+    command: "pnpm db:migrate && pnpm db:codegen",
+    needs: ["postgres", "atlas"],
+    drift: ["apps/api/src/db/types.ts"],
+  },
+  {
+    id: "openapi-drift",
+    title: "OpenAPI snapshot matches the routes",
+    command: "pnpm api:openapi",
+    drift: ["apps/api/openapi.json"],
+  },
+  { id: "test:shared", title: "Shared unit tests", command: "pnpm --filter @app/shared test" },
+  { id: "test:web", title: "Web unit tests", command: "pnpm --filter @app/web test" },
+  {
+    id: "test:api",
+    title: "API integration tests (app.inject + Postgres)",
+    command: "pnpm --filter @app/api test",
+    needs: ["postgres", "atlas"],
+  },
+  { id: "db:seed", title: "Seed runs cleanly", command: "pnpm db:seed", needs: ["postgres"] },
+  { id: "build:web", title: "Next.js production build", command: "pnpm --filter @app/web build" },
+  { id: "e2e", title: "Playwright e2e", command: "pnpm e2e", needs: ["postgres"] },
+];
+
+export type ObligationId = "api-test" | "shared-test" | "web-unit-test" | "e2e-spec";
+
+export interface Obligation {
+  id: ObligationId;
+  title: string;
+  /** Met when any changed path matches one of these. */
+  metBy: string[];
+}
+
+export const OBLIGATIONS: Obligation[] = [
+  {
+    id: "api-test",
+    title: "An API integration test is added or changed",
+    metBy: ["apps/api/test/**"],
+  },
+  {
+    id: "shared-test",
+    title: "A shared unit test is added or changed",
+    metBy: ["packages/shared/src/**/*.test.ts"],
+  },
+  {
+    id: "web-unit-test",
+    title: "A web unit test is added or changed",
+    metBy: ["apps/web/src/**/*.test.ts"],
+  },
+  {
+    id: "e2e-spec",
+    title: "An e2e spec or page object is added or changed",
+    metBy: ["apps/e2e/tests/**", "apps/e2e/pages/**"],
+  },
+];
+
+export type EvidenceId = "visual-check" | "openapi-review" | "lockfile-review" | "ci-run";
+
+export interface Evidence {
+  id: EvidenceId;
+  title: string;
+  how: string;
+}
+
+export const EVIDENCE: Evidence[] = [
+  {
+    id: "visual-check",
+    title: "Agent visual check of the changed screens",
+    how: "Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.",
+  },
+  {
+    id: "openapi-review",
+    title: "Review the OpenAPI snapshot diff",
+    how: "Read the apps/api/openapi.json diff. A removed path, a removed or newly required request field, or a removed or narrowed response field is breaking; say so in the PR.",
+  },
+  {
+    id: "lockfile-review",
+    title: "Review the lockfile diff",
+    how: "New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.",
+  },
+  {
+    id: "ci-run",
+    title: "Green CI run of the change",
+    how: "Tooling changes affect CI itself; push and link the run.",
+  },
+];
+
+/** `e2e: "mapped"` picks specs from E2E_MAP; `"all"` runs the whole suite. */
+export type E2eScope = "none" | "mapped" | "all" | "self";
+
+export type Side = "repo" | "backend" | "shared" | "frontend" | "tests";
+
+export interface ChangeClass {
+  id: string;
+  side: Side;
+  title: string;
+  paths: string[];
+  checks: CheckId[] | "full";
+  e2e: E2eScope;
+  obligations?: ObligationId[];
+  evidence?: EvidenceId[];
+}
+
+const ALL = "full" as const;
+
+/** Ordered: the first class whose paths match a file owns it. */
+export const CLASSES: ChangeClass[] = [
+  // Repo-wide
+  {
+    id: "docs",
+    side: "repo",
+    title: "Documentation",
+    paths: ["**/*.md", "docs/**", "LICENSE"],
+    checks: ["lint", "rules-drift"],
+    e2e: "none",
+  },
+  {
+    id: "verify-tooling",
+    side: "repo",
+    title: "Verification rules and runner",
+    paths: ["scripts/verify/**"],
+    checks: ["lint", "typecheck", "test:scripts", "rules-drift"],
+    e2e: "none",
+  },
+  {
+    id: "dependencies",
+    side: "repo",
+    title: "Dependencies and runtime versions",
+    paths: ["pnpm-lock.yaml", "pnpm-workspace.yaml", "**/package.json", ".nvmrc"],
+    checks: ALL,
+    e2e: "all",
+    evidence: ["lockfile-review"],
+  },
+  {
+    id: "tooling",
+    side: "repo",
+    title: "CI, scripts, hooks and repo config",
+    paths: [
+      ".github/**",
+      "scripts/**",
+      ".githooks/**",
+      ".claude/**",
+      "turbo.json",
+      "biome.json",
+      "tsconfig.base.json",
+      "atlas.hcl",
+      "docker-compose.yml",
+      "docker/**",
+      ".env.example",
+      ".gitignore",
+    ],
+    checks: ALL,
+    e2e: "all",
+    evidence: ["ci-run"],
+  },
+
+  // Backend
+  {
+    id: "schema",
+    side: "backend",
+    title: "Database schema and migrations",
+    paths: ["db/schema.sql", "db/migrations/**", "apps/api/src/db/types.ts"],
+    checks: ["lint", "typecheck", "db:check", "codegen-drift", "test:api", "db:seed"],
+    e2e: "all",
+    obligations: ["api-test"],
+  },
+  {
+    id: "seed",
+    side: "backend",
+    title: "Seed data",
+    paths: ["db/seed/**", "apps/api/src/db/seed.ts"],
+    checks: ["lint", "typecheck", "db:seed"],
+    e2e: "mapped",
+  },
+  {
+    id: "api-spec",
+    side: "backend",
+    title: "OpenAPI snapshot",
+    paths: ["apps/api/openapi.json", "apps/api/src/openapi.ts"],
+    checks: ["openapi-drift"],
+    e2e: "none",
+    evidence: ["openapi-review"],
+  },
+  {
+    id: "api-tests",
+    side: "backend",
+    title: "API tests only",
+    paths: ["apps/api/test/**"],
+    checks: ["lint", "typecheck", "test:api"],
+    e2e: "none",
+  },
+  {
+    id: "api-route",
+    side: "backend",
+    title: "API routes, plugins and app wiring",
+    paths: ["apps/api/src/routes/**", "apps/api/src/plugins/**", "apps/api/src/app.ts"],
+    checks: ["lint", "typecheck", "openapi-drift", "test:api"],
+    e2e: "mapped",
+    obligations: ["api-test"],
+  },
+  {
+    id: "api-domain",
+    side: "backend",
+    title: "API domain logic (scheduling, import, config)",
+    paths: ["apps/api/**"],
+    checks: ["lint", "typecheck", "openapi-drift", "test:api"],
+    e2e: "mapped",
+    obligations: ["api-test"],
+  },
+
+  // Shared
+  {
+    id: "contract",
+    side: "shared",
+    title: "API contracts (Zod)",
+    paths: ["packages/shared/src/contracts.ts"],
+    checks: ["lint", "typecheck", "openapi-drift", "test:shared", "test:web", "test:api"],
+    e2e: "all",
+    obligations: ["api-test"],
+  },
+  {
+    id: "shared-tests",
+    side: "shared",
+    title: "Shared tests only",
+    paths: ["packages/shared/src/**/*.test.ts"],
+    checks: ["lint", "typecheck", "test:shared"],
+    e2e: "none",
+  },
+  {
+    id: "shared-logic",
+    side: "shared",
+    title: "Shared logic (grading)",
+    paths: ["packages/shared/**"],
+    checks: ["lint", "typecheck", "test:shared", "test:web", "test:api"],
+    e2e: "mapped",
+    obligations: ["shared-test"],
+  },
+
+  // Frontend
+  {
+    id: "web-tests",
+    side: "frontend",
+    title: "Web unit tests only",
+    paths: ["apps/web/src/**/*.test.ts"],
+    checks: ["lint", "typecheck", "test:web"],
+    e2e: "none",
+  },
+  {
+    id: "web-logic",
+    side: "frontend",
+    title: "Web client logic (session state, API client)",
+    paths: ["apps/web/src/lib/**"],
+    checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "mapped",
+    obligations: ["web-unit-test"],
+  },
+  {
+    id: "web-primitive",
+    side: "frontend",
+    title: "UI primitives and global styles",
+    paths: ["apps/web/src/components/ui/**", "apps/web/src/app/globals.css"],
+    checks: ["lint", "typecheck", "build:web"],
+    e2e: "all",
+    evidence: ["visual-check"],
+  },
+  {
+    id: "web-screen",
+    side: "frontend",
+    title: "Screens and components",
+    paths: ["apps/web/src/**"],
+    checks: ["lint", "typecheck", "build:web"],
+    e2e: "mapped",
+    obligations: ["e2e-spec"],
+    evidence: ["visual-check"],
+  },
+  {
+    id: "web-config",
+    side: "frontend",
+    title: "Web app config",
+    paths: ["apps/web/**"],
+    checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "all",
+    evidence: ["visual-check"],
+  },
+
+  // Tests
+  {
+    id: "e2e-specs",
+    side: "tests",
+    title: "E2E specs",
+    paths: ["apps/e2e/tests/**"],
+    checks: ["lint", "typecheck"],
+    e2e: "self",
+  },
+  {
+    id: "e2e-support",
+    side: "tests",
+    title: "E2E page objects, fixtures and config",
+    paths: ["apps/e2e/**"],
+    checks: ["lint", "typecheck"],
+    e2e: "all",
+  },
+];
+
+export const UNCLASSIFIED: ChangeClass = {
+  id: "unclassified",
+  side: "repo",
+  title: "Matches no class (fail safe: full run)",
+  paths: [],
+  checks: ALL,
+  e2e: "all",
+};
+
+/**
+ * Which e2e specs guard which source files, for classes with `e2e: "mapped"`.
+ * Globs use `path.matchesGlob`; write a literal `[` or `]` as `[[]` / `[]]`.
+ * First match wins; a file with no entry runs the whole suite.
+ */
+export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
+  {
+    paths: [
+      "apps/api/src/routes/study.ts",
+      "apps/api/src/srs.ts",
+      "apps/web/src/app/courses/[[]id[]]/study/**",
+      "apps/web/src/lib/study-session.ts",
+      "packages/shared/src/grading.ts",
+    ],
+    specs: ["study", "grading"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/courses.ts",
+      "apps/api/src/import.ts",
+      "apps/web/src/app/courses/new/**",
+      "apps/web/src/app/courses/[[]id[]]/page.tsx",
+      "apps/web/src/components/import-csv-card.tsx",
+    ],
+    specs: ["course-authoring", "courses"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/me.ts",
+      "apps/web/src/app/settings/**",
+      "apps/web/src/components/course-grading-card.tsx",
+    ],
+    specs: ["grading", "courses"],
+  },
+  {
+    paths: ["apps/web/src/app/page.tsx", "db/seed/**", "apps/api/src/db/seed.ts"],
+    specs: ["courses"],
+  },
+];

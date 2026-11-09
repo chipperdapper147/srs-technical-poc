@@ -12,8 +12,10 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
 - [ ] **Ruleset on `main`** (Settings → Rules → Rulesets): target the default
   branch. Restrict deletions, block force pushes, require linear history.
   Require a pull request with 0 approvals (you can't approve your own PR).
-  Require status checks `check` and `commit-messages`, and require branches to
-  be up to date before merging.
+  Require the status check `check` only, and require branches to be up to
+  date before merging. `check` is an aggregate job that fails unless every
+  other CI job (`commit-messages`, `obligations`, `static`, `database`, `e2e`)
+  passed, so later job splits never touch the ruleset.
 - [ ] **Merge settings** (Settings → General → Pull Requests): squash merging
   only. Allow auto-merge, always suggest updating PR branches, and delete head
   branches automatically.
@@ -28,65 +30,71 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
 
 ## 2. Housekeeping after the move
 
-- [ ] Limit CI's `push` trigger to `main`. Today every PR runs CI twice (once
-  for `push`, once for `pull_request`).
 - [ ] When section 1 is done, update the status in
-  [ADR 0001](docs/adr/0001-dedicated-repository.md) and the "blocked on ADR
-  0001" row in `docs/verification.md`.
+  [ADR 0001](docs/adr/0001-dedicated-repository.md) and the "Branch
+  protection" row in `docs/verification.md`.
 
 ## 3. Decisions needed
 
 - [ ] **Deploy target** (Vercel / Fly / Railway / other), an open question in
   ADR 0001. It decides whether preview environments, and the real-integration
   tier that runs against them, are possible.
-- [ ] **Hook manager:** lefthook, plain `.githooks/`, or CI-only enforcement
-  (ADR 0001). `.githooks/` already holds the session-link guards. The stage-1
-  Biome hook goes wherever this lands.
+- [ ] **Confirm plain `.githooks/`** as the hook manager (decided provisionally
+  on 2026-11-09, see `docs/decisions.md`; reverse it if lefthook is wanted).
 
 ## 4. Verification mechanisms
 
-Grouped by the stages in `docs/verification.md`.
+Grouped by the stages in `docs/verification.md`. Each new check lands in
+`scripts/verify/rules.ts` (a `Check`, plus the classes that require it), so
+`pnpm verify`, CI and the docs pick it up together.
 
-### Local (stages 1–2)
+### Rules follow-ups
 
-- [ ] **`/verify` skill**, written from `docs/verification.md`. It runs stage 2
-  for the touched area and reports with evidence, following the reporting rule.
-  It includes the agent visual check, which is practised but not yet written up
-  as a skill.
-- [ ] **Pre-commit hook:** Biome on staged files, under 5 s. Depends on the
-  hook-manager decision.
+- [ ] **Waivers from the PR description.** Today waivers are commit trailers
+  only. With squash merges, also accepting `Verify-Waive:` lines in the PR
+  body would read more naturally; needs the PR body in the `obligations` job
+  (`github.event.pull_request.body`, passed via an env var, not inlined).
+- [ ] **Manual evidence in CI.** The report lists owed evidence but nothing
+  checks it was supplied. Option: a PR template with one checkbox per
+  evidence id, and the `obligations` job fails on unchecked boxes.
+- [ ] **Grow the e2e map** as specs are added (`E2E_MAP` in rules.ts); an
+  unmapped file runs the whole suite, which is safe but slow once the suite
+  grows.
 
 ### Missing test kinds (stage 3)
 
-- [ ] **Property-based tests** (fast-check) for grading and normalization
-  invariants.
 - [ ] **Frontend mocked integration:** components against a mocked API
-  (Testing Library + MSW).
-- [ ] **OpenAPI diff** against the base branch, posted on the PR.
-- [ ] **Accessibility checks** (axe), and screenshot diffs later.
+  (Testing Library + MSW). Then add a `test:web-components` check to the
+  `web-screen` class and an obligation for it.
+- [ ] **Accessibility checks** (`@axe-core/playwright`): one axe scan per
+  screen in the e2e suite, required by the `web-*` classes. Screenshot diffs
+  later.
+- [ ] **Breaking-change detection on the OpenAPI snapshot** (e.g. `oasdiff
+  breaking` against the base branch's `apps/api/openapi.json`). Today it is
+  a reviewed diff (`openapi-review` evidence).
 - [ ] **Migration linter** for locking hazards. `atlas migrate lint` needs
-  Atlas Pro, so find a free alternative or extend `scripts/db-check.sh`.
+  Atlas Pro, so find a free alternative (e.g. squawk) or extend
+  `scripts/db-check.sh`; add it to the `schema` class.
 - [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.
   Needs the Auth0 integration first.
 
-### CI shape (stage 3)
-
-- [ ] **Parallel CI jobs:** split the single serial `check` job (~2 min now;
-  target under 5 min once the checks above are added). Update the ruleset's
-  required checks when job names change.
-
 ### Merge gate and beyond (stages 4–7)
 
-Blocked on the deploy target and the Auth0 integration.
+Not blocked, can start now:
 
-- [ ] **Stage 4, merge gate:** cross-browser e2e (Chromium, Firefox, WebKit,
-  mobile viewport). Deploy a preview and run the real-integration smoke with
-  real Auth0. Run migrations on a production-like copy of the data.
+- [ ] **Stage 6, nightly workflow** (`schedule:` in a second workflow): flake
+  hunting (`pnpm e2e --repeat-each 20`), the full browser matrix, `pnpm audit`,
+  and a canary build on Node 26, TypeScript 7 and the latest dependencies.
+- [ ] **Cross-browser e2e** (Firefox, WebKit, mobile viewport) as Playwright
+  projects. Run them nightly first; move them into the merge gate once
+  they are stable.
+
+Blocked on the deploy target and the Auth0 integration:
+
+- [ ] **Stage 4, merge gate:** deploy a preview and run the real-integration
+  smoke with real Auth0. Run migrations on a production-like copy of the data.
 - [ ] **Stage 5, post-deploy:** smoke e2e against staging, then production.
   Check the migration result.
-- [ ] **Stage 6, nightly:** flake hunting (each test repeated many times), the
-  full browser matrix, a dependency audit, and a canary build on Node 26,
-  TypeScript 7 and the latest dependencies.
 - [ ] **Stage 7, production:** error tracking and a synthetic check of the
   study flow.
 

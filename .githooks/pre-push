@@ -12,3 +12,12 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
     "$check" "$remote_sha..$local_sha"
   fi
 done
+
+# Verification obligations: behaviour changes must ship with a test change or
+# a `Verify-Waive: <id>: <reason>` trailer (docs/verification.md). Instant, git only.
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  node "$(git rev-parse --show-toplevel)/scripts/verify/cli.ts" obligations --committed >/dev/null || {
+    echo "pre-push: verification obligations not met. See: pnpm verify obligations --committed" >&2
+    exit 1
+  }
+fi
