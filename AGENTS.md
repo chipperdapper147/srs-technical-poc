@@ -50,6 +50,14 @@ container); migrations against Neon run from CI or the deploy.
   never in specs. Prefer role/label locators; use `data-testid` only where there
   is no accessible handle. Each test runs as a fresh learner (`x-dev-user`), so
   arrange state through the `api` fixture rather than shared data.
+- **Screens are controller, view model, view** ([ADR 0002](docs/adr/0002-client-architecture.md)).
+  Logic and text live in `@app/client` (`packages/client/src/<screen>/`: a
+  controller with its state and actions, a pure view model), platform-free so
+  the Expo app reuses it. Web views (`apps/web/src/views/<screen>/`) only
+  render `{ vm, actions }`; `*-screen.tsx` binds them with `useScreen`; route
+  files in `app/` only pass params to a screen. Biome enforces the imports
+  per layer. Test controllers with `@app/client/testing` (MSW fake API built
+  on the contracts), views with Testing Library on hand-built view models.
 - **Auth is a dev stub** (`apps/api/src/plugins/auth.ts`). Route code should
   only rely on `request.user.id`; Auth0 replaces the stub later.
 

@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // No "DOM" lib: controllers and view models must run in React Native too.
+  "compilerOptions": { "types": ["node"], "jsx": "react-jsx" },
+  "include": ["src", "vitest.config.ts"]
+}

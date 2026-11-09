@@ -63,12 +63,11 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 
 ### Missing test kinds (stage 3)
 
-- [ ] **Frontend mocked integration:** components against a mocked API
-  (Testing Library + MSW). Then add a `test:web-components` check to the
-  `web-screen` class and an obligation for it.
-- [ ] **Accessibility checks** (`@axe-core/playwright`): one axe scan per
-  screen in the e2e suite, required by the `web-*` classes. Screenshot diffs
-  later.
+- [ ] **Accessibility checks in the browser** (`@axe-core/playwright`): axe
+  already scans every view in jsdom; a browser pass adds colour contrast and
+  real layout. Screenshot diffs later.
+- [ ] **Mobile app** (`apps/mobile`, Expo): views, screens and `platform/`
+  adapters over `@app/client` (ADR 0002). Add `mobile-*` classes to the rules.
 - [ ] **Breaking-change detection on the OpenAPI snapshot** (e.g. `oasdiff
   breaking` against the base branch's `apps/api/openapi.json`). Today it is
   a reviewed diff (`openapi-review` evidence).

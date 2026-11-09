@@ -58,7 +58,7 @@ jobs:
       - name: Lint, types, unit tests, generated-file drift
         run: >-
           pnpm verify --all
-          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,test:shared,test:web
+          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,test:shared,test:client,test:web
 
   database:
     runs-on: ubuntu-latest
