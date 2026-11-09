@@ -77,3 +77,23 @@ than delete when a decision is reversed.
 - [Verification strategy](verification.md): target state for checks at every
   stage, organised along three axes (kept vs throwaway, targeted vs complete,
   heuristic vs realistic). A `/verify` skill will be written from it.
+
+## 2026-11-09: No Claude session links in commits
+
+The repository is public, so `Claude-Session:` trailers and claude.ai session
+URLs must never reach it. They were stripped from the history carried over from
+the old branch. No single guard covers every case, so there are several:
+
+- `AGENTS.md` states the rule (`CLAUDE.md` now just imports `AGENTS.md`).
+- `.claude/settings.json` sets `attribution.sessionUrl: false`. Cloud sessions
+  with several repositories, or inside a project, don't read repo settings,
+  so this alone isn't enough.
+- `.githooks/commit-msg` strips the trailer and rejects other session URLs.
+  `.githooks/pre-push` rejects them in anything being pushed, which covers
+  commits that skipped commit-msg. `pnpm install` (`prepare`) and a Claude Code
+  SessionStart hook set `core.hooksPath`.
+- CI's `commit-messages` job checks the whole history. Once branch protection
+  exists, make it a required check.
+
+Plain `.githooks/` was chosen over a hook manager to keep the lefthook question
+in ADR 0001 open. If lefthook is adopted, move both hooks into it.

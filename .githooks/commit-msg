@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Strip `Claude-Session:` trailers and reject any other Claude session link.
+# The repo is public (see AGENTS.md).
+set -euo pipefail
+msg="$1"
+
+if grep -qiE '^claude-session:' "$msg"; then
+  awk 'tolower($0) !~ /^claude-session:/' "$msg" >"$msg.tmp"
+  mv "$msg.tmp" "$msg"
+  echo "commit-msg: removed Claude-Session trailer" >&2
+fi
+if grep -qiE 'claude\.ai/code/session_' "$msg"; then
+  echo "commit-msg: the message links to a Claude session; remove the link" >&2
+  exit 1
+fi

@@ -9,6 +9,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # check the whole history, not just the tip
+
+      - name: No Claude session links in commit messages
+        run: ./scripts/check-commit-messages.sh
+
   check:
     runs-on: ubuntu-latest
     services:

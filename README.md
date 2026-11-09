@@ -29,7 +29,8 @@ packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
 db/seed          Sample course CSV
-scripts/         db-check.sh (CI schema guard)
+scripts/         db-check.sh (CI schema guard), check-commit-messages.sh (no session links)
+.githooks/       commit-msg and pre-push guards, enabled by `pnpm install`
 docs/            decisions.md, verification.md, adr/
 ```
 

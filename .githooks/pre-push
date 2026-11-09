@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Block pushing commits whose messages link to a Claude session, including
+# commits that never went through commit-msg (cherry-picks, --no-verify).
+set -euo pipefail
+check="$(git rev-parse --show-toplevel)/scripts/check-commit-messages.sh"
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  if [[ $local_sha =~ ^0+$ ]]; then continue; fi # deleting a remote branch
+  if [[ $remote_sha =~ ^0+$ ]] || ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+    "$check" "$local_sha" --not --remotes # new branch, or remote tip unknown locally
+  else
+    "$check" "$remote_sha..$local_sha"
+  fi
+done
