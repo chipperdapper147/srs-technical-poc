@@ -30,7 +30,8 @@ db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
 db/seed          Sample course CSV
 scripts/verify/  `pnpm verify`: change classes and verification rules (rules.ts), runner
-scripts/         db-check.sh (CI schema guard), check-commit-messages.sh (no session links)
+scripts/         setup-agent-env.sh (cloud session setup), db-check.sh (CI schema guard),
+                 check-commit-messages.sh (no session links)
 .githooks/       pre-commit (Biome), commit-msg and pre-push guards, enabled by `pnpm install`
 docs/            decisions.md, verification.md, adr/
 ```
@@ -47,6 +48,10 @@ pnpm install
 pnpm db:setup        # start Postgres 18, apply migrations, seed the sample course
 pnpm dev             # API on :4000 (docs at /docs), web on :3000
 ```
+
+Claude Code cloud sessions set all of this up automatically through a
+SessionStart hook; see `scripts/setup-agent-env.sh`, which also works by hand
+on a Linux machine where you are root.
 
 ## Common tasks
 

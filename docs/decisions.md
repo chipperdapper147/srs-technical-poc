@@ -128,3 +128,21 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   verdict depended on the order of equally close alternatives (`abcx`
   against `abc|abcd` was wrong, against `abcd|abc` a typo). Fixed: on a
   tie the candidate that allows the typo wins.
+
+## 2026-11-09: Agent environment setup lives in the repo
+
+- **One idempotent script, `scripts/setup-agent-env.sh`**, run by a
+  committed SessionStart hook in cloud sessions (`CLAUDE_CODE_REMOTE=true`).
+  Locally the hook only sets `core.hooksPath`, as before. The script pins
+  Node (checksum-verified tarball) and Atlas (extracted from its official
+  image, the same version CI pins), starts Docker if needed, installs
+  dependencies only when a manifest changed, and brings Postgres up,
+  migrated and seeded. Measured here: 12 s from cold with Docker images
+  cached, about 10 s more to pull them, 3 s warm.
+- **Why a hook, not the cloud environment's setup script:** the hook is
+  versioned and reviewed with the code it sets up, runs on every session
+  start and resume (containers can be replaced on resume), and is the same
+  for every environment a session might use. An environment setup script
+  is per-account settings, invisible in the repo, and drifts.
+- **Synchronous** on purpose: the first turn can rely on `pnpm verify`
+  working. Switch to async (`{"async": true}`) only if startup latency hurts.
