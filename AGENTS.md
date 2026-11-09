@@ -7,6 +7,16 @@ verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`. Open
 follow-up work is in `TODO.md`. Check the decisions log before proposing
 alternatives to anything listed there.
 
+## Environment
+
+In Claude Code cloud sessions the SessionStart hook
+(`.claude/hooks/session-start.sh`) runs `scripts/setup-agent-env.sh` before
+your first turn: Node 24, pnpm, Docker, Atlas, dependencies, and Postgres
+migrated and seeded. Its last line says `setup: ready` or `setup: FAILED`
+with a log path. Don't install toolchains by hand; if something is missing,
+rerun the script, and fix the script rather than working around it, so the
+next session gets the fix. Elsewhere, follow "Getting started" in `README.md`.
+
 ## Ground rules
 
 - **Schema changes go through Atlas.** Edit `db/schema.sql`, run
