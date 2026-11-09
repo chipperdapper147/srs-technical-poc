@@ -110,6 +110,20 @@ describe("courses and import", () => {
     });
     expect(res.statusCode).toBe(403);
   });
+
+  it("updates only the fields a PATCH names", async () => {
+    const id = await createCourse();
+    const patch = (payload: object) =>
+      app.inject({ method: "PATCH", url: `/courses/${id}`, payload });
+    await patch({ description: "Travel words", gradingMode: "strict" });
+    const res = await patch({ accentSensitive: true });
+    expect(res.json()).toMatchObject({
+      title: "Test Spanish",
+      description: "Travel words",
+      gradingMode: "strict",
+      accentSensitive: true,
+    });
+  });
 });
 
 describe("study flow", () => {

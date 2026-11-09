@@ -81,17 +81,28 @@ export const CourseDetailSchema = CourseSummarySchema.extend({
 });
 export type CourseDetail = z.infer<typeof CourseDetailSchema>;
 
-export const CreateCourseSchema = z.object({
+const CourseFieldsSchema = z.object({
   title: z.string().trim().min(1).max(200),
-  description: z.string().max(2000).default(""),
+  description: z.string().max(2000),
   sourceLang: langCode,
   targetLang: langCode,
-  gradingMode: GradingModeSchema.nullable().default(null),
-  accentSensitive: z.boolean().nullable().default(null),
+  gradingMode: GradingModeSchema.nullable(),
+  accentSensitive: z.boolean().nullable(),
+});
+
+export const CreateCourseSchema = CourseFieldsSchema.extend({
+  description: CourseFieldsSchema.shape.description.default(""),
+  gradingMode: CourseFieldsSchema.shape.gradingMode.default(null),
+  accentSensitive: CourseFieldsSchema.shape.accentSensitive.default(null),
 });
 export type CreateCourse = z.input<typeof CreateCourseSchema>;
 
-export const UpdateCourseSchema = CreateCourseSchema.partial();
+/**
+ * Only the named fields change. Built from the fields without defaults: a
+ * partial of CreateCourseSchema would fill in its defaults, so a PATCH of one
+ * field would also reset the description and grading overrides.
+ */
+export const UpdateCourseSchema = CourseFieldsSchema.partial();
 export type UpdateCourse = z.input<typeof UpdateCourseSchema>;
 
 // ---- CSV import ----------------------------------------------------------
