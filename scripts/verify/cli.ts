@@ -24,7 +24,7 @@ import { createConnection } from "node:net";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { injectRules } from "./docs.ts";
-import { type Plan, parseWaivers, plan } from "./plan.ts";
+import { type Plan, parseWaivers, plan, remoteDatabases } from "./plan.ts";
 import { CHECKS, type Check, type CheckId, type Need } from "./rules.ts";
 
 const root = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout.trim();
@@ -107,13 +107,25 @@ const needHints: Record<Need, string> = {
   docker: "Docker is not running (Atlas uses it for its dev database).",
 };
 
-async function needAvailable(need: Need): Promise<boolean> {
-  if (need === "atlas") return spawnSync("atlas", ["version"]).status === 0;
-  if (need === "docker") return spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
+/** null when the need is met, otherwise why not. */
+async function needUnmet(need: Need): Promise<string | null> {
+  if (need === "atlas")
+    return spawnSync("atlas", ["version"]).status === 0 ? null : needHints.atlas;
+  if (need === "docker") {
+    return spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0
+      ? null
+      : needHints.docker;
+  }
+  // Checks migrate, seed and truncate tables: never point them at a real
+  // database (e.g. Neon variables pulled into .env by `neon init`).
+  const remote = remoteDatabases(process.env);
+  if (remote.length > 0) {
+    return `refusing a non-local database (${remote.join(", ")}): checks migrate, seed and truncate it. Restore .env from .env.example; Neon variables belong in .env.neon.`;
+  }
   const url = process.env.DATABASE_URL;
-  if (!url) return false;
+  if (!url) return needHints.postgres;
   const { hostname, port } = new URL(url);
-  return tcpOpen(hostname, Number(port || 5432));
+  return (await tcpOpen(hostname, Number(port || 5432))) ? null : needHints.postgres;
 }
 
 // ---------------------------------------------------------------- run
@@ -132,9 +144,8 @@ async function runCheck(check: Check, p: Plan, why: string[], skips: Map<string,
   const skip = skips.get(check.id);
   if (skip !== undefined) return { status: "skipped", seconds: 0, note: skip } as const;
   for (const need of check.needs ?? []) {
-    if (!(await needAvailable(need))) {
-      return { status: "blocked", seconds: 0, note: needHints[need] } as const;
-    }
+    const unmet = await needUnmet(need);
+    if (unmet) return { status: "blocked", seconds: 0, note: unmet } as const;
   }
   let cmd = check.command;
   if (check.id === "e2e" && p.e2e && p.e2e.length > 0) {

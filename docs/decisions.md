@@ -146,3 +146,21 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   is per-account settings, invisible in the repo, and drifts.
 - **Synchronous** on purpose: the first turn can rely on `pnpm verify`
   working. Switch to async (`{"async": true}`) only if startup latency hurts.
+
+## 2026-11-09: Neon project linked; its credentials stay out of `.env`
+
+- Neon project `muddy-field-12956530` (Postgres 18, eu-central-1) is linked
+  with the Neon CLI (`.neon`, git-ignored). Its connection strings are in
+  `.env.neon` (git-ignored): `DATABASE_URL` (pooled) and
+  `DATABASE_URL_UNPOOLED` (direct, for migrations).
+- `neon init` pulls variables into the existing `.env`, replacing the local
+  `DATABASE_URL`; with that in place, `pnpm dev`, seeding, `pnpm verify` and
+  the e2e suite would run against production. `.env` keeps only local
+  databases, and `pnpm verify` blocks database checks when `DATABASE_URL`
+  or `TEST_DATABASE_URL` is not local.
+- No `neon.ts`: its packages (`@neon/config`, `@neon/env`) aren't needed for
+  connection strings. Add it when we declare Neon services or branch
+  policies (e.g. per-preview branches).
+- Claude Code cloud containers only allow outbound HTTPS, so Postgres over
+  TCP to Neon fails there; Neon's HTTPS SQL endpoint works. Migrations and
+  deploy-time database work go in CI or Vercel.

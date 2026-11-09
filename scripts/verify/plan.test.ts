@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { describe, it } from "node:test";
 import { END, injectRules, START } from "./docs.ts";
-import { classify, parseWaivers, plan } from "./plan.ts";
+import { classify, parseWaivers, plan, remoteDatabases } from "./plan.ts";
 import { CLASSES, E2E_MAP } from "./rules.ts";
 
 const ids = (p: ReturnType<typeof plan>) => p.checks.map((c) => c.id);
@@ -151,5 +151,23 @@ describe("docs", () => {
     assert.ok(once.startsWith("intro\n") && once.endsWith(`${END}\noutro\n`));
     assert.ok(!once.includes("\nold\n"));
     assert.equal(injectRules(once), once);
+  });
+});
+
+describe("remoteDatabases", () => {
+  it("accepts local databases and flags remote or malformed ones", () => {
+    const local = "postgres://srs:srs@localhost:5432/srs?sslmode=disable";
+    assert.deepEqual(remoteDatabases({ DATABASE_URL: local, TEST_DATABASE_URL: local }), []);
+    assert.deepEqual(remoteDatabases({}), []);
+    assert.deepEqual(
+      remoteDatabases({
+        DATABASE_URL: "postgresql://u:p@ep-x-pooler.eu-central-1.aws.neon.tech/neondb",
+        TEST_DATABASE_URL: '"postgresql://u:p@host/db"',
+      }),
+      [
+        "DATABASE_URL → ep-x-pooler.eu-central-1.aws.neon.tech",
+        "TEST_DATABASE_URL (not a valid URL)",
+      ],
+    );
   });
 });
