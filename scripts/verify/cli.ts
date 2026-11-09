@@ -66,11 +66,25 @@ function resolveBase(): { ref: string; sha: string } {
   return { ref, sha: git("merge-base", ref, "HEAD") };
 }
 
-function changedFiles(base: string): string[] {
-  if (values.committed) return git("diff", "--name-only", base, "HEAD").split("\n").filter(Boolean);
-  const tracked = git("diff", "--name-only", base);
-  const untracked = git("ls-files", "--others", "--exclude-standard");
-  return [...tracked.split("\n"), ...untracked.split("\n")].filter(Boolean);
+/** Changed paths, and which of them no longer exist (deleted, or the old side of a rename). */
+function changedFiles(base: string): { files: string[]; deleted: Set<string> } {
+  const files: string[] = [];
+  const deleted = new Set<string>();
+  const status = values.committed
+    ? git("diff", "--name-status", base, "HEAD")
+    : git("diff", "--name-status", base);
+  for (const line of status.split("\n").filter(Boolean)) {
+    const [code = "", ...paths] = line.split("\t");
+    const [from = "", to] = paths;
+    files.push(...paths);
+    if (code.startsWith("D")) deleted.add(from);
+    if (code.startsWith("R")) deleted.add(from);
+    if (to && code.startsWith("C")) files.push(to);
+  }
+  if (!values.committed) {
+    files.push(...git("ls-files", "--others", "--exclude-standard").split("\n").filter(Boolean));
+  }
+  return { files: [...new Set(files)], deleted };
 }
 
 function commitWaiverLines(base: string): string[] {
@@ -258,12 +272,12 @@ async function main(): Promise<number> {
 
   loadDotEnv();
   const base = resolveBase();
-  const files = changedFiles(base.sha);
+  const { files, deleted } = changedFiles(base.sha);
   const fromCommits = parseWaivers(commitWaiverLines(base.sha));
   const fromFlags = parseWaivers(values.waive.map((w) => `Verify-Waive: ${w}`));
   const waivers = new Map([...fromCommits.waivers, ...fromFlags.waivers]);
   const unknown = [...fromCommits.unknown, ...fromFlags.unknown];
-  const full = plan(files, waivers, { all: values.all });
+  const full = plan(files, waivers, { all: values.all, deleted });
   const only = values.only?.split(",").map((s) => s.trim());
   const unknownOnly = only?.filter((id) => !CHECKS.some((c) => c.id === id)) ?? [];
   if (unknownOnly.length > 0) throw new Error(`--only: unknown checks ${unknownOnly.join(", ")}`);
