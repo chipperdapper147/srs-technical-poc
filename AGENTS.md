@@ -3,8 +3,9 @@
 Prototype suite of SRS language-learning tools. The first tool is a typed-recall
 vocabulary trainer. Start with `README.md` (stack, layout, commands) and
 `docs/decisions.md` (what was chosen and why, plus open questions). How to
-verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`. Check the
-decisions log before proposing alternatives to anything listed there.
+verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`. Open
+follow-up work is in `TODO.md`. Check the decisions log before proposing
+alternatives to anything listed there.
 
 ## Ground rules
 
