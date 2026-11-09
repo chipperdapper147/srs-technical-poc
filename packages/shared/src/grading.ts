@@ -81,9 +81,13 @@ export function gradeAnswer(
     if (target === "") continue;
     const distance = editDistance(given, target);
     if (distance === 0) return { verdict: "exact", matched: candidate, distance };
-    if (distance < best.distance) {
-      const isTypo = options.mode === "lenient" && distance <= typoAllowance([...target].length);
-      best = { verdict: isTypo ? "typo" : "wrong", matched: candidate, distance };
+    const isTypo = options.mode === "lenient" && distance <= typoAllowance([...target].length);
+    const verdict = isTypo ? "typo" : "wrong";
+    // On a tie, a longer candidate may allow the typo a shorter one doesn't;
+    // prefer it, so the verdict never depends on the order of alternatives.
+    const tieButBetter = distance === best.distance && isTypo && best.verdict === "wrong";
+    if (distance < best.distance || tieButBetter) {
+      best = { verdict, matched: candidate, distance };
     }
   }
   return best;

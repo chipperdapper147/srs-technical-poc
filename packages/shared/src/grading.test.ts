@@ -61,6 +61,12 @@ describe("gradeAnswer", () => {
     );
   });
 
+  it("does not depend on the order of equally close alternatives", () => {
+    // 1 edit from both; only the 4-letter one allows a typo.
+    expect(gradeAnswer("abcx", ["abc", "abcd"]).verdict).toBe("typo");
+    expect(gradeAnswer("abcx", ["abcd", "abc"]).verdict).toBe("typo");
+  });
+
   it("marks empty input wrong", () => {
     expect(gradeAnswer("   ", ["agua"], lenient).verdict).toBe("wrong");
   });
