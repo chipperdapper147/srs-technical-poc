@@ -53,6 +53,7 @@ pnpm dev             # API on :4000 (docs at /docs), web on :3000
 | `pnpm dev`                                     | Run API and web in watch mode                                                         |
 | `pnpm test`                                    | All tests (API tests use `TEST_DATABASE_URL`; Postgres must be running)               |
 | `pnpm e2e`                                     | Playwright browser tests (starts API + web unless already running; needs a seeded DB) |
+| `pnpm e2e:scratch [file]`                      | Throwaway specs in `apps/e2e/scratch/` (git-ignored, never in CI); see its README     |
 | `pnpm typecheck` / `pnpm lint` / `pnpm format` | Types, Biome check, Biome autofix                                                     |
 | `pnpm db:diff <name>`                          | After editing `db/schema.sql`: generate a migration                                   |
 | `pnpm db:migrate`                              | Apply pending migrations to `DATABASE_URL`                                            |

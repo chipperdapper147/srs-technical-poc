@@ -56,31 +56,54 @@ The frontend and the backend are different environments, so their tiers differ.
 ## The agent visual check
 
 A throwaway verification method used during development. It can be done by
-the coding agent or by a person.
+the coding agent or by a person: change something, look at it, report what you
+saw. Pick the tool by what you need to see.
 
-1. Run the app (`pnpm dev`).
-2. Drive the changed flow with a short Playwright script kept outside the repo
-   (the agent's scratchpad). Plain `playwright` library, headless Chromium.
-3. Take screenshots at the key states, collect console errors, and query the
-   database or API if the change persists data.
-4. Look at the screenshots and report what was checked, with the evidence.
+| What you're checking                                                              | Tool                                                               |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| A static page, or one screen in a variant (mobile, dark mode)                     | Playwright CLI: `playwright screenshot`                            |
+| A flow, or a state reached by interacting (typing an answer, finishing a session) | Throwaway spec in `apps/e2e/scratch/`, run with `pnpm e2e:scratch` |
+| A flow worth guarding permanently                                                 | Promote the spec into `apps/e2e/tests/`                            |
 
-This is how the first UI screenshots of the prototype were produced. If a
-scripted flow turns out to be worth keeping, promote it into `apps/e2e` with
-page objects.
+**Steps:**
+
+1. Run the app (`pnpm dev`), or let `pnpm e2e:scratch` start it.
+2. **Static pages:**
+   `pnpm --filter @app/e2e exec playwright screenshot --full-page <url> scratch/out/<name>.png`.
+   Useful options: `--device "iPhone 15"`, `--color-scheme dark`,
+   `--wait-for-selector <selector>`. The CLI only loads a URL; it can't click
+   or type.
+3. **Flows:** write a spec in `apps/e2e/scratch/`, which is git-ignored apart
+   from its README. It uses the same fixtures and page objects as the real
+   suite, so a flow is a few lines. It also saves screenshots wherever you
+   point them (convention: `scratch/out/`), records a trace, and starts the
+   servers if they aren't running. The scratch config is separate:
+   `pnpm e2e` and CI never run these specs. Template: `apps/e2e/scratch/README.md`.
+4. Collect console errors, and query the database or API if the change
+   persists data.
+5. Look at the screenshots and report what was checked, with the evidence.
+6. **Promote or delete.** Move a scratch spec into `tests/` (screenshots
+   replaced by assertions) only if it guards behaviour that would be costly to
+   break silently.
+
+**Why not a standalone script:** the first UI screenshots of the prototype
+came from a hand-written script using the plain `playwright` library, before
+the page objects existed. Scratch specs replace that approach: they reuse the
+page objects, give traces on failure, and promoting one is just moving the
+file.
 
 ## Stages
 
-| #   | Stage                                          | Runs                                                                                                                                                                                                                           | Axes                                         | Target time |
-| --- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | ----------- |
-| 0   | **Inner loop** (every edit)                    | Typecheck and unit tests for affected packages, editor formatting                                                                                                                                                              | targeted, heuristic, kept                    | seconds     |
-| 1   | **Pre-commit** (optional hook)                 | Biome on staged files                                                                                                                                                                                                          | targeted                                     | < 5 s       |
-| 2   | **Local verify** (end of a task; `/verify`)    | Lint, typecheck, all unit and mocked-integration tests, Docker integration tests; `db:check` and codegen if the schema changed; e2e specs for the touched flows; agent visual check for UI changes; throwaway checks as needed | targeted, mostly heuristic, kept + throwaway | 1–2 min     |
-| 3   | **CI on every PR push**                        | Everything in stage 2 except throwaway checks, at full scope: full e2e on the production build, accessibility, OpenAPI diff posted on the PR. Parallel jobs.                                                                   | complete, realistic-ish, kept                | < 5 min     |
-| 4   | **Merge gate** (required checks / merge queue) | Cross-browser e2e (Chromium, Firefox, WebKit, mobile viewport); deploy a preview and run the real-integration smoke (real Auth0); migrations on a production-like data copy                                                    | complete, realistic                          | ~10 min     |
-| 5   | **Post-deploy**                                | Smoke e2e against staging, then production; check the migration result                                                                                                                                                         | realistic                                    | minutes     |
-| 6   | **Nightly**                                    | Flake hunting (each test repeated many times); full browser matrix; dependency audit; canary build on upcoming versions (Node 26, TypeScript 7, latest deps)                                                                   | complete                                     | unbounded   |
-| 7   | **Production**                                 | Error tracking; a synthetic check of the study flow                                                                                                                                                                            | realistic                                    | continuous  |
+| #   | Stage                                          | Runs                                                                                                                                                                                                                                                            | Axes                                         | Target time |
+| --- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------- |
+| 0   | **Inner loop** (every edit)                    | Typecheck and unit tests for affected packages, editor formatting                                                                                                                                                                                               | targeted, heuristic, kept                    | seconds     |
+| 1   | **Pre-commit** (optional hook)                 | Biome on staged files                                                                                                                                                                                                                                           | targeted                                     | < 5 s       |
+| 2   | **Local verify** (end of a task; `/verify`)    | Lint, typecheck, all unit and mocked-integration tests, Docker integration tests; `db:check` and codegen if the schema changed; e2e specs for the touched flows; agent visual check for UI changes (CLI screenshots, scratch specs); throwaway checks as needed | targeted, mostly heuristic, kept + throwaway | 1–2 min     |
+| 3   | **CI on every PR push**                        | Everything in stage 2 except throwaway checks, at full scope: full e2e on the production build, accessibility, OpenAPI diff posted on the PR. Parallel jobs.                                                                                                    | complete, realistic-ish, kept                | < 5 min     |
+| 4   | **Merge gate** (required checks / merge queue) | Cross-browser e2e (Chromium, Firefox, WebKit, mobile viewport); deploy a preview and run the real-integration smoke (real Auth0); migrations on a production-like data copy                                                                                     | complete, realistic                          | ~10 min     |
+| 5   | **Post-deploy**                                | Smoke e2e against staging, then production; check the migration result                                                                                                                                                                                          | realistic                                    | minutes     |
+| 6   | **Nightly**                                    | Flake hunting (each test repeated many times); full browser matrix; dependency audit; canary build on upcoming versions (Node 26, TypeScript 7, latest deps)                                                                                                    | complete                                     | unbounded   |
+| 7   | **Production**                                 | Error tracking; a synthetic check of the study flow                                                                                                                                                                                                             | realistic                                    | continuous  |
 
 Stages 4–5 need a dedicated repository and a deploy target; see
 [ADR 0001](adr/0001-dedicated-repository.md).

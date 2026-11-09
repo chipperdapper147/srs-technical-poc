@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["pages", "tests", "support", "playwright.config.ts"]
+  "include": ["pages", "tests", "support", "playwright.config.ts", "playwright.scratch.config.ts"]
 }

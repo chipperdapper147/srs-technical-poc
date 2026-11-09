@@ -6,7 +6,8 @@
   "scripts": {
     "e2e": "playwright test --trace off",
     "e2e:ui": "playwright test --ui",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "e2e:scratch": "playwright test -c playwright.scratch.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
