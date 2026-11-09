@@ -1,0 +1,30 @@
+{
+  "name": "@app/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "@tanstack/query-core": "5.107.1",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "react": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "msw": "3.0.3",
+    "react": "19.3.1",
+    "vitest": "5.1.0"
+  }
+}

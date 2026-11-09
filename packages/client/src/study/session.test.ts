@@ -1,12 +1,6 @@
 import type { AnswerResult, StudyItem } from "@app/shared";
 import { describe, expect, it } from "vitest";
-import {
-  currentStep,
-  initSession,
-  isFinished,
-  MAX_RETRIES,
-  sessionReducer,
-} from "./study-session.ts";
+import { currentStep, initSession, isFinished, MAX_RETRIES, sessionReducer } from "./session.ts";
 
 const item = (term: string): StudyItem => ({
   itemId: `id-${term}`,

@@ -76,6 +76,235 @@
       "formatter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["apps/web/src/**", "!**/*.test.tsx", "!apps/web/src/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/client/src/**",
+        "!packages/client/src/react/**",
+        "!packages/client/src/testing/**",
+        "!**/*.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Controllers and view models run on web and React Native: no react here (ADR 0002, docs/adr/0002-client-architecture.md).",
+                  "react-dom": "Controllers and view models run on web and React Native: no react-dom here (ADR 0002, docs/adr/0002-client-architecture.md).",
+                  "react-native": "Controllers and view models run on web and React Native: no react-native here (ADR 0002, docs/adr/0002-client-architecture.md).",
+                  "next": "Controllers and view models run on web and React Native: no next here (ADR 0002, docs/adr/0002-client-architecture.md)."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "next/*",
+                      "react-dom/*",
+                      "react-native/*",
+                      "@tanstack/react-query",
+                      "msw",
+                      "msw/*",
+                      "node:*"
+                    ],
+                    "message": "Controllers and view models are platform-free (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["**/react/*", "**/testing/*"],
+                    "message": "Logic must not depend on the React binding or the testing kit."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/views/**",
+        "!apps/web/src/views/**/*-screen.tsx",
+        "!**/*.test.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "Views are stateless: state and effects belong in the controller (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  "next/navigation": "Views don't route: render a RouteLink or call an action (ADR 0002, docs/adr/0002-client-architecture.md)."
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": ["@app/client/react"],
+                    "message": "Only *-screen.tsx binds a controller (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client"],
+                    "importNamePattern": "create[A-Za-z]*",
+                    "message": "Views receive a view model; they never create controllers or clients (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/views/**/*-screen.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "A screen only calls useScreen (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "@/components/**",
+                      "@/lib/**",
+                      "@/platform/**",
+                      "next",
+                      "next/*",
+                      "@/views/**"
+                    ],
+                    "message": "A screen imports its controller, view model, useScreen and its own view only (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/app/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "Routes only render a screen (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  "next/navigation": "Routes get params as props and render a screen (ADR 0002, docs/adr/0002-client-architecture.md)."
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "@/components/**",
+                      "@/lib/**",
+                      "@app/*",
+                      "@app/**",
+                      "@/views/**/*-view"
+                    ],
+                    "message": "Routes render screens (@/views/**/*-screen) and platform providers only (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

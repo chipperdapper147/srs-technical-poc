@@ -26,6 +26,7 @@ export type CheckId =
   | "codegen-drift"
   | "openapi-drift"
   | "test:shared"
+  | "test:client"
   | "test:web"
   | "test:api"
   | "db:seed"
@@ -83,7 +84,16 @@ export const CHECKS: Check[] = [
     drift: ["apps/api/openapi.json"],
   },
   { id: "test:shared", title: "Shared unit tests", command: "pnpm --filter @app/shared test" },
-  { id: "test:web", title: "Web unit tests", command: "pnpm --filter @app/web test" },
+  {
+    id: "test:client",
+    title: "Client tests: controllers and view models against the MSW fake API",
+    command: "pnpm --filter @app/client test",
+  },
+  {
+    id: "test:web",
+    title: "Web tests: views and screens in jsdom (Testing Library, MSW, axe)",
+    command: "pnpm --filter @app/web test",
+  },
   {
     id: "test:api",
     title: "API integration tests (app.inject + Postgres)",
@@ -95,7 +105,13 @@ export const CHECKS: Check[] = [
   { id: "e2e", title: "Playwright e2e", command: "pnpm e2e", needs: ["postgres"] },
 ];
 
-export type ObligationId = "api-test" | "shared-test" | "web-unit-test" | "e2e-spec";
+export type ObligationId =
+  | "api-test"
+  | "shared-test"
+  | "client-test"
+  | "web-unit-test"
+  | "web-view-test"
+  | "e2e-spec";
 
 export interface Obligation {
   id: ObligationId;
@@ -114,6 +130,16 @@ export const OBLIGATIONS: Obligation[] = [
     id: "shared-test",
     title: "A shared unit test is added or changed",
     metBy: ["packages/shared/src/**/*.test.ts"],
+  },
+  {
+    id: "client-test",
+    title: "A controller or view-model test is added or changed",
+    metBy: ["packages/client/src/**/*.test.ts"],
+  },
+  {
+    id: "web-view-test",
+    title: "A view or screen test (jsdom) is added or changed",
+    metBy: ["apps/web/src/**/*.test.tsx"],
   },
   {
     id: "web-unit-test",
@@ -161,7 +187,7 @@ export const EVIDENCE: Evidence[] = [
 /** `e2e: "mapped"` picks specs from E2E_MAP; `"all"` runs the whole suite. */
 export type E2eScope = "none" | "mapped" | "all" | "self";
 
-export type Side = "repo" | "backend" | "shared" | "frontend" | "tests";
+export type Side = "repo" | "backend" | "shared" | "client" | "frontend" | "tests";
 
 export interface ChangeClass {
   id: string;
@@ -287,7 +313,15 @@ export const CLASSES: ChangeClass[] = [
     side: "shared",
     title: "API contracts (Zod)",
     paths: ["packages/shared/src/contracts.ts"],
-    checks: ["lint", "typecheck", "openapi-drift", "test:shared", "test:web", "test:api"],
+    checks: [
+      "lint",
+      "typecheck",
+      "openapi-drift",
+      "test:shared",
+      "test:client",
+      "test:web",
+      "test:api",
+    ],
     e2e: "all",
     obligations: ["api-test"],
   },
@@ -304,28 +338,54 @@ export const CLASSES: ChangeClass[] = [
     side: "shared",
     title: "Shared logic (grading)",
     paths: ["packages/shared/**"],
-    checks: ["lint", "typecheck", "test:shared", "test:web", "test:api"],
+    checks: ["lint", "typecheck", "test:shared", "test:client", "test:web", "test:api"],
     e2e: "mapped",
     obligations: ["shared-test"],
   },
 
-  // Frontend
+  // Client: controllers, view models, API client, binding (ADR 0002)
   {
-    id: "web-tests",
-    side: "frontend",
-    title: "Web unit tests only",
-    paths: ["apps/web/src/**/*.test.ts"],
-    checks: ["lint", "typecheck", "test:web"],
+    id: "client-tests",
+    side: "client",
+    title: "Client tests only",
+    paths: ["packages/client/src/**/*.test.ts"],
+    checks: ["lint", "typecheck", "test:client"],
     e2e: "none",
   },
   {
-    id: "web-logic",
-    side: "frontend",
-    title: "Web client logic (session state, API client)",
-    paths: ["apps/web/src/lib/**"],
+    id: "client-testing",
+    side: "client",
+    title: "Client testing kit (fake API, fixtures)",
+    paths: ["packages/client/src/testing/**"],
+    checks: ["lint", "typecheck", "test:client", "test:web"],
+    e2e: "none",
+  },
+  {
+    id: "client-binding",
+    side: "client",
+    title: "React binding (ClientProvider, useScreen)",
+    paths: ["packages/client/src/react/**"],
     checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "all",
+  },
+  {
+    id: "client-logic",
+    side: "client",
+    title: "Controllers, view models, API client",
+    paths: ["packages/client/**"],
+    checks: ["lint", "typecheck", "test:client", "test:web", "build:web"],
     e2e: "mapped",
-    obligations: ["web-unit-test"],
+    obligations: ["client-test"],
+  },
+
+  // Frontend (web)
+  {
+    id: "web-tests",
+    side: "frontend",
+    title: "Web tests only",
+    paths: ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx", "apps/web/src/test/**"],
+    checks: ["lint", "typecheck", "test:web"],
+    e2e: "none",
   },
   {
     id: "web-primitive",
@@ -337,14 +397,40 @@ export const CLASSES: ChangeClass[] = [
     evidence: ["visual-check"],
   },
   {
-    id: "web-screen",
+    id: "web-platform",
     side: "frontend",
-    title: "Screens and components",
-    paths: ["apps/web/src/**"],
+    title: "Web platform adapters (providers, routes, links)",
+    paths: ["apps/web/src/platform/**"],
+    checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "all",
+  },
+  {
+    id: "web-route",
+    side: "frontend",
+    title: "Routes (app/: params in, screen out)",
+    paths: ["apps/web/src/app/**"],
     checks: ["lint", "typecheck", "build:web"],
     e2e: "mapped",
     obligations: ["e2e-spec"],
+  },
+  {
+    id: "web-view",
+    side: "frontend",
+    title: "Views, screens and components",
+    paths: ["apps/web/src/views/**", "apps/web/src/components/**"],
+    checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "mapped",
+    obligations: ["web-view-test"],
     evidence: ["visual-check"],
+  },
+  {
+    id: "web-logic",
+    side: "frontend",
+    title: "Web helpers (lib/)",
+    paths: ["apps/web/src/lib/**"],
+    checks: ["lint", "typecheck", "test:web", "build:web"],
+    e2e: "mapped",
+    obligations: ["web-unit-test"],
   },
   {
     id: "web-config",
@@ -394,9 +480,10 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
     paths: [
       "apps/api/src/routes/study.ts",
       "apps/api/src/srs.ts",
-      "apps/web/src/app/courses/[[]id[]]/study/**",
-      "apps/web/src/lib/study-session.ts",
       "packages/shared/src/grading.ts",
+      "packages/client/src/study/**",
+      "apps/web/src/views/study/**",
+      "apps/web/src/app/courses/[[]id[]]/study/**",
     ],
     specs: ["study", "grading"],
   },
@@ -404,22 +491,34 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
     paths: [
       "apps/api/src/routes/courses.ts",
       "apps/api/src/import.ts",
+      "packages/client/src/course/**",
+      "packages/client/src/new-course/**",
+      "apps/web/src/views/course/**",
+      "apps/web/src/views/new-course/**",
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
-      "apps/web/src/components/import-csv-card.tsx",
     ],
-    specs: ["course-authoring", "courses"],
+    specs: ["course-authoring", "courses", "grading"],
   },
   {
     paths: [
       "apps/api/src/routes/me.ts",
+      "packages/client/src/settings/**",
+      "apps/web/src/views/settings/**",
       "apps/web/src/app/settings/**",
-      "apps/web/src/components/course-grading-card.tsx",
     ],
     specs: ["grading", "courses"],
   },
   {
-    paths: ["apps/web/src/app/page.tsx", "db/seed/**", "apps/api/src/db/seed.ts"],
+    paths: [
+      "db/seed/**",
+      "apps/api/src/db/seed.ts",
+      "packages/client/src/courses/**",
+      "packages/client/src/shell/**",
+      "apps/web/src/views/courses/**",
+      "apps/web/src/views/app-shell/**",
+      "apps/web/src/app/page.tsx",
+    ],
     specs: ["courses"],
   },
 ];

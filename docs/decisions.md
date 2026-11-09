@@ -164,3 +164,22 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - Claude Code cloud containers only allow outbound HTTPS, so Postgres over
   TCP to Neon fails there; Neon's HTTPS SQL endpoint works. Migrations and
   deploy-time database work go in CI or Vercel.
+
+## 2026-11-09: Screens are controller, view model, view
+
+- [ADR 0002](adr/0002-client-architecture.md). Every screen's logic and text
+  moved into `@app/client` (controllers on `@tanstack/query-core`, pure view
+  models); web views only render. Expo will reuse the package. Biome's
+  `noRestrictedImports` enforces each layer's imports; `rules.ts` has
+  `client-*`, `web-view` and `web-route` classes with their own obligations.
+  `@tanstack/react-query` is gone from the web app.
+- **MSW fake API** (`@app/client/testing`): stateful, grades with the shared
+  grader, fixtures parsed by the contracts. Writing it found a real bug:
+  `UpdateCourseSchema` was a partial of the create schema, and Zod 4 applies
+  defaults inside a partial, so changing a course's accents erased its
+  description and grading override. Fixed in the contract, with an API test.
+- **axe in jsdom** found that progress bars had no accessible name; view
+  models now carry a label for each.
+- msw 3 renamed `onUnhandledRequest` to `onUnhandledFrame`; the old name is
+  silently ignored, so `setupFakeApi` uses the new one and unhandled requests
+  fail the test.

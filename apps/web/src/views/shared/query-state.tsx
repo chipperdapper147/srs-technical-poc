@@ -4,11 +4,11 @@ export function Loading() {
   return <p className="text-sm text-muted-foreground">Loading…</p>;
 }
 
-export function ErrorMessage({ error }: { error: Error }) {
+export function ErrorMessage({ message }: { message: string }) {
   return (
     <Alert variant="destructive">
       <AlertTitle>Something went wrong</AlertTitle>
-      <AlertDescription>{error.message}</AlertDescription>
+      <AlertDescription>{message}</AlertDescription>
     </Alert>
   );
 }

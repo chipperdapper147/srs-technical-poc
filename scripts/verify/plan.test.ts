@@ -30,12 +30,20 @@ describe("classify", () => {
     ["packages/shared/src/contracts.ts", "contract"],
     ["packages/shared/src/grading.test.ts", "shared-tests"],
     ["packages/shared/src/grading.ts", "shared-logic"],
-    ["apps/web/src/lib/study-session.test.ts", "web-tests"],
-    ["apps/web/src/lib/study-session.ts", "web-logic"],
+    ["packages/client/src/study/controller.test.ts", "client-tests"],
+    ["packages/client/src/testing/fake-api.ts", "client-testing"],
+    ["packages/client/src/react/use-screen.ts", "client-binding"],
+    ["packages/client/src/study/controller.ts", "client-logic"],
+    ["packages/client/package.json", "dependencies"],
+    ["apps/web/src/views/study/study-view.test.tsx", "web-tests"],
+    ["apps/web/src/test/a11y.ts", "web-tests"],
+    ["apps/web/src/lib/utils.ts", "web-logic"],
     ["apps/web/src/components/ui/button.tsx", "web-primitive"],
     ["apps/web/src/app/globals.css", "web-primitive"],
-    ["apps/web/src/app/courses/[id]/study/page.tsx", "web-screen"],
-    ["apps/web/src/components/import-csv-card.tsx", "web-screen"],
+    ["apps/web/src/platform/providers.tsx", "web-platform"],
+    ["apps/web/src/app/courses/[id]/study/page.tsx", "web-route"],
+    ["apps/web/src/views/study/study-view.tsx", "web-view"],
+    ["apps/web/src/components/native-select.tsx", "web-view"],
     ["apps/web/next.config.ts", "web-config"],
     ["apps/e2e/tests/study.spec.ts", "e2e-specs"],
     ["apps/e2e/pages/study-page.ts", "e2e-support"],
@@ -64,17 +72,46 @@ describe("plan", () => {
     assert.deepEqual(p.obligations, []);
   });
 
-  it("maps a study screen change to the study and grading specs", () => {
-    const p = plan(["apps/web/src/app/courses/[id]/study/page.tsx"]);
+  it("maps a study view change to the study and grading specs, with a view test owed", () => {
+    const p = plan(["apps/web/src/views/study/study-view.tsx"]);
     assert.deepEqual(p.e2e, ["grading", "study"]);
-    assert.deepEqual(ids(p), ["lint", "typecheck", "build:web", "e2e"]);
+    assert.deepEqual(ids(p), ["lint", "typecheck", "test:web", "build:web", "e2e"]);
+    assert.deepEqual(
+      p.obligations.map((o) => [o.id, o.status]),
+      [["web-view-test", "missing"]],
+    );
     assert.deepEqual(
       p.evidence.map((e) => e.evidence.id),
       ["visual-check"],
     );
   });
 
-  it("runs the whole suite for an unmapped screen file", () => {
+  it("requires a controller test for client logic, met by a client test", () => {
+    const missing = plan(["packages/client/src/settings/controller.ts"]);
+    assert.deepEqual(ids(missing), [
+      "lint",
+      "typecheck",
+      "test:client",
+      "test:web",
+      "build:web",
+      "e2e",
+    ]);
+    assert.deepEqual(missing.e2e, ["courses", "grading"]);
+    assert.equal(missing.obligations[0]?.status, "missing");
+    const met = plan([
+      "packages/client/src/settings/controller.ts",
+      "packages/client/src/settings/settings.test.ts",
+    ]);
+    assert.equal(met.obligations[0]?.status, "met");
+  });
+
+  it("requires an e2e spec for a route change", () => {
+    const p = plan(["apps/web/src/app/courses/[id]/study/page.tsx"]);
+    assert.deepEqual(p.e2e, ["grading", "study"]);
+    assert.equal(p.obligations[0]?.id, "e2e-spec");
+  });
+
+  it("runs the whole suite for an unmapped route", () => {
     assert.deepEqual(plan(["apps/web/src/app/layout.tsx"]).e2e, []);
   });
 
