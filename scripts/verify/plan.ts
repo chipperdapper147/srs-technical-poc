@@ -60,7 +60,8 @@ const specName = (file: string) =>
 export function plan(
   changed: readonly string[],
   waivers: ReadonlyMap<string, string> = new Map(),
-  opts: { all?: boolean } = {},
+  /** `deleted`: paths that no longer exist. They still need checks, but deleting a test never meets an obligation. */
+  opts: { all?: boolean; deleted?: ReadonlySet<string> } = {},
 ): Plan {
   const files = [...new Set(changed)].sort();
   const byClass = new Map<string, { cls: ChangeClass; files: string[] }>();
@@ -114,7 +115,7 @@ export function plan(
   for (const ob of OBLIGATIONS) {
     const requiredBy = classes.filter((c) => c.cls.obligations?.includes(ob.id));
     if (requiredBy.length === 0) continue;
-    const metBy = files.filter((f) => matches(f, ob.metBy));
+    const metBy = files.filter((f) => !opts.deleted?.has(f) && matches(f, ob.metBy));
     const waiver = waivers.get(ob.id);
     obligations.push({
       id: ob.id,

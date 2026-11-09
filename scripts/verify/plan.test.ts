@@ -129,6 +129,13 @@ describe("plan", () => {
     assert.ok(ids(met).includes("openapi-drift"));
   });
 
+  it("never counts a deleted test as meeting an obligation", () => {
+    const changed = ["apps/api/src/srs.ts", "apps/api/test/api.test.ts"];
+    const p = plan(changed, new Map(), { deleted: new Set(["apps/api/test/api.test.ts"]) });
+    assert.equal(p.obligations[0]?.status, "missing");
+    assert.ok(p.files.includes("apps/api/test/api.test.ts"), "still classified and checked");
+  });
+
   it("accepts a waiver for a missing obligation", () => {
     const p = plan(["apps/api/src/srs.ts"], new Map([["api-test", "rename only"]]));
     assert.equal(p.obligations[0]?.status, "waived");
