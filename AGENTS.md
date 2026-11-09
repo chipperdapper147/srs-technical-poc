@@ -15,7 +15,9 @@ alternatives to anything listed there.
   files in `db/migrations/` or `types.ts`.
 - **Contracts live in `packages/shared/src/contracts.ts`.** API routes validate
   and serialize with them; the web client parses responses with them. Change the
-  contract first, then make both sides typecheck.
+  contract first, then make both sides typecheck. Regenerate the committed
+  OpenAPI snapshot with `pnpm api:openapi`; its diff is how contract changes
+  get reviewed.
 - **The API is authoritative for grading and scheduling.** `@app/shared`
   grading is pure and shared; FSRS (`apps/api/src/srs.ts`) runs only on the server.
 - **No build step for API and shared.** Node 24 runs `.ts` directly, so code
@@ -36,11 +38,18 @@ alternatives to anything listed there.
 ## Before committing
 
 ```sh
-pnpm lint && pnpm typecheck && pnpm test && pnpm db:check
-pnpm e2e    # when UI or API behaviour changed
+pnpm verify          # runs what this diff requires and prints the report
 ```
 
-API tests need Postgres running (`pnpm db:up`) and Atlas on the PATH.
+Or use the `/verify` skill, which also does the manual evidence (visual check
+for UI changes). What a change needs is decided by `scripts/verify/rules.ts`,
+not by judgment: see "The rule" in `docs/verification.md`. Behaviour changes
+must ship with a test of the matching kind; when none can express the change,
+add a `Verify-Waive: <id>: <reason>` trailer to the commit. Only claim a change
+is verified with the report as evidence.
+
+Checks need Postgres (`pnpm db:setup`), Atlas on the PATH and Docker running.
+Missing ones show as blocked, never as passed.
 
 ## Commits and pull requests
 

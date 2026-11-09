@@ -1,0 +1,27 @@
+name: Setup
+description: pnpm, Node from .nvmrc, dependencies, and optionally Atlas
+inputs:
+  atlas:
+    description: Install the Atlas CLI
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Install Atlas
+      if: inputs.atlas == 'true'
+      shell: bash
+      run: curl -sSf https://atlasgo.sh | sh -s -- --yes
+      env:
+        # Pinned: the installer's "latest" resolves to canary builds.
+        # Keep in sync with README prerequisites.
+        ATLAS_VERSION: v1.3.8
+
+    - shell: bash
+      run: pnpm install --frozen-lockfile

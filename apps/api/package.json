@@ -9,7 +9,8 @@
     "typecheck": "tsc -p .",
     "test": "vitest run",
     "db:codegen": "node --env-file-if-exists=../../.env node_modules/kysely-codegen/dist/cli/bin.js --dialect postgres --out-file src/db/types.ts --camel-case --runtime-enums false --exclude-pattern \"atlas_schema_revisions.*\"",
-    "db:seed": "node --env-file-if-exists=../../.env src/db/seed.ts"
+    "db:seed": "node --env-file-if-exists=../../.env src/db/seed.ts",
+    "openapi": "node src/openapi.ts"
   },
   "dependencies": {
     "@app/shared": "workspace:*",

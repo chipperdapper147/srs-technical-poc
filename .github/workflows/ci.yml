@@ -1,12 +1,25 @@
+# Verification stage 3 (docs/verification.md). Every job runs checks through
+# `pnpm verify`, so CI and local runs share one definition of each check
+# (scripts/verify/rules.ts). `check` is the single required status check:
+# jobs can be split or renamed without touching branch protection.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgres://srs:srs@localhost:5432/srs?sslmode=disable
+  TEST_DATABASE_URL: postgres://srs:srs@localhost:5432/srs_test?sslmode=disable
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   commit-messages:
@@ -19,10 +32,36 @@ jobs:
       - name: No Claude session links in commit messages
         run: ./scripts/check-commit-messages.sh
 
-  check:
+  obligations:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }} # the branch, not the merge commit
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Behaviour changes come with tests (or a Verify-Waive trailer)
+        run: node scripts/verify/cli.ts obligations --committed --base "origin/$GITHUB_BASE_REF"
+
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Lint, types, unit tests, generated-file drift
+        run: >-
+          pnpm verify --all
+          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,test:shared,test:web
+
+  database:
     runs-on: ubuntu-latest
     services:
-      postgres:
+      postgres: &postgres
         image: postgres:18
         env:
           POSTGRES_USER: srs
@@ -32,59 +71,32 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U srs -d srs"
           --health-interval 2s --health-timeout 3s --health-retries 30
-    env:
-      DATABASE_URL: postgres://srs:srs@localhost:5432/srs?sslmode=disable
-      TEST_DATABASE_URL: postgres://srs:srs@localhost:5432/srs_test?sslmode=disable
-      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v5
+      - uses: ./.github/actions/setup
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
+          atlas: "true"
+      - run: psql "$DATABASE_URL" -c "CREATE DATABASE srs_test"
+      - name: Schema, codegen drift, API integration tests, seed
+        run: pnpm verify --all --only db:check,codegen-drift,test:api,db:seed
 
-      - name: Install Atlas
-        run: curl -sSf https://atlasgo.sh | sh -s -- --yes
-        env:
-          # Pinned: the installer's "latest" resolves to canary builds.
-          # Keep in sync with README prerequisites.
-          ATLAS_VERSION: v1.3.8
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Lint and format check
-        run: pnpm lint
-
-      - name: Migrations valid and in sync with db/schema.sql
-        run: pnpm db:check
-
-      - name: Apply migrations
-        run: |
-          psql "$DATABASE_URL" -c "CREATE DATABASE srs_test"
-          pnpm db:migrate
-
-      - name: Kysely types match the migrated schema
-        run: |
-          pnpm db:codegen
-          git diff --exit-code apps/api/src/db/types.ts
-
-      - run: pnpm typecheck
-
-      - run: pnpm test
-
-      - name: Seed runs cleanly
-        run: pnpm db:seed
-
-      - run: pnpm build
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres: *postgres
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          atlas: "true"
+      - name: Migrate and seed
+        run: pnpm db:migrate && pnpm db:seed
 
       - name: Install Playwright browser
         run: pnpm --filter @app/e2e exec playwright install --with-deps chromium
 
-      - name: End-to-end tests (production build, real API and Postgres)
-        run: pnpm e2e
+      - name: Production build, then e2e against it (real API and Postgres)
+        run: pnpm verify --all --only build:web,e2e
 
       - name: Upload Playwright report
         if: failure()
@@ -93,3 +105,17 @@ jobs:
           name: playwright-report
           path: apps/e2e/playwright-report
           retention-days: 7
+
+  check:
+    if: always()
+    needs: [commit-messages, obligations, static, database, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All verification jobs passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != success ] && [ "$r" != skipped ]; then exit 1; fi
+          done

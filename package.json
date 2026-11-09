@@ -1,6 +1,7 @@
 {
   "name": "srs",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=24.0.0 <25"
@@ -9,10 +10,12 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "typecheck": "turbo run typecheck && tsc -p scripts",
+    "test": "turbo run test && pnpm test:scripts",
+    "test:scripts": "node --test 'scripts/**/*.test.ts'",
     "lint": "biome check .",
     "format": "biome check --write .",
+    "verify": "node scripts/verify/cli.ts",
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down",
     "db:diff": "./scripts/with-env.sh atlas migrate diff --env local",
@@ -20,12 +23,14 @@
     "db:check": "./scripts/db-check.sh",
     "db:codegen": "pnpm --filter @app/api db:codegen",
     "db:seed": "pnpm --filter @app/api db:seed",
+    "api:openapi": "pnpm --filter @app/api openapi",
     "db:setup": "pnpm db:up && pnpm db:migrate && pnpm db:seed",
     "e2e": "pnpm --filter @app/e2e e2e",
     "e2e:scratch": "pnpm --filter @app/e2e e2e:scratch"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
+    "@types/node": "24.19.2",
     "turbo": "2.11.10",
     "typescript": "6.0.3"
   }

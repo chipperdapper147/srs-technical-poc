@@ -97,3 +97,34 @@ the old branch. No single guard covers every case, so there are several:
 
 Plain `.githooks/` was chosen over a hook manager to keep the lefthook question
 in ADR 0001 open. If lefthook is adopted, move both hooks into it.
+
+## 2026-11-09: Verification rules as code
+
+- **Change classes.** Every changed path falls in exactly one class (first
+  match in `scripts/verify/rules.ts`); a class lists the checks it needs,
+  whether e2e runs for mapped specs or the whole suite, the test
+  obligations, and the manual evidence. Unmatched paths, dependencies and
+  tooling require the full run. `pnpm verify` computes this from the diff
+  and runs it; the tables in `docs/verification.md` are generated from the
+  same file and drift-checked.
+- **Obligations instead of coverage thresholds.** "A route change ships
+  with an API test change" is checkable from the diff alone and fails
+  loudly; coverage percentages reward the wrong tests. The escape hatch is
+  an explicit `Verify-Waive: <id>: <reason>` commit trailer, so every
+  exception is written down.
+- **One runner for local and CI.** CI jobs call `pnpm verify --all --only
+  …`, so a check has one command definition. A single aggregate `check` job
+  is the required status check, so jobs can be split without touching
+  branch protection.
+- **OpenAPI snapshot instead of a posted diff.** `apps/api/openapi.json` is
+  generated from the Zod contracts and committed, with a drift check.
+  Contract changes show up as a normal PR diff; no PR-comment token needed.
+  Breaking-change detection is by review for now (TODO).
+- **Hook manager: plain `.githooks/`** (provisional, answers the open
+  question in ADR 0001). The pre-commit Biome hook joins the existing
+  commit-msg and pre-push hooks; pre-push also checks obligations. One
+  hook per stage doesn't need a manager. Revisit if hooks multiply.
+- **Property-based tests** (fast-check) for grading. They found that the
+  verdict depended on the order of equally close alternatives (`abcx`
+  against `abc|abcd` was wrong, against `abcd|abc` a typo). Fixed: on a
+  tie the candidate that allows the typo wins.
