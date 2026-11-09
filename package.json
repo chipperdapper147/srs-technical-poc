@@ -14,12 +14,13 @@
     "format": "biome check --write .",
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down",
-    "db:diff": "atlas migrate diff --env local",
-    "db:migrate": "atlas migrate apply --env local",
+    "db:diff": "./scripts/with-env.sh atlas migrate diff --env local",
+    "db:migrate": "./scripts/with-env.sh atlas migrate apply --env local",
     "db:check": "./scripts/db-check.sh",
     "db:codegen": "pnpm --filter @app/api db:codegen",
     "db:seed": "pnpm --filter @app/api db:seed",
-    "db:setup": "pnpm db:up && pnpm db:migrate && pnpm db:seed"
+    "db:setup": "pnpm db:up && pnpm db:migrate && pnpm db:seed",
+    "e2e": "pnpm --filter @app/e2e e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",

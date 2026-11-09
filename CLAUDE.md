@@ -23,6 +23,11 @@ decisions log before proposing alternatives to anything listed there.
 - **`apps/web/src/components/ui/` is shadcn-generated.** Prefer
   `pnpm dlx shadcn@4.23.0 add <component>` over hand-writing primitives.
 - **Pin exact dependency versions** (no `^`).
+- **E2E tests use page objects.** Specs in `apps/e2e/tests` talk to pages only
+  through classes in `apps/e2e/pages` (one per screen); selectors live there,
+  never in specs. Prefer role/label locators; use `data-testid` only where there
+  is no accessible handle. Each test runs as a fresh learner (`x-dev-user`), so
+  arrange state through the `api` fixture rather than shared data.
 - **Auth is a dev stub** (`apps/api/src/plugins/auth.ts`). Route code should
   only rely on `request.user.id`; Auth0 replaces the stub later.
 
@@ -30,6 +35,7 @@ decisions log before proposing alternatives to anything listed there.
 
 ```sh
 pnpm lint && pnpm typecheck && pnpm test && pnpm db:check
+pnpm e2e    # when UI or API behaviour changed
 ```
 
 API tests need Postgres running (`pnpm db:up`) and Atlas on the PATH.

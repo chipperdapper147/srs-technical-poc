@@ -7,3 +7,5 @@ coverage/
 .env
 .env.local
 next-env.d.ts
+test-results/
+playwright-report/

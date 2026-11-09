@@ -24,6 +24,7 @@ Branch: `ccr-7f8b4c24-u0wnj2`. See [`docs/decisions.md`](docs/decisions.md) for 
 ```
 apps/api         Fastify API (src/routes, src/srs.ts, src/import.ts, test/)
 apps/web         Next.js app (src/app, src/lib/study-session.ts, src/components/ui)
+apps/e2e         Playwright tests: pages/ (page objects), tests/ (specs), support/ (fixtures)
 packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
@@ -36,7 +37,7 @@ docs/            decisions.md
 
 Prerequisites: Node 24 (`.nvmrc`), pnpm 10 (`corepack enable`), Docker, and the
 [Atlas CLI](https://atlasgo.io/getting-started#installation)
-(`curl -sSf https://atlasgo.sh | sh`).
+(`curl -sSf https://atlasgo.sh | ATLAS_VERSION=v1.3.8 sh`, the version CI pins).
 
 ```sh
 cp .env.example .env
@@ -47,16 +48,20 @@ pnpm dev             # API on :4000 (docs at /docs), web on :3000
 
 ## Common tasks
 
-| Command                                        | What it does                                                            |
-| ---------------------------------------------- | ----------------------------------------------------------------------- |
-| `pnpm dev`                                     | Run API and web in watch mode                                           |
-| `pnpm test`                                    | All tests (API tests use `TEST_DATABASE_URL`; Postgres must be running) |
-| `pnpm typecheck` / `pnpm lint` / `pnpm format` | Types, Biome check, Biome autofix                                       |
-| `pnpm db:diff <name>`                          | After editing `db/schema.sql`: generate a migration                     |
-| `pnpm db:migrate`                              | Apply pending migrations to `DATABASE_URL`                              |
-| `pnpm db:codegen`                              | Regenerate `apps/api/src/db/types.ts` from the migrated DB              |
-| `pnpm db:check`                                | Validate migrations and confirm they match `schema.sql` (runs in CI)    |
-| `pnpm db:seed`                                 | Load the sample course (idempotent)                                     |
+| Command                                        | What it does                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `pnpm dev`                                     | Run API and web in watch mode                                                         |
+| `pnpm test`                                    | All tests (API tests use `TEST_DATABASE_URL`; Postgres must be running)               |
+| `pnpm e2e`                                     | Playwright browser tests (starts API + web unless already running; needs a seeded DB) |
+| `pnpm typecheck` / `pnpm lint` / `pnpm format` | Types, Biome check, Biome autofix                                                     |
+| `pnpm db:diff <name>`                          | After editing `db/schema.sql`: generate a migration                                   |
+| `pnpm db:migrate`                              | Apply pending migrations to `DATABASE_URL`                                            |
+| `pnpm db:codegen`                              | Regenerate `apps/api/src/db/types.ts` from the migrated DB                            |
+| `pnpm db:check`                                | Validate migrations and confirm they match `schema.sql` (runs in CI)                  |
+| `pnpm db:seed`                                 | Load the sample course (idempotent)                                                   |
+
+First e2e run: `pnpm --filter @app/e2e exec playwright install chromium`, or set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium binary.
 
 Schema change loop: edit `db/schema.sql` → `pnpm db:diff add_thing` →
 `pnpm db:migrate` → `pnpm db:codegen` → commit all three.

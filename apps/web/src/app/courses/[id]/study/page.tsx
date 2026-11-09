@@ -89,7 +89,7 @@ function Session({
   const step = currentStep(state);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="study-session" data-step={state.index}>
       <div className="flex items-center gap-4">
         <Link href={`/courses/${course.id}`} className="text-sm text-muted-foreground">
           ← {course.title}
@@ -119,10 +119,16 @@ function Session({
       ) : (
         <Card>
           <CardHeader className="text-lg font-semibold">Session complete</CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p>Correct: {state.tally.exact}</p>
-            <p>Almost (typo): {state.tally.typo}</p>
-            <p>Wrong: {state.tally.wrong}</p>
+          <CardContent className="space-y-1 text-sm" data-testid="session-summary">
+            <p>
+              Correct: <span data-testid="tally-exact">{state.tally.exact}</span>
+            </p>
+            <p>
+              Almost (typo): <span data-testid="tally-typo">{state.tally.typo}</span>
+            </p>
+            <p>
+              Wrong: <span data-testid="tally-wrong">{state.tally.wrong}</span>
+            </p>
           </CardContent>
           <CardFooter className="gap-3">
             <Link href={`/courses/${course.id}`} className={buttonVariants()}>
@@ -172,10 +178,12 @@ function PresentStep({
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-1">
-          <p lang={lang} className="text-3xl font-semibold">
+          <p lang={lang} data-testid="study-term" className="text-3xl font-semibold">
             {item.term}
           </p>
-          <p className="text-lg text-muted-foreground">{item.definition}</p>
+          <p data-testid="study-definition" className="text-lg text-muted-foreground">
+            {item.definition}
+          </p>
           {item.alternatives.length > 0 && (
             <p className="text-sm text-muted-foreground">Also: {item.alternatives.join(", ")}</p>
           )}
@@ -244,7 +252,9 @@ function QuizStep({
         <span className="text-xs text-muted-foreground">{item.unitTitle}</span>
       </CardHeader>
       <CardContent className="space-y-5">
-        <p className="text-2xl font-semibold">{item.definition}</p>
+        <p data-testid="study-prompt" className="text-2xl font-semibold">
+          {item.definition}
+        </p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -282,7 +292,11 @@ function QuizStep({
 function FeedbackPanel({ result, lang }: { result: AnswerResult; lang: string }) {
   const style = FEEDBACK[result.verdict];
   return (
-    <div role="status" className={cn("rounded-lg border p-3 text-sm", style.className)}>
+    <div
+      role="status"
+      data-verdict={result.verdict}
+      className={cn("rounded-lg border p-3 text-sm", style.className)}
+    >
       <p className="font-medium">{style.label}</p>
       {result.verdict !== "exact" && (
         <p>

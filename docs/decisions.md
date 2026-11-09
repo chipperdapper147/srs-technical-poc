@@ -52,4 +52,20 @@ than delete when a decision is reversed.
 - Map fast exact answers to **Easy**? It would need per-learner timing baselines.
 - Prompt direction is fixed (definition → type term); add reverse or
   listening modes later.
-- Atlas CI installs the latest Atlas release; pin `ATLAS_VERSION` if it causes churn.
+
+## 2026-11-09: Atlas pinned, Playwright e2e with page objects
+
+- **Atlas pinned to v1.3.8 in CI.** The installer's `latest` resolves to canary
+  builds (`v1.3.9-…-canary` at the time), which is not what we want gating CI.
+- **Playwright** (`apps/e2e`, `@playwright/test` 1.65) using the page object
+  model: one class per screen in `pages/`, fixtures in `support/fixtures.ts`
+  that hand each test its page objects, an `api` client for fast setup, and a
+  unique learner identity so tests are isolated and run in parallel against
+  one database. `support/db.ts` is the only direct DB access (time travel for
+  review tests).
+- In CI, e2e runs against `next start` (production build), the real API and
+  Postgres. Locally it reuses `pnpm dev` if it is already running.
+- Writing the suite caught a real bug: invalidating `["courses"]` at the end of a
+  session also refetched the session itself (its key started with `courses`),
+  which replaced the summary with the empty state. Study queries now use a
+  `["study", …]` key.

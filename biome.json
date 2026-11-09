@@ -47,6 +47,19 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/e2e/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noEmptyPattern": "off"
+          },
+          "suspicious": {
+            "noConfusingVoidType": "off"
+          }
+        }
+      }
     }
   ]
 }
