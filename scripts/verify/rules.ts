@@ -23,6 +23,8 @@ export type CheckId =
   | "rules-drift"
   | "shell-syntax"
   | "db:check"
+  | "migration-lint"
+  | "migration-rehearsal"
   | "codegen-drift"
   | "openapi-drift"
   | "test:shared"
@@ -74,11 +76,23 @@ export const CHECKS: Check[] = [
     needs: ["atlas", "docker"],
   },
   {
+    id: "migration-lint",
+    title:
+      "New migrations: Squawk (stand-in for atlas migrate lint) and the expand/contract policy",
+    command: "pnpm db:lint",
+  },
+  {
     id: "codegen-drift",
     title: "Kysely types match the migrated schema",
     command: "pnpm db:migrate && pnpm db:codegen",
     needs: ["postgres", "atlas"],
     drift: ["apps/api/src/db/types.ts"],
+  },
+  {
+    id: "migration-rehearsal",
+    title: "New migrations applied to production-shaped data: timed, invariants hold",
+    command: "pnpm db:rehearse",
+    needs: ["postgres", "atlas"],
   },
   {
     id: "openapi-drift",
@@ -173,6 +187,7 @@ export const OBLIGATIONS: Obligation[] = [
 ];
 
 export type EvidenceId =
+  | "contract-readiness"
   | "visual-check"
   | "openapi-review"
   | "lockfile-review"
@@ -200,6 +215,11 @@ export const EVIDENCE: Evidence[] = [
     id: "lockfile-review",
     title: "Review the lockfile diff",
     how: "New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.",
+  },
+  {
+    id: "contract-readiness",
+    title: "Nothing in the compatibility window still uses what the contract removes",
+    how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. Until deployed versions are recorded, search the code at the base branch.",
   },
   {
     id: "design-publish",
@@ -319,13 +339,48 @@ export const CLASSES: ChangeClass[] = [
 
   // Backend
   {
+    id: "schema-contract",
+    side: "backend",
+    title: "Contract migration (removes or tightens; ADR 0003)",
+    paths: ["db/migrations/*_contract_*.sql"],
+    checks: [
+      "lint",
+      "typecheck",
+      "db:check",
+      "migration-lint",
+      "codegen-drift",
+      "migration-rehearsal",
+      "test:api",
+      "db:seed",
+    ],
+    e2e: "all",
+    evidence: ["contract-readiness"],
+  },
+  {
     id: "schema",
     side: "backend",
     title: "Database schema and migrations",
     paths: ["db/schema.sql", "db/migrations/**", "apps/api/src/db/types.ts"],
-    checks: ["lint", "typecheck", "db:check", "codegen-drift", "test:api", "db:seed"],
+    checks: [
+      "lint",
+      "typecheck",
+      "db:check",
+      "migration-lint",
+      "codegen-drift",
+      "migration-rehearsal",
+      "test:api",
+      "db:seed",
+    ],
     e2e: "all",
     obligations: ["api-test"],
+  },
+  {
+    id: "schema-rehearsal",
+    side: "backend",
+    title: "Migration rehearsal data and invariants",
+    paths: ["db/rehearsal/**"],
+    checks: ["lint", "migration-rehearsal"],
+    e2e: "none",
   },
   {
     id: "seed",

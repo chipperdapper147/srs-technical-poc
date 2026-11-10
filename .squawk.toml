@@ -1,0 +1,19 @@
+# Squawk: the migration linter (check `migration-lint`, scripts/schema/lint-migrations.ts).
+# It STANDS IN for Atlas Pro's `atlas migrate lint`, which needs a paid login; in a
+# setup with Atlas Pro, the check's command becomes
+#   atlas migrate lint --env local --git-base <base>
+# and this file goes away. See docs/decisions.md (2026-11-10, migration lint).
+pg_version = "18.0"
+# Atlas applies each migration file in one transaction.
+assume_in_transaction = true
+excluded_rules = [
+  # Atlas's transactions already make a failed file safe to rerun.
+  "prefer-robust-stmts",
+  # Style preferences, not hazards: counts and positions fit in int/smallint.
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
+  # Timeouts are set once for every migration by the deploy's apply step
+  # (lock_timeout / statement_timeout on the connection), not per file.
+  "require-lock-timeout",
+  "require-statement-timeout",
+]

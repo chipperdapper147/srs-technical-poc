@@ -29,8 +29,17 @@ container); migrations against Neon run from CI or the deploy.
 
 - **Schema changes go through Atlas.** Edit `db/schema.sql`, run
   `pnpm db:diff <name>`, `pnpm db:migrate`, `pnpm db:codegen`, and commit the
-  migration, `atlas.sum` and `apps/api/src/db/types.ts` together. Never hand-edit
-  files in `db/migrations/` or `types.ts`.
+  migration, `atlas.sum` and `apps/api/src/db/types.ts` together. Never edit an
+  applied migration or `types.ts`; a new, unapplied migration may be edited for
+  what the migration linter asks, then `pnpm db:hash`.
+- **Database changes are expand, then contract** ([ADR 0003](docs/adr/0003-verification-across-repositories.md)).
+  A change may never break the API versions in production, the rollback
+  candidate or the deployment candidate. Removals and tightening go in their
+  own `*_contract_*` migration, after everything stops using the thing;
+  renames and type changes are expand, backfill, switch, contract. The
+  recipe and what `migration-lint` and `migration-rehearsal` check are under
+  "Database changes" in `docs/verification.md`. When a schema change alters
+  what `db/rehearsal/seed.sql` must produce, update it in the same change.
 - **Contracts live in `packages/shared/src/contracts.ts`.** API routes validate
   and serialize with them; the web client parses responses with them. Change the
   contract first, then make both sides typecheck. Regenerate the committed

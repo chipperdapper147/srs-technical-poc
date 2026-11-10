@@ -71,7 +71,19 @@ mkdirSync(WORK, { recursive: true });
 // ---------------------------------------------------------------- tokens and docs
 
 const tokens = JSON.parse(readFileSync(at("../tokens.json"), "utf8")) as Tokens;
-const ref = `${git("rev-parse", "--abbrev-ref", "HEAD")}@${git("rev-parse", "--short", "HEAD")}`;
+const onMain = (() => {
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", "HEAD", "origin/main"], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+// A commit already on main is named by main, whatever branch it was built from.
+const ref = `${onMain ? "main" : git("rev-parse", "--abbrev-ref", "HEAD")}@${git("rev-parse", "--short", "HEAD")}`;
 const withMeta = {
   ...tokens,
   meta: {
