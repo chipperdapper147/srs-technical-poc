@@ -1,0 +1,14 @@
+<!-- @dsCard group="Forms" height=170 subtitle="Default and study size (h-11 text-lg)" -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(
+    h("div", { style: { display: "grid", gap: "6px" } }, h(S.Label, { htmlFor: "title" }, "Title"), h(S.Input, { id: "title", defaultValue: "My French" })),
+    h("div", { style: { display: "grid", gap: "6px" } }, h(S.Label, { htmlFor: "lang" }, "Learning (language code)"), h(S.Input, { id: "lang", placeholder: "es" })),
+    h(S.Input, { "aria-label": "Type the answer", placeholder: "Type the answer", className: "h-11 text-lg", spellCheck: false }),
+  )
+);
+</script>

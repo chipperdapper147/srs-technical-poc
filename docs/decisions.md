@@ -183,3 +183,25 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - msw 3 renamed `onUnhandledRequest` to `onUnhandledFrame`; the old name is
   silently ignored, so `setupFakeApi` uses the new one and unhandled requests
   fail the test.
+
+## 2026-11-10: Design system in the repo; tokens.json is the one source
+
+- **`@app/design` (`packages/design`)** holds `tokens.json`, in the Design
+  System artifact's format. `pnpm design:build` generates the web's CSS
+  variables (`apps/web/src/app/tokens.css`, imported by `globals.css`, which
+  no longer holds values) and a typed module for Expo
+  (`packages/design/src/tokens.ts`: colours converted from oklch to hex,
+  because React Native has no `oklch()`; sizes in dp). Both are committed and
+  drift-checked like the OpenAPI snapshot.
+- **The switch is exact.** Old and new stylesheets were compiled and compared
+  in a browser: 82 computed values in both themes, 0 differences. The
+  verdict colours, Tailwind literals in `study-view.tsx` until now, became
+  `verdict-*` tokens with the same values.
+- **The artifact's docs live in `packages/design/system/`**;
+  `pnpm design:system` assembles the publishable files, including a live
+  component bundle. The bundle is built from ESM only: the preview frame
+  supplies React 18 as globals (React 19 has no UMD build), so `react`,
+  `react-dom` and the JSX runtime resolve to generated ESM modules whose
+  export lists come from `Object.keys` of the installed packages.
+- The system documents the UI as it is: shadcn's stock neutral theme. A
+  product identity (palette, display face) is a separate decision (TODO).

@@ -58,6 +58,12 @@ container); migrations against Neon run from CI or the deploy.
   files in `app/` only pass params to a screen. Biome enforces the imports
   per layer. Test controllers with `@app/client/testing` (MSW fake API built
   on the contracts), views with Testing Library on hand-built view models.
+- **Tokens come from `packages/design/tokens.json`** (`@app/design`), the one
+  source for web and mobile. Edit it, run `pnpm design:build`, and commit the
+  regenerated `apps/web/src/app/tokens.css` and `packages/design/src/tokens.ts`
+  (never edit those two). Views use Tailwind token utilities (`bg-primary`,
+  `border-verdict-exact/40`), never colour or size literals. The usage rules
+  are the design system's README (`packages/design/system/README.md`).
 - **Auth is a dev stub** (`apps/api/src/plugins/auth.ts`). Route code should
   only rely on `request.user.id`; Auth0 replaces the stub later.
 

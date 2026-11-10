@@ -1,0 +1,17 @@
+<!-- @dsCard group="Layout" height=300 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h("div", { style: { display: "grid", gap: "16px", maxWidth: "560px" } },
+    h(S.Card, null,
+      h(S.CardHeader, null, h(S.CardTitle, null, "Spanish basics (sample)"), h(S.CardDescription, null, "Spanish for English speakers"), h(S.CardAction, null, h(S.Badge, null, "3 due"))),
+      h(S.CardContent, { className: "space-y-2" }, h(S.Progress, { value: 25, "aria-label": "Spanish basics progress" }), h("p", { className: "text-xs text-muted-foreground" }, "6 / 24 words learned"))),
+    h(S.Card, null,
+      h(S.CardHeader, { className: "text-lg font-semibold" }, "Session complete"),
+      h(S.CardContent, { className: "space-y-1 text-sm" }, h("p", null, "Correct: 2"), h("p", null, "Almost (typo): 1"), h("p", null, "Wrong: 0")),
+      h(S.CardFooter, null, h(S.Button, null, "Back to course"))),
+  )
+);
+</script>

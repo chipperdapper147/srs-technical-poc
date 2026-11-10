@@ -26,6 +26,9 @@ export type CheckId =
   | "codegen-drift"
   | "openapi-drift"
   | "test:shared"
+  | "test:design"
+  | "design-drift"
+  | "design-system"
   | "test:client"
   | "test:web"
   | "test:api"
@@ -83,7 +86,18 @@ export const CHECKS: Check[] = [
     command: "pnpm api:openapi",
     drift: ["apps/api/openapi.json"],
   },
+  {
+    id: "design-drift",
+    title: "Generated token files match packages/design/tokens.json",
+    command: "pnpm design:build",
+    drift: ["packages/design/src/tokens.ts", "apps/web/src/app/tokens.css"],
+  },
   { id: "test:shared", title: "Shared unit tests", command: "pnpm --filter @app/shared test" },
+  {
+    id: "test:design",
+    title: "Design token generator tests",
+    command: "pnpm --filter @app/design test",
+  },
   {
     id: "test:client",
     title: "Client tests: controllers and view models against the MSW fake API",
@@ -102,6 +116,11 @@ export const CHECKS: Check[] = [
   },
   { id: "db:seed", title: "Seed runs cleanly", command: "pnpm db:seed", needs: ["postgres"] },
   { id: "build:web", title: "Next.js production build", command: "pnpm --filter @app/web build" },
+  {
+    id: "design-system",
+    title: "Design-system artifact builds, and every preview renders in both themes",
+    command: "pnpm design:system && pnpm --filter @app/design system:check",
+  },
   { id: "e2e", title: "Playwright e2e", command: "pnpm e2e", needs: ["postgres"] },
 ];
 
@@ -153,7 +172,12 @@ export const OBLIGATIONS: Obligation[] = [
   },
 ];
 
-export type EvidenceId = "visual-check" | "openapi-review" | "lockfile-review" | "ci-run";
+export type EvidenceId =
+  | "visual-check"
+  | "openapi-review"
+  | "lockfile-review"
+  | "ci-run"
+  | "design-publish";
 
 export interface Evidence {
   id: EvidenceId;
@@ -176,6 +200,11 @@ export const EVIDENCE: Evidence[] = [
     id: "lockfile-review",
     title: "Review the lockfile diff",
     how: "New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.",
+  },
+  {
+    id: "design-publish",
+    title: "Republish the design-system artifact",
+    how: "After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.",
   },
   {
     id: "ci-run",
@@ -204,6 +233,41 @@ const ALL = "full" as const;
 
 /** Ordered: the first class whose paths match a file owns it. */
 export const CLASSES: ChangeClass[] = [
+  // Design system: tokens.json is the one source of tokens (packages/design)
+  {
+    id: "design-tokens",
+    side: "repo",
+    title: "Design tokens and their generated files",
+    paths: [
+      "packages/design/tokens.json",
+      "packages/design/src/**",
+      "packages/design/scripts/**",
+      "packages/design/vitest.config.ts",
+      "packages/design/tsconfig.json",
+      "apps/web/src/app/tokens.css",
+    ],
+    checks: [
+      "lint",
+      "typecheck",
+      "test:design",
+      "design-drift",
+      "test:web",
+      "build:web",
+      "design-system",
+    ],
+    e2e: "all",
+    evidence: ["visual-check", "design-publish"],
+  },
+  {
+    id: "design-docs",
+    side: "repo",
+    title: "Design-system docs, previews and cover",
+    paths: ["packages/design/system/**", "packages/design/README.md"],
+    checks: ["lint", "design-system"],
+    e2e: "none",
+    evidence: ["design-publish"],
+  },
+
   // Repo-wide
   {
     id: "docs",

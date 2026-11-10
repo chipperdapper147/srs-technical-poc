@@ -58,7 +58,7 @@ jobs:
       - name: Lint, types, unit tests, generated-file drift
         run: >-
           pnpm verify --all
-          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,test:shared,test:client,test:web
+          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,design-drift,test:shared,test:design,test:client,test:web
 
   database:
     runs-on: ubuntu-latest
@@ -97,8 +97,8 @@ jobs:
       - name: Install Playwright browser
         run: pnpm --filter @app/e2e exec playwright install --with-deps chromium
 
-      - name: Production build, then e2e against it (real API and Postgres)
-        run: pnpm verify --all --only build:web,e2e
+      - name: Production build, design-system previews, then e2e (real API and Postgres)
+        run: pnpm verify --all --only build:web,design-system,e2e
 
       - name: Upload Playwright report
         if: failure()

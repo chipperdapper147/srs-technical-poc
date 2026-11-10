@@ -1,0 +1,16 @@
+<!-- @dsCard group="Forms" height=110 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const row = (...children) => h("div", { style: { display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" } }, ...children);
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(
+    h("div", { className: "flex items-center justify-between gap-4" },
+      h("div", null, h(S.Label, { htmlFor: "accents" }, "Require accents"), h("p", { className: "text-xs text-muted-foreground" }, 'When off, "cancion" is accepted for "canción".')),
+      h(S.Switch, { id: "accents", defaultChecked: true })),
+    row(h(S.Switch, { "aria-label": "Off" }), h(S.Switch, { size: "sm", defaultChecked: true, "aria-label": "Small" }), h(S.Switch, { disabled: true, "aria-label": "Disabled" })),
+  )
+);
+</script>

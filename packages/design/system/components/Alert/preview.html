@@ -1,0 +1,13 @@
+<!-- @dsCard group="Feedback" height=200 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(
+    h(S.Alert, { variant: "destructive" }, h(S.AlertTitle, null, "Something went wrong"), h(S.AlertDescription, null, "Course not found")),
+    h(S.Alert, null, h(S.AlertTitle, null, "Imported 3 words"), h(S.AlertDescription, null, "1 new unit: Basics.")),
+  )
+);
+</script>

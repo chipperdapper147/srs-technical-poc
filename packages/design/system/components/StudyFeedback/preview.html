@@ -1,0 +1,16 @@
+<!-- @dsCard group="Study patterns" height=330 subtitle="Static rendition of FeedbackPanel in study-view.tsx" -->
+<style>
+  .fb { border: 1px solid; border-radius: var(--radius); padding: 12px; font: 14px/20px var(--font-sans); color: var(--foreground); max-width: 420px; }
+  .fb p { margin: 0; }
+  .fb .t { font-weight: 500; }
+  .fb .a b { font-weight: 600; }
+  .fb .n { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+  .exact { border-color: color-mix(in oklch, var(--verdict-exact) 40%, transparent); background: color-mix(in oklch, var(--verdict-exact) 10%, transparent); }
+  .typo { border-color: color-mix(in oklch, var(--verdict-typo) 40%, transparent); background: color-mix(in oklch, var(--verdict-typo) 10%, transparent); }
+  .wrong { border-color: color-mix(in oklch, var(--verdict-wrong) 40%, transparent); background: color-mix(in oklch, var(--verdict-wrong) 10%, transparent); }
+</style>
+<div style="padding:16px; display:grid; gap:12px; background: var(--background)">
+  <div class="fb exact" role="status" data-verdict="exact"><p class="t">Correct</p><p class="n">Next review 14/11/2026, 09:00</p></div>
+  <div class="fb typo" role="status" data-verdict="typo"><p class="t">Almost: watch the spelling</p><p class="a">Answer: <b lang="es">biblioteca</b></p><p class="n">Next review 11/11/2026, 09:00</p></div>
+  <div class="fb wrong" role="status" data-verdict="wrong"><p class="t">Not quite</p><p class="a">Answer: <b lang="es">la biblioteca</b></p><p class="n">Next review 10/11/2026, 09:10</p></div>
+</div>

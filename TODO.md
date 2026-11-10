@@ -103,7 +103,17 @@ Blocked on the deploy target and the Auth0 integration:
   links. Today only `attribution.sessionUrl` and the `AGENTS.md` rule cover PR
   descriptions.
 
-## 5. Product
+## 5. Design
+
+- [ ] **A product identity.** The design system documents shadcn's stock
+  neutral theme. Decide a palette, a display face and the verdict colours,
+  change `packages/design/tokens.json`, and republish the artifact.
+- [ ] **Contrast gaps** flagged in the token notes: `muted-foreground` on
+  `muted` (4.3:1, light) and the focus `ring` (2.6:1, light).
+- [ ] **Dark theme is unreachable**: defined in tokens, but nothing sets
+  `.dark`. Follow the OS setting, or add a toggle in Settings.
+
+## 6. Product
 
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client. This unblocks the Auth0

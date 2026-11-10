@@ -1,0 +1,14 @@
+<!-- @dsCard group="Forms" height=110 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(h("div", { style: { display: "grid", gap: "6px" } },
+    h(S.Label, { htmlFor: "grading" }, "Answer grading"),
+    h(S.NativeSelect, { id: "grading", defaultValue: "lenient" },
+      h("option", { value: "lenient" }, 'Lenient: small typos count as "almost" (rated Hard)'),
+      h("option", { value: "strict" }, "Strict: exact match only"))))
+);
+</script>

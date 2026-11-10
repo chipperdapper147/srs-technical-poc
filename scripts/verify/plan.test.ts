@@ -47,6 +47,14 @@ describe("classify", () => {
     ["apps/web/next.config.ts", "web-config"],
     ["apps/e2e/tests/study.spec.ts", "e2e-specs"],
     ["apps/e2e/pages/study-page.ts", "e2e-support"],
+    ["packages/design/tokens.json", "design-tokens"],
+    ["packages/design/src/generate.ts", "design-tokens"],
+    ["apps/web/src/app/tokens.css", "design-tokens"],
+    ["packages/design/system/components/Button/preview.html", "design-docs"],
+    ["packages/design/system/README.md", "design-docs"],
+    ["packages/design/README.md", "design-docs"],
+    ["packages/design/vitest.config.ts", "design-tokens"],
+    ["packages/design/package.json", "dependencies"],
     ["something/new.txt", "unclassified"],
   ];
   for (const [file, cls] of cases) {

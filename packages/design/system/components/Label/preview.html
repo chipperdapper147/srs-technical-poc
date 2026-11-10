@@ -1,0 +1,10 @@
+<!-- @dsCard group="Forms" height=90 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(h("div", { style: { display: "grid", gap: "6px" } }, h(S.Label, { htmlFor: "n" }, "New words per learn session"), h(S.Input, { id: "n", type: "number", defaultValue: 5, className: "w-24" })))
+);
+</script>
