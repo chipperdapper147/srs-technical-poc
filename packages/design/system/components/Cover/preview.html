@@ -1,0 +1,41 @@
+<!-- @dsCard height=288 -->
+<style>
+  html, body { margin: 0; background: var(--background); }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--background); }
+  .cover svg { position: absolute; inset: 0; }
+  .ink { fill: var(--primary); }
+  .mid { fill: var(--muted-foreground); }
+  .tint { fill: var(--chart-1); }
+  .exact { fill: var(--verdict-exact); }
+  .typo { fill: var(--verdict-typo); }
+  .wrong { fill: var(--verdict-wrong); }
+  .slab { rx: calc(var(--radius) * 1.4); }
+  .tile { rx: var(--radius); }
+  .name { position: absolute; left: 48px; bottom: 36px; max-width: 440px; display: grid; gap: 8px; }
+  .name h1 { margin: 0; font: 600 120px/0.92 var(--font-heading); letter-spacing: -0.04em; color: var(--foreground); }
+  .name p { margin: 0; font: 400 14px/20px var(--font-sans); color: var(--muted-foreground); }
+</style>
+<div class="cover">
+  <!--
+    blocks: primary 176×200 slab (radius×1.4), muted-foreground 288×120 bleeding top-right, chart-1 128×64 relief; verdict-wrong / verdict-typo / verdict-exact as 24px tiles only.
+    arrangement: one tall ink slab with a grey satellite bleeding off the top and right edges, all right of x = 480.
+    pattern: literal motif, the review schedule: a row of review tiles whose gaps double (expanding intervals), red to amber to green as the word sticks.
+    scales: tiles 24px = 6 × spacing, radius; gaps 1, 2, 4, 8, 16, 32 × spacing (4 … 128px); slab radius 1.4 × radius.
+  -->
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <rect class="ink slab" x="480" y="-16" width="176" height="216" />
+    <rect class="mid slab" x="672" y="-16" width="304" height="136" />
+    <rect class="tint slab" x="672" y="136" width="128" height="64" />
+    <rect class="wrong tile" x="480" y="232" width="24" height="24" />
+    <rect class="typo tile" x="508" y="232" width="24" height="24" />
+    <rect class="exact tile" x="540" y="232" width="24" height="24" />
+    <rect class="exact tile" x="580" y="232" width="24" height="24" />
+    <rect class="exact tile" x="636" y="232" width="24" height="24" />
+    <rect class="exact tile" x="724" y="232" width="24" height="24" />
+    <rect class="exact tile" x="876" y="232" width="24" height="24" />
+  </svg>
+  <div class="name">
+    <h1>SRS</h1>
+    <p>Typed recall, spaced for memory.</p>
+  </div>
+</div>

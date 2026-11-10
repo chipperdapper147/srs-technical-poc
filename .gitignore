@@ -18,3 +18,5 @@ apps/e2e/scratch/*
 /tmp
 # Neon CLI project link (org, project and branch ids; written by neon init)
 .neon
+# Design system build output (pnpm design:system), published to the artifact
+/packages/design/.system/

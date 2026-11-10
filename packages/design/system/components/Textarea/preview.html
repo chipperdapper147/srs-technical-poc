@@ -1,0 +1,12 @@
+<!-- @dsCard group="Forms" height=190 -->
+<div id="root" style="padding:16px"></div>
+<script>
+const h = React.createElement;
+const S = window.SRS;
+const stack = (...children) => h("div", { style: { display: "grid", gap: "16px", maxWidth: "420px" } }, ...children);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  stack(h("div", { style: { display: "grid", gap: "6px" } },
+    h(S.Label, { htmlFor: "csv" }, "Or paste"),
+    h(S.Textarea, { id: "csv", rows: 4, className: "font-mono text-xs", placeholder: "unit,term,definition,alternatives,notes\nGreetings,hola,hello,," })))
+);
+</script>

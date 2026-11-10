@@ -26,6 +26,7 @@ See [`docs/decisions.md`](docs/decisions.md) for why things are the way they are
 apps/api         Fastify API (src/routes, src/srs.ts, src/import.ts, test/)
 apps/web         Next.js app: src/app (routes), src/views (views + screens), src/platform, src/components/ui
 packages/client  Controllers, view models, API client, React binding, testing kit (shared with mobile)
+packages/design  Design system: tokens.json (one source for web and mobile), generators, system docs
 apps/e2e         Playwright tests: pages/ (page objects), tests/ (specs), support/ (fixtures)
 packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
@@ -71,6 +72,8 @@ on a Linux machine where you are root.
 | `pnpm db:check`                                | Validate migrations and confirm they match `schema.sql` (runs in CI)                  |
 | `pnpm db:seed`                                 | Load the sample course (idempotent)                                                   |
 | `pnpm api:openapi`                             | Regenerate the committed OpenAPI snapshot `apps/api/openapi.json`                     |
+| `pnpm design:build`                            | Regenerate token files from `packages/design/tokens.json` (web CSS, native TS)        |
+| `pnpm design:system`                           | Build the design-system artifact's files into `packages/design/.system/`              |
 
 First e2e run: `pnpm --filter @app/e2e exec playwright install chromium`, or set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium binary.

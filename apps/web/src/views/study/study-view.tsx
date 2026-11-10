@@ -151,9 +151,9 @@ function AnswerInput(props: React.ComponentProps<typeof Input> & { lang: string 
 }
 
 const VERDICT_STYLE: Record<Verdict, string> = {
-  exact: "border-green-600/40 bg-green-600/10",
-  typo: "border-amber-500/40 bg-amber-500/10",
-  wrong: "border-destructive/40 bg-destructive/10",
+  exact: "border-verdict-exact/40 bg-verdict-exact/10",
+  typo: "border-verdict-typo/40 bg-verdict-typo/10",
+  wrong: "border-verdict-wrong/40 bg-verdict-wrong/10",
 };
 
 function FeedbackPanel({ feedback, lang }: { feedback: FeedbackVM; lang: string }) {

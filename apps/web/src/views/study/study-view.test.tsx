@@ -114,6 +114,9 @@ describe("StudyView", () => {
     );
     const status = screen.getByRole("status");
     expect(status.dataset.verdict).toBe("typo");
+    // Tinted with the verdict token (packages/design/tokens.json), never a palette literal.
+    expect(status.className).toContain("border-verdict-typo/40");
+    expect(status.className).toContain("bg-verdict-typo/10");
     expect(status.textContent).toContain("Answer: biblioteca");
     expect(screen.getByRole<HTMLInputElement>("textbox").readOnly).toBe(true);
     expect(screen.queryByRole("button", { name: "Check" })).toBeNull();

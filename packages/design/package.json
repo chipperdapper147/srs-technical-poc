@@ -1,0 +1,29 @@
+{
+  "name": "@app/design",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.json": "./tokens.json"
+  },
+  "scripts": {
+    "build": "node scripts/build-tokens.ts",
+    "system": "node scripts/build-system.ts",
+    "system:check": "node scripts/check-previews.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/node": "24.19.2",
+    "postcss": "8.5.32",
+    "react": "19.3.1",
+    "react-18": "npm:react@18.3.1",
+    "react-dom": "19.3.1",
+    "react-dom-18": "npm:react-dom@18.3.1",
+    "rolldown": "1.2.16",
+    "vitest": "5.1.0"
+  }
+}
