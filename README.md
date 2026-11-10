@@ -32,6 +32,7 @@ packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
 db/seed          Sample course CSV
+db/rehearsal     Production-shaped data generator and invariants for the migration rehearsal
 scripts/verify/  `pnpm verify`: change classes and verification rules (rules.ts), runner
 scripts/         setup-agent-env.sh (cloud session setup), db-check.sh (CI schema guard),
                  check-commit-messages.sh (no session links)
@@ -70,6 +71,9 @@ on a Linux machine where you are root.
 | `pnpm db:migrate`                              | Apply pending migrations to `DATABASE_URL`                                            |
 | `pnpm db:codegen`                              | Regenerate `apps/api/src/db/types.ts` from the migrated DB                            |
 | `pnpm db:check`                                | Validate migrations and confirm they match `schema.sql` (runs in CI)                  |
+| `pnpm db:lint`                                 | Lint new migrations: Squawk and the expand/contract policy (ADR 0003)                 |
+| `pnpm db:rehearse`                             | Apply new migrations to production-shaped data, timed, then check invariants          |
+| `pnpm db:hash`                                 | Re-hash `atlas.sum` after editing a new, unapplied migration                          |
 | `pnpm db:seed`                                 | Load the sample course (idempotent)                                                   |
 | `pnpm api:openapi`                             | Regenerate the committed OpenAPI snapshot `apps/api/openapi.json`                     |
 | `pnpm design:build`                            | Regenerate token files from `packages/design/tokens.json` (web CSS, native TS)        |

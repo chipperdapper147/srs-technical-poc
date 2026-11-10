@@ -73,14 +73,22 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U srs -d srs"
           --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      # migration-lint and migration-rehearsal judge the migrations this change
+      # adds relative to its base branch (on main itself: nothing new).
+      VERIFY_BASE: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the base branch, for what this change adds
       - uses: ./.github/actions/setup
         with:
           atlas: "true"
       - run: psql "$DATABASE_URL" -c "CREATE DATABASE srs_test"
-      - name: Schema, codegen drift, API integration tests, seed
-        run: pnpm verify --all --only db:check,codegen-drift,test:api,db:seed
+      - name: Schema, migration lint and rehearsal, codegen drift, API integration tests, seed
+        run: >-
+          pnpm verify --all
+          --only db:check,migration-lint,codegen-drift,migration-rehearsal,test:api,db:seed
 
   e2e:
     runs-on: ubuntu-latest

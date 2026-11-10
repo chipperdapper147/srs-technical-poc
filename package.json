@@ -21,6 +21,9 @@
     "db:diff": "./scripts/with-env.sh atlas migrate diff --env local",
     "db:migrate": "./scripts/with-env.sh atlas migrate apply --env local",
     "db:check": "./scripts/db-check.sh",
+    "db:lint": "node scripts/schema/lint-migrations.ts",
+    "db:rehearse": "node scripts/schema/rehearse.ts",
+    "db:hash": "./scripts/with-env.sh atlas migrate hash --env local",
     "db:codegen": "pnpm --filter @app/api db:codegen",
     "db:seed": "pnpm --filter @app/api db:seed",
     "api:openapi": "pnpm --filter @app/api openapi",
@@ -33,6 +36,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@types/node": "24.19.2",
+    "squawk-cli": "2.70.0",
     "turbo": "2.11.10",
     "typescript": "6.0.3"
   }

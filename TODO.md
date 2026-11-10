@@ -68,14 +68,36 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
   real layout. Screenshot diffs later.
 - [ ] **Mobile app** (`apps/mobile`, Expo): views, screens and `platform/`
   adapters over `@app/client` (ADR 0002). Add `mobile-*` classes to the rules.
-- [ ] **Breaking-change detection on the OpenAPI snapshot** (e.g. `oasdiff
-  breaking` against the base branch's `apps/api/openapi.json`). Today it is
-  a reviewed diff (`openapi-review` evidence).
-- [ ] **Migration linter** for locking hazards. `atlas migrate lint` needs
-  Atlas Pro, so find a free alternative (e.g. squawk) or extend
-  `scripts/db-check.sh`; add it to the `schema` class.
 - [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.
   Needs the Auth0 integration first.
+
+### Across repositories (ADR 0003)
+
+Principles are decided (compatibility window, expand/contract, every
+unit treated as its own repository); these details are open.
+
+- [ ] **Versioned consumption between units.** Units publish versions and
+  consumers pin exact ones, instead of workspace links. Proposal to evaluate:
+  changesets for versions, a local registry (Verdaccio) in CI and dev.
+- [ ] **Record deployed versions** per environment: production and the rollback
+  candidate, per consumer. Needs the deploy pipeline.
+- [ ] **Compatibility-window test:** run each consumer version in the window
+  (its database-facing tests, from its published artifact) against the
+  migrated schema. Depends on the two items above.
+- [ ] **When is it safe to contract?** Today `contract-readiness` is written
+  evidence. Decide how consumers publish what they use (for example a usage
+  manifest per release) so readiness can be checked automatically.
+- [ ] **HTTP API compatibility with deployed clients** (web, and every supported
+  mobile version): an automated breaking-change check against what's deployed.
+  `oasdiff` (compares two OpenAPI documents and labels breaking changes) is
+  one option, not a decision. Includes tolerant parsing of enums in clients.
+- [ ] **Rehearse on a branch of production** (Neon) instead of generated data,
+  with the deploy. Also set `lock_timeout` and `statement_timeout` on the
+  deploy's migration connection (Squawk's per-file timeout rules are off for
+  that reason).
+- [ ] **In a setup with Atlas Pro**, replace Squawk: the `migration-lint`
+  command becomes `atlas migrate lint --git-base <base>`, and `.squawk.toml`
+  goes.
 
 ### Merge gate and beyond (stages 4–7)
 

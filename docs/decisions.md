@@ -205,3 +205,26 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   export lists come from `Object.keys` of the installed packages.
 - The system documents the UI as it is: shadcn's stock neutral theme. A
   product identity (palette, display face) is a separate decision (TODO).
+
+## 2026-11-10: Verify as if every package were its own repository
+
+- [ADR 0003](adr/0003-verification-across-repositories.md): mechanisms are
+  designed for separate repositories, which is the real setup; changes to the
+  database must not break consumer versions in the compatibility window
+  (production, rollback candidate, deployment candidate); database changes go
+  by expand and contract, without versioned views.
+- **Migration lint: Squawk, standing in for Atlas Pro.** `atlas migrate lint`
+  needs a paid login; the real setup has it. Squawk (`squawk-cli`, a free
+  Postgres migration linter) runs in its place on the migrations a change adds,
+  configured in `.squawk.toml`. Swapping back is one command in `rules.ts`.
+  Rules off: `prefer-robust-stmts` (Atlas runs each file in a transaction),
+  the bigint style rules, and the per-file timeout rules (the deploy's
+  connection sets timeouts).
+- **Expand/contract is enforced on the SQL** (`scripts/schema/classify.ts`),
+  separately from the linter: Squawk judges locking, the policy judges
+  compatibility with running versions. When it is safe to contract is still
+  written evidence (`contract-readiness`).
+- **Rehearsal on generated data** until there is a production branch to use:
+  writing it showed that a UNIQUE on duplicate terms, a SET NOT NULL over
+  existing NULLs, and a backfill that breaks the rating/verdict pairing all
+  pass on an empty database and fail here.
