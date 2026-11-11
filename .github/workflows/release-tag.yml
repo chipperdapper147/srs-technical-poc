@@ -1,0 +1,32 @@
+# Records releases for the compatibility window (ADR 0003): every commit on
+# main whose CI passed gets a `release/<UTC timestamp>-<sha>` tag, the
+# stand-in for "deployed" until the deploy pipeline records what it deploys
+# (TODO.md, "Across repositories"). The compatibility checks take the newest
+# tag as production and the one before as the rollback target
+# (scripts/compat/window.ts).
+name: Release tag
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  tag:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the tag; nothing else
+    steps:
+      - name: Tag the commit CI just passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          tag="release/$(date -u +%Y%m%d-%H%M%S)-${SHA:0:7}"
+          gh api "repos/$REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$SHA" --silent
+          echo "Tagged $SHA as $tag" >> "$GITHUB_STEP_SUMMARY"

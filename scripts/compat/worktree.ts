@@ -1,14 +1,13 @@
 /**
- * The base commit as a runnable checkout: a detached git worktree with its
- * own dependencies, for the compatibility checks (ADR 0003). The base is the
- * merge-base with VERIFY_BASE / origin/main / main, the stand-in for what is
- * deployed until deployed versions are recorded.
+ * A deployed version as a runnable checkout: a detached git worktree with its
+ * own dependencies, for the compatibility checks (ADR 0003). Which versions:
+ * window.ts.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { git, ROOT, type SchemaChange } from "../schema/change.ts";
+import { git, ROOT } from "../schema/change.ts";
 import { remoteDatabases } from "../verify/plan.ts";
 
 export function run(
@@ -66,13 +65,13 @@ export function dropDb(db: string) {
   run("psql", [urlFor("postgres"), "-X", "-q", "-c", `DROP DATABASE IF EXISTS ${db}`]);
 }
 
-/** Check out `change.base` with its dependencies installed; `use` runs in it; always cleaned up. */
-export async function withBaseWorktree<T>(
-  change: SchemaChange,
+/** Check out `sha` with its dependencies installed; `use` runs in it; always cleaned up. */
+export async function withWorktree<T>(
+  sha: string,
   use: (dir: string) => Promise<T> | T,
 ): Promise<T> {
-  const dir = join(mkdtempSync(join(tmpdir(), "srs-compat-")), "base");
-  git("worktree", "add", "--detach", dir, change.base);
+  const dir = join(mkdtempSync(join(tmpdir(), "srs-compat-")), "version");
+  git("worktree", "add", "--detach", dir, sha);
   try {
     // From pnpm's store: fast, and the base's own lockfile decides versions.
     const status = run(
@@ -80,8 +79,7 @@ export async function withBaseWorktree<T>(
       ["install", "--frozen-lockfile", "--prefer-offline", "--ignore-scripts"],
       { cwd: dir },
     );
-    if (status !== 0)
-      throw new Error(`pnpm install failed in the base worktree (${change.base.slice(0, 8)})`);
+    if (status !== 0) throw new Error(`pnpm install failed in the worktree of ${sha.slice(0, 8)}`);
     return await use(dir);
   } finally {
     git("worktree", "remove", "--force", dir);

@@ -132,10 +132,10 @@ Run in this order. Drift checks regenerate a committed file and fail if it chang
 | `migration-lint`      | New migrations: Squawk (stand-in for atlas migrate lint) and the expand/contract policy                                         | `pnpm db:lint`                                                         | —               |
 | `codegen-drift`       | Kysely types match the migrated schema (drift: `apps/api/src/db/types.ts`)                                                      | `pnpm db:migrate && pnpm db:codegen`                                   | postgres, atlas |
 | `migration-rehearsal` | New migrations applied to production-shaped data: timed, invariants hold                                                        | `pnpm db:rehearse`                                                     | postgres, atlas |
-| `compat-old-api`      | The base commit's API passes its integration tests on the new schema                                                            | `pnpm compat:old-api`                                                  | postgres, atlas |
-| `compat-old-client`   | The base commit's web app passes its e2e specs against the new API                                                              | `pnpm compat:old-client`                                               | postgres, atlas |
+| `compat-old-api`      | Production's and the rollback target's API pass their integration tests on the new schema                                       | `pnpm compat:old-api`                                                  | postgres, atlas |
+| `compat-old-client`   | Production's and the rollback target's web apps pass their e2e specs against the new API                                        | `pnpm compat:old-client`                                               | postgres, atlas |
 | `openapi-drift`       | OpenAPI snapshot matches the routes (drift: `apps/api/openapi.json`)                                                            | `pnpm api:openapi`                                                     | —               |
-| `openapi-breaking`    | The OpenAPI spec makes no breaking change against the base (oasdiff)                                                            | `pnpm api:breaking`                                                    | oasdiff         |
+| `openapi-breaking`    | The OpenAPI spec makes no breaking change against production or the rollback target (oasdiff)                                   | `pnpm api:breaking`                                                    | oasdiff         |
 | `design-drift`        | Generated token files match packages/design/tokens.json (drift: `packages/design/src/tokens.ts`, `apps/web/src/app/tokens.css`) | `pnpm design:build`                                                    | —               |
 | `test:shared`         | Shared unit tests                                                                                                               | `pnpm --filter @app/shared test`                                       | —               |
 | `test:design`         | Design token generator tests                                                                                                    | `pnpm --filter @app/design test`                                       | —               |
@@ -166,14 +166,14 @@ description.
 
 On a PR, each owed item due `pr` must be ticked in the description (`- [x] \`<id>\``) or the `obligations` job fails.
 
-| Evidence                                                                                       | Due         | How                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visual-check`: Agent visual check of the changed screens                                      | pr          | Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.                                                                                                                                                                                                                                   |
-| `openapi-review`: Review the OpenAPI snapshot diff                                             | pr          | Read the apps/api/openapi.json diff for what `openapi-breaking` cannot judge: a field whose meaning, units or default changed, and whether each new field and path is what clients need. Say in the PR what changes for clients.                                                                                                                                        |
-| `lockfile-review`: Review the lockfile diff                                                    | pr          | New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.                                                                                                                                                                                                                                                                  |
-| `contract-readiness`: Nothing in the compatibility window still uses what the contract removes | pr          | For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. `compat-old-api` proves it for the API at the base branch; cover any other consumer, and the deployed versions once they are recorded. |
-| `design-publish`: Republish the design-system artifact                                         | after-merge | After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.                                                                                                                                                                                                |
-| `ci-run`: Green CI run of the change                                                           | ci          | Tooling changes affect CI itself; push and link the run.                                                                                                                                                                                                                                                                                                                |
+| Evidence                                                                                       | Due         | How                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `visual-check`: Agent visual check of the changed screens                                      | pr          | Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.                                                                                                                                                                                                    |
+| `openapi-review`: Review the OpenAPI snapshot diff                                             | pr          | Read the apps/api/openapi.json diff for what `openapi-breaking` cannot judge: a field whose meaning, units or default changed, and whether each new field and path is what clients need. Say in the PR what changes for clients.                                                                                                         |
+| `lockfile-review`: Review the lockfile diff                                                    | pr          | New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.                                                                                                                                                                                                                                   |
+| `contract-readiness`: Nothing in the compatibility window still uses what the contract removes | pr          | For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. `compat-old-api` proves it for the API of production and the rollback target; cover any other consumer. |
+| `design-publish`: Republish the design-system artifact                                         | after-merge | After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.                                                                                                                                                                 |
+| `ci-run`: Green CI run of the change                                                           | ci          | Tooling changes affect CI itself; push and link the run.                                                                                                                                                                                                                                                                                 |
 
 ### E2E map
 
@@ -229,24 +229,39 @@ four changes, each deployed before the next:
   each timed (over `REHEARSAL_MAX_SECONDS`, default 20 s, fails), then every
   invariant in `db/rehearsal/invariants/`. It also checks that the head
   `seed.sql` fits the head schema, so a schema change updates the generator.
-- `compat-old-api`: checks out the base commit (the stand-in for production
-  and the rollback candidate) in a git worktree, swaps in this change's
+- `compat-old-api`: checks out each version in the window (production and the
+  rollback target) in a git worktree, swaps in this change's
   migrations, and runs that old API's integration tests on the result. It
   fails when the old API can't work on the new schema. A contract migration
-  passes only once no API code at the base still uses what it removes. Runs
+  passes only once neither of those APIs still uses what it removes. Runs
   when a change adds migrations.
 
 Applied migrations are immutable. A new, unapplied migration may be edited for
 what the linter asks (`CONCURRENTLY` with `-- atlas:txmode none`, `NOT VALID`
 and a separate `VALIDATE`), followed by `pnpm db:hash`.
 
+## The compatibility window
+
+`openapi-breaking`, `compat-old-api` and `compat-old-client` check a change
+(the deployment candidate) against each deployed version in the window
+([ADR 0003](adr/0003-verification-across-repositories.md)):
+
+- **production**, the newest `release/*` tag;
+- **the rollback target**, the release before it.
+
+`.github/workflows/release-tag.yml` tags every commit on main whose CI
+passed, the stand-in for a deploy until the deploy pipeline records what
+it deploys (TODO.md has the desired state). With no tags yet, or in a clone
+without them, the checks fall back to the merge-base with main. A branch
+that is behind production can fail `openapi-breaking` for an API change
+main made since; rebase it. `scripts/compat/window.ts` picks the versions.
+
 ## API changes
 
 The HTTP API is the other interface with more than one consumer: the web app
 already loaded in users' browsers, and later each supported mobile version.
-`openapi-breaking` compares the head `apps/api/openapi.json` with the base
-branch's copy (the stand-in for production until deployed versions are
-recorded) using [oasdiff](https://github.com/oasdiff/oasdiff), and fails on a
+`openapi-breaking` compares the head `apps/api/openapi.json` with the copy
+of each version in the compatibility window using [oasdiff](https://github.com/oasdiff/oasdiff), and fails on a
 breaking change. Breaking changes include a removed path or response field, a
 response field that became optional, a newly required request field, and a
 narrowed type.
@@ -264,9 +279,9 @@ Say why in the PR. `openapi-review` still covers what oasdiff can't judge,
 such as a field whose meaning changed.
 
 `compat-old-client` covers what oasdiff can't see, such as behaviour, error
-handling and data. It checks out the base commit, builds its web app for an
+handling and data. For each version in the window it builds that web app for an
 API on port 4100, starts the head API there on a scratch database with the
-head migrations and seed, and runs the base commit's e2e specs (Chromium)
+head migrations and seed, and runs that version's e2e specs (Chromium)
 against the old app on port 3100. It runs when a change touches
 `apps/api/`, `packages/shared/`, `db/` or the compatibility tooling, in CI's
 `e2e` job.
@@ -398,7 +413,7 @@ the tests until someone decides what verifying it means.
 | Atlas drift guard, codegen drift check                                      | ✅                                                 |
 | Playwright e2e with page objects                                            | ✅ local and in CI (Chromium, production build)    |
 | Change classes, obligations and `pnpm verify`                               | ✅ local, pre-push and CI                          |
-| OpenAPI snapshot with drift check, breaking changes vs the base (oasdiff)   | ✅                                                 |
+| OpenAPI snapshot with drift check, breaking changes vs the window (oasdiff) | ✅                                                 |
 | Property-based tests (grading)                                              | ✅                                                 |
 | Pre-commit hook (Biome on staged files)                                     | ✅                                                 |
 | Parallel CI jobs behind one `check` gate                                    | ✅                                                 |

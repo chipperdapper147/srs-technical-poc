@@ -304,3 +304,16 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - It runs when a change touches the API, the shared contracts or the
   schema, in CI's `e2e` job (Chromium only). oasdiff checks the contract's
   shape; this checks behaviour.
+
+## 2026-11-11: The window is production and the rollback target, from release tags
+
+- The compatibility checks run against the two newest `release/*` tags
+  (production and the rollback target), not the merge-base alone. The
+  deployment candidate is the change itself.
+- With rebase merges one PR lands as several commits, and only some get a
+  green CI run, so "the previous commit" isn't a release. A tag written
+  after CI passes on main is.
+- `release-tag.yml` writes the tags (contents: write, nothing else). It is a
+  stand-in. The long-term state, with deploys recorded per environment and
+  per unit, is in TODO.md. Until a tag exists the checks use the merge-base,
+  as before.
