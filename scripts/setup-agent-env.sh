@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Bring a Claude Code cloud container (or any Linux box with Docker, as root)
 # to the state `pnpm verify` needs: Node 24, pnpm, Docker running, Atlas,
-# .env, dependencies, Postgres 18 up, migrated and seeded.
+# .env, dependencies, Postgres 18 up, migrated and seeded. Also the Neon CLI
+# and the deployed database's connection strings in .env.neon (optional:
+# setup continues without them).
 #
 # Idempotent and fast when nothing changed: every step checks before it acts.
 # Run by .claude/hooks/session-start.sh at the start of every cloud session;
@@ -13,12 +15,16 @@ set -euo pipefail
 NODE_VERSION=24.22.2 # keep on the .nvmrc major; bump deliberately
 ATLAS_VERSION=1.3.8  # keep in sync with .github/actions/setup and README
 OASDIFF_VERSION=1.34.1  # keep in sync with .github/actions/setup
+NEON_VERSION=8.18.0     # the `neon` npm package; at least 7 days old when bumped
+NEON_DEPS_BEFORE=2026-11-04 # its dependencies resolve as of this date (npm --before)
+NEON_PROJECT_ID=muddy-field-12956530 # docs/decisions.md, 2026-11-09
 TOOLS="${SRS_TOOLS_DIR:-/opt/srs-tools}"
 LOG="${TMPDIR:-/tmp}/srs-agent-setup.log"
 
 cd "$(dirname "$0")/.."
 : >"$LOG"
 step() { printf 'setup: %s\n' "$*"; }
+note() { printf 'setup: note: %s (details: %s)\n' "$*" "$LOG"; }
 fail() {
   printf 'setup: FAILED: %s (details: %s)\n' "$*" "$LOG"
   tail -n 20 "$LOG" | sed 's/^/  | /'
@@ -72,7 +78,15 @@ want="$(sed -n 's/.*"packageManager": "pnpm@\([^"]*\)".*/\1/p' package.json)"
 if ! docker info >/dev/null 2>&1; then
   command -v dockerd >/dev/null || fail "Docker is not installed and no daemon is running"
   step "starting the Docker daemon"
-  setsid nohup dockerd >"${TMPDIR:-/tmp}/dockerd.log" 2>&1 </dev/null &
+  # Close every inherited descriptor above stderr first: the daemon outlives
+  # this script and would otherwise keep a caller's lock (e.g. flock) held.
+  (
+    for fd in /proc/self/fd/*; do
+      fd="${fd##*/}"
+      if [ "$fd" -gt 2 ]; then { exec {fd}>&-; } 2>/dev/null; fi
+    done
+    exec setsid nohup dockerd >"${TMPDIR:-/tmp}/dockerd.log" 2>&1 </dev/null
+  ) &
   for _ in $(seq 60); do docker info >/dev/null 2>&1 && break; sleep 0.5; done
   docker info >/dev/null 2>&1 || fail "Docker daemon did not start (see ${TMPDIR:-/tmp}/dockerd.log)"
 fi
@@ -113,5 +127,40 @@ fi
 run pnpm db:up || fail "starting Postgres (pnpm db:up)"
 run pnpm db:migrate || fail "applying migrations (pnpm db:migrate)"
 run pnpm db:seed || fail "seeding (pnpm db:seed)"
+
+# --- Neon: CLI and .env.neon (optional; never fails the setup) ---------------
+# Installed into Node's global prefix, so a Node reinstall reinstalls it too.
+if [ "$(neon --version 2>/dev/null)" != "$NEON_VERSION" ]; then
+  step "installing the Neon CLI $NEON_VERSION"
+  run npm install --global --ignore-scripts --before "$NEON_DEPS_BEFORE" "neon@$NEON_VERSION" ||
+    note "could not install the Neon CLI; .env.neon is not pulled"
+fi
+# Neon variables go only into the git-ignored .env.neon, never into .env (see
+# AGENTS.md). In cloud sessions the API key is a network secret that the proxy
+# injects for console.neon.tech, so the CLI gets a placeholder it replaces.
+if [ ! -f .env.neon ] && [ "$(neon --version 2>/dev/null)" = "$NEON_VERSION" ]; then
+  if [ -z "${NEON_API_KEY:-}" ] && [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+    neon_key=replaced-by-the-proxy
+  else
+    neon_key="${NEON_API_KEY:-}"
+  fi
+  if [ -z "$neon_key" ]; then
+    note "no NEON_API_KEY; .env.neon is not pulled"
+  else
+    env_before="$(sha256sum .env)"
+    if NEON_API_KEY="$neon_key" run neon env pull --project-id "$NEON_PROJECT_ID" \
+      --branch production --service postgres --file .env.neon --no-color; then
+      chmod 600 .env.neon
+      step "pulled .env.neon (Neon connection strings)"
+    else
+      rm -f .env.neon
+      note "could not pull .env.neon (is the Neon API key saved on the environment?)"
+    fi
+    if [ "$(sha256sum .env)" != "$env_before" ]; then
+      cp .env.example .env
+      note "the Neon CLI changed .env; restored it from .env.example"
+    fi
+  fi
+fi
 
 step "ready: node $(node --version), pnpm $(pnpm --version), atlas v$ATLAS_VERSION, Postgres up and seeded. Verify changes with \`pnpm verify\`."

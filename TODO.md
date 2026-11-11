@@ -58,8 +58,6 @@ step starts with something only the repo owner can do.
   sessions can't reach Neon over TCP, so this runs only in CI.
 - [ ] **A Neon branch per preview deploy**, so stage 4 runs against a copy of
   production. This also replaces the generated rehearsal data (ADR 0003).
-- [ ] **Setup script:** install the Neon CLI and pull `.env.neon` in cloud
-  sessions (the API key is already saved on the environment).
 
 ## 5. Verification mechanisms
 
