@@ -25,8 +25,8 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
   repos (confirm in settings). Either transfer the repo to an organization, or
   rely on "up to date before merging" plus auto-merge.
 - [ ] **Environments** `preview` and `production`, holding the Auth0 and deploy
-  secrets, with `production` limited to `main`. Blocked on the deploy target
-  (section 3) and the Auth0 integration (section 5).
+  secrets, with `production` limited to `main`. Blocked on the deploy setup
+  (section 4) and the Auth0 integration (section 7).
 
 ## 2. Housekeeping after the move
 
@@ -36,13 +36,29 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
 
 ## 3. Decisions needed
 
-- [ ] **Deploy target** (Vercel / Fly / Railway / other), an open question in
-  ADR 0001. It decides whether preview environments, and the real-integration
-  tier that runs against them, are possible.
 - [ ] **Confirm plain `.githooks/`** as the hook manager (decided provisionally
   on 2026-11-09, see `docs/decisions.md`; reverse it if lefthook is wanted).
 
-## 4. Verification mechanisms
+## 4. Deploy (Vercel Hobby + Neon)
+
+Decided on 2026-11-11 (decisions log). Needs accounts and secrets, so each
+step starts with something only the repo owner can do.
+
+- [ ] **Vercel projects** for `apps/web` and `apps/api` (owner: create them and
+  connect the repository).
+- [ ] **Trial the API on Vercel.** Open risks: Fastify's zero-config detection
+  with our build-free TypeScript (`.ts` run directly, `@app/shared` as source),
+  the entry point (`server.ts` calls `listen()`), and a smaller connection pool
+  on Neon's pooled URL.
+- [ ] **Migrations from CI against Neon**, with the direct
+  (`DATABASE_URL_UNPOOLED`) URL as a GitHub environment secret. Cloud agent
+  sessions can't reach Neon over TCP, so this runs only in CI.
+- [ ] **A Neon branch per preview deploy**, so stage 4 runs against a copy of
+  production. This also replaces the generated rehearsal data (ADR 0003).
+- [ ] **Setup script:** install the Neon CLI and pull `.env.neon` in cloud
+  sessions (the API key is already saved on the environment).
+
+## 5. Verification mechanisms
 
 Grouped by the stages in `docs/verification.md`. Each new check lands in
 `scripts/verify/rules.ts` (a `Check`, plus the classes that require it), so
@@ -110,7 +126,7 @@ Not blocked, can start now:
   projects. Run them nightly first; move them into the merge gate once
   they are stable.
 
-Blocked on the deploy target and the Auth0 integration:
+Blocked on the deploy setup (section 4) and the Auth0 integration:
 
 - [ ] **Stage 4, merge gate:** deploy a preview and run the real-integration
   smoke with real Auth0. Run migrations on a production-like copy of the data.
@@ -125,7 +141,7 @@ Blocked on the deploy target and the Auth0 integration:
   links. Today only `attribution.sessionUrl` and the `AGENTS.md` rule cover PR
   descriptions.
 
-## 5. Design
+## 6. Design
 
 - [ ] **A product identity.** The design system documents shadcn's stock
   neutral theme. Decide a palette, a display face and the verdict colours,
@@ -135,7 +151,7 @@ Blocked on the deploy target and the Auth0 integration:
 - [ ] **Dark theme is unreachable**: defined in tokens, but nothing sets
   `.dark`. Follow the OS setting, or add a toggle in Settings.
 
-## 6. Product
+## 7. Product
 
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client. This unblocks the Auth0

@@ -228,3 +228,19 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   writing it showed that a UNIQUE on duplicate terms, a SET NOT NULL over
   existing NULLs, and a backfill that breaks the rating/verdict pairing all
   pass on an empty database and fail here.
+
+## 2026-11-11: Deploy target: Vercel Hobby and Neon
+
+- **Vercel Hobby** hosts both apps as separate projects: the Next.js web app
+  (server features included), and the Fastify API as a Vercel Function
+  (Vercel supports Fastify without configuration). Each pull request gets a
+  preview deploy of both, which is what the merge gate (verification stage 4)
+  runs against.
+- **Neon** hosts Postgres 18 (project `muddy-field-12956530`, eu-central-1).
+  Its branches give each preview, and later each migration rehearsal, a copy
+  of production.
+- Hobby is for personal, non-commercial use. A product with revenue moves to
+  Vercel Pro.
+- Risks to settle in a trial before relying on it, and the steps that need
+  the owner's accounts and secrets: `TODO.md`, section 4. This closes the
+  open question in ADR 0001.

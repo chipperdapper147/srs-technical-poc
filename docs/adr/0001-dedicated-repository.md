@@ -43,7 +43,8 @@ verification process in [`../verification.md`](../verification.md) enforced ther
 ## Open questions
 
 - ~~Repository name.~~ `srs-technical-poc`.
-- Deploy target (Vercel / Fly / Railway / other). This decides whether preview
-  environments, and the real-integration tier that runs against them, are possible.
+- ~~Deploy target.~~ Vercel Hobby for the web app and the API, Neon for
+  Postgres (decisions log, 2026-11-11). Both give a preview per pull request,
+  so the merge gate and the real-integration tier are possible.
 - ~~Pre-commit hooks (e.g. lefthook) vs CI-only enforcement.~~ Plain
   `.githooks/` plus CI, provisionally (decisions log, 2026-11-09).
