@@ -134,7 +134,7 @@ jobs:
         run: pnpm db:migrate && pnpm db:seed
 
       - name: Install Playwright browser
-        run: pnpm --filter @app/e2e exec playwright install --with-deps chromium
+        run: ./scripts/install-browsers.sh chromium
 
       - name: Production build, design-system previews, e2e (real API and Postgres), then the base web app against this API
         run: pnpm verify --all --only build:web,design-system,e2e,compat-old-client
