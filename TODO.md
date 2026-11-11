@@ -185,6 +185,8 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 - [ ] **Reverse and listening modes** (issue #24).
 - [ ] **Mobile app** (issue #25); its verification is under "Missing test
   kinds" above.
+- Candidate features that aren't chosen yet are in
+  [`docs/product-ideas.md`](docs/product-ideas.md); they aren't TODOs.
 - Open product questions are tracked in
   [`docs/decisions.md`](docs/decisions.md#open-questions). The learn-session
   interval is decided (learning steps); mapping fast answers to Easy is
