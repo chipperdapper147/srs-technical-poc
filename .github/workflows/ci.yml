@@ -120,8 +120,13 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres: *postgres
+    env:
+      # compat-old-client runs the base branch's web app and specs.
+      VERIFY_BASE: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the base branch, for compat-old-client
       - uses: ./.github/actions/setup
         with:
           atlas: "true"
@@ -131,8 +136,8 @@ jobs:
       - name: Install Playwright browser
         run: pnpm --filter @app/e2e exec playwright install --with-deps chromium
 
-      - name: Production build, design-system previews, then e2e (real API and Postgres)
-        run: pnpm verify --all --only build:web,design-system,e2e
+      - name: Production build, design-system previews, e2e (real API and Postgres), then the base web app against this API
+        run: pnpm verify --all --only build:web,design-system,e2e,compat-old-client
 
       - name: Upload Playwright report
         if: failure()

@@ -24,6 +24,7 @@
     "db:lint": "node scripts/schema/lint-migrations.ts",
     "db:rehearse": "node scripts/schema/rehearse.ts",
     "compat:old-api": "node scripts/compat/old-api.ts",
+    "compat:old-client": "node scripts/compat/old-client.ts",
     "db:hash": "./scripts/with-env.sh atlas migrate hash --env local",
     "db:codegen": "pnpm --filter @app/api db:codegen",
     "db:seed": "pnpm --filter @app/api db:seed",
