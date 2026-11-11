@@ -101,10 +101,11 @@ unit treated as its own repository); these details are open.
   evidence. Decide how consumers publish what they use (for example a usage
   manifest per release) so readiness can be checked automatically.
 - [ ] **HTTP API compatibility with deployed clients**: `openapi-breaking`
-  (oasdiff) compares against the base branch's spec. Once deployed versions
-  are recorded, compare against every deployed client's version (web, and
-  each supported mobile release) instead. Also: tolerant parsing of enums in
-  clients.
+  (oasdiff) compares against the base branch's spec, and `compat-old-client`
+  runs the base branch's web app and specs against the new API. Once
+  deployed versions are recorded, test every deployed client version (web,
+  and each supported mobile release) instead. Also: tolerant parsing of
+  enums in clients.
 - [ ] **Rehearse on a branch of production** (Neon) instead of generated data,
   with the deploy. Also set `lock_timeout` and `statement_timeout` on the
   deploy's migration connection (Squawk's per-file timeout rules are off for

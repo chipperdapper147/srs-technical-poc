@@ -292,3 +292,15 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - It turns "expand/contract keeps old versions working" from a policy into
   a test. It also checks the API part of `contract-readiness`: a contract
   migration passes only once the base API no longer uses what it removes.
+
+## 2026-11-11: The old web app is tested against the new API
+
+- `compat-old-client` builds the base commit's web app for the head API,
+  runs the head API on a scratch database (head migrations and seed), and
+  runs the base commit's e2e specs against them.
+- The base stands in for the client already loaded in users' browsers. The
+  web app and the API deploy separately, so a new API always serves old
+  clients for a while.
+- It runs when a change touches the API, the shared contracts or the
+  schema, in CI's `e2e` job (Chromium only). oasdiff checks the contract's
+  shape; this checks behaviour.

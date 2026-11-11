@@ -28,6 +28,7 @@ export type CheckId =
   | "migration-lint"
   | "migration-rehearsal"
   | "compat-old-api"
+  | "compat-old-client"
   | "codegen-drift"
   | "openapi-drift"
   | "openapi-breaking"
@@ -102,6 +103,12 @@ export const CHECKS: Check[] = [
     id: "compat-old-api",
     title: "The base commit's API passes its integration tests on the new schema",
     command: "pnpm compat:old-api",
+    needs: ["postgres", "atlas"],
+  },
+  {
+    id: "compat-old-client",
+    title: "The base commit's web app passes its e2e specs against the new API",
+    command: "pnpm compat:old-client",
     needs: ["postgres", "atlas"],
   },
   {
@@ -382,6 +389,7 @@ export const CLASSES: ChangeClass[] = [
       "migration-rehearsal",
       "compat-old-api",
       "test:api",
+      "compat-old-client",
       "db:seed",
     ],
     e2e: "all",
@@ -401,6 +409,7 @@ export const CLASSES: ChangeClass[] = [
       "migration-rehearsal",
       "compat-old-api",
       "test:api",
+      "compat-old-client",
       "db:seed",
     ],
     e2e: "all",
@@ -444,7 +453,14 @@ export const CLASSES: ChangeClass[] = [
     side: "backend",
     title: "API routes, plugins and app wiring",
     paths: ["apps/api/src/routes/**", "apps/api/src/plugins/**", "apps/api/src/app.ts"],
-    checks: ["lint", "typecheck", "openapi-drift", "openapi-breaking", "test:api"],
+    checks: [
+      "lint",
+      "typecheck",
+      "openapi-drift",
+      "openapi-breaking",
+      "test:api",
+      "compat-old-client",
+    ],
     e2e: "mapped",
     obligations: ["api-test"],
   },
@@ -453,7 +469,14 @@ export const CLASSES: ChangeClass[] = [
     side: "backend",
     title: "API domain logic (scheduling, import, config)",
     paths: ["apps/api/**"],
-    checks: ["lint", "typecheck", "openapi-drift", "openapi-breaking", "test:api"],
+    checks: [
+      "lint",
+      "typecheck",
+      "openapi-drift",
+      "openapi-breaking",
+      "test:api",
+      "compat-old-client",
+    ],
     e2e: "mapped",
     obligations: ["api-test"],
   },
@@ -473,6 +496,7 @@ export const CLASSES: ChangeClass[] = [
       "test:client",
       "test:web",
       "test:api",
+      "compat-old-client",
     ],
     e2e: "all",
     obligations: ["api-test"],
@@ -490,7 +514,15 @@ export const CLASSES: ChangeClass[] = [
     side: "shared",
     title: "Shared logic (grading)",
     paths: ["packages/shared/**"],
-    checks: ["lint", "typecheck", "test:shared", "test:client", "test:web", "test:api"],
+    checks: [
+      "lint",
+      "typecheck",
+      "test:shared",
+      "test:client",
+      "test:web",
+      "test:api",
+      "compat-old-client",
+    ],
     e2e: "mapped",
     obligations: ["shared-test"],
   },

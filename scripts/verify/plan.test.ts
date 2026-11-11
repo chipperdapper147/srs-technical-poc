@@ -20,6 +20,7 @@ describe("classify", () => {
     ["scripts/db-check.sh", "tooling"],
     ["scripts/contract/openapi-breaking.ts", "tooling"],
     ["scripts/compat/old-api.ts", "tooling"],
+    ["scripts/compat/old-client.ts", "tooling"],
     [".squawk.toml", "tooling"],
     [".github/pull_request_template.md", "tooling"],
     ["db/schema.sql", "schema"],

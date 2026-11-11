@@ -71,15 +71,15 @@ consumer's code at one commit doesn't exist at all.
 
 ## What exists now, and what is open
 
-| Mechanism              | Now                                                                                                        | Target                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Migration lint         | Squawk on the migrations a change adds (`migration-lint`)                                                  | `atlas migrate lint --git-base`                                                                       |
-| Expand/contract policy | Enforced on migration SQL (`migration-lint`); contract readiness is manual evidence (`contract-readiness`) | Readiness proven automatically from the consumers' published usage (open)                             |
-| Rehearsal              | Local Postgres with generated data (`migration-rehearsal`)                                                 | A per-change branch of production in Neon (open, with the deploy)                                     |
-| Versioned consumption  | Workspace links (same commit)                                                                              | Units publish versions; consumers pin exact versions (open)                                           |
-| Compatibility window   | The base commit's API runs its integration tests on the migrated schema (`compat-old-api`)                 | Each consumer version in the window runs its database-facing tests against the migrated schema (open) |
-| Deployed versions      | Not recorded                                                                                               | The deploy pipeline records production and the rollback candidate per environment (open)              |
-| HTTP API compatibility | oasdiff against the base branch's spec (`openapi-breaking`), plus review of the diff                       | The same check against each deployed client's version (open)                                          |
+| Mechanism              | Now                                                                                                                           | Target                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Migration lint         | Squawk on the migrations a change adds (`migration-lint`)                                                                     | `atlas migrate lint --git-base`                                                                       |
+| Expand/contract policy | Enforced on migration SQL (`migration-lint`); contract readiness is manual evidence (`contract-readiness`)                    | Readiness proven automatically from the consumers' published usage (open)                             |
+| Rehearsal              | Local Postgres with generated data (`migration-rehearsal`)                                                                    | A per-change branch of production in Neon (open, with the deploy)                                     |
+| Versioned consumption  | Workspace links (same commit)                                                                                                 | Units publish versions; consumers pin exact versions (open)                                           |
+| Compatibility window   | The base commit's API runs its integration tests on the migrated schema (`compat-old-api`)                                    | Each consumer version in the window runs its database-facing tests against the migrated schema (open) |
+| Deployed versions      | Not recorded                                                                                                                  | The deploy pipeline records production and the rollback candidate per environment (open)              |
+| HTTP API compatibility | oasdiff against the base branch's spec (`openapi-breaking`); the base web app's e2e against the new API (`compat-old-client`) | The same checks against each deployed client's version (open)                                         |
 
 ## Consequences
 
