@@ -255,3 +255,15 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   re-runs it. The whole workflow repeats rather than only that job: skipping
   jobs on an edit would let a green `check` from the edit replace a red one
   from the same commit.
+
+## 2026-11-11: Waivers and manual evidence in the PR description
+
+- CI's `obligations` job reads the PR description (`VERIFY_PR_BODY`, passed
+  as data). Its `Verify-Waive:` lines count like commit trailers, which reads
+  more naturally than amending commits.
+- Each evidence item now says when it is due. Items due `pr` must be ticked
+  in the description (`- [x] \`<id>\``, one box per item in
+  `.github/pull_request_template.md`), or the job fails. `design-publish`is
+  due after merge and only listed;`ci-run`is met by the green`check`.
+- A ticked box is the author's attestation, with what they did beside it.
+  CI can't judge a screenshot, but it can make sure nobody forgot one.

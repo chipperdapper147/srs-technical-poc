@@ -40,15 +40,20 @@ export function renderRules(): string {
   out.push("", "### Obligations", "");
   out.push(
     "A class with an obligation must ship with a matching test change, or a",
-    "`Verify-Waive: <id>: <reason>` trailer on one of the branch's commits.",
+    "`Verify-Waive: <id>: <reason>` line in one of the branch's commits or the PR",
+    "description.",
   );
   out.push("", "| Obligation | Met by a change to |", "| --- | --- |");
   for (const o of OBLIGATIONS) {
     out.push(`| ${code(o.id)}: ${o.title} | ${o.metBy.map(glob).join(", ")} |`);
   }
   out.push("", "### Manual evidence", "");
-  out.push("| Evidence | How |", "| --- | --- |");
-  for (const e of EVIDENCE) out.push(`| ${code(e.id)}: ${e.title} | ${e.how} |`);
+  out.push(
+    "On a PR, each owed item due `pr` must be ticked in the description (`- [x] \\`<id>\\``) or the `obligations` job fails.",
+    "",
+  );
+  out.push("| Evidence | Due | How |", "| --- | --- | --- |");
+  for (const e of EVIDENCE) out.push(`| ${code(e.id)}: ${e.title} | ${e.due} | ${e.how} |`);
   out.push("", "### E2E map", "");
   out.push("For classes with mapped specs. A file with no entry runs the whole suite.", "");
   out.push("| Source files | Specs |", "| --- | --- |");

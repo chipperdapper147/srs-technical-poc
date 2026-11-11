@@ -24,11 +24,11 @@ below are generated from it, and CI fails if they drift apart.
 
 Who enforces what:
 
-| Part            | Locally                                                          | CI on a PR                                                   |
-| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ |
-| Checks          | `pnpm verify`, targeted to the diff                              | every check, full scope (`pnpm verify --all`, parallel jobs) |
-| Obligations     | `pnpm verify`, and the pre-push hook                             | the `obligations` job                                        |
-| Manual evidence | `pnpm verify` lists what's owed; the author or agent supplies it | the job summary lists it; the PR description carries it      |
+| Part            | Locally                                                          | CI on a PR                                                     |
+| --------------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| Checks          | `pnpm verify`, targeted to the diff                              | every check, full scope (`pnpm verify --all`, parallel jobs)   |
+| Obligations     | `pnpm verify`, and the pre-push hook                             | the `obligations` job                                          |
+| Manual evidence | `pnpm verify` lists what's owed; the author or agent supplies it | the `obligations` job: each owed box ticked in the description |
 
 Rules of thumb behind the classes:
 
@@ -51,14 +51,27 @@ pnpm verify --skip e2e="no browser in this sandbox"   # listed as skipped, still
 pnpm verify --waive api-test="pure rename"            # for uncommitted work
 ```
 
-Waive an obligation in a commit with a trailer, so the reason travels with
-the change and CI sees it:
+Waive an obligation with a line of its own in a commit message (a trailer,
+so the reason travels with the change) or in the PR description; CI reads
+both:
 
 ```
 Verify-Waive: e2e-spec: spacing-only change, covered by the visual check
 ```
 
-An unknown id in a trailer fails the run, so a typo can't waive nothing.
+An unknown id fails the run, so a typo can't waive nothing.
+
+Supply manual evidence in the PR description. The template
+(`.github/pull_request_template.md`) has one box per evidence item due before
+merge; tick each one the report lists as owed and say what you did beside it:
+
+```
+- [x] `visual-check` changed screens, desktop and mobile: screenshots below, no console errors
+```
+
+The `obligations` job reads the description (CI re-runs when it is edited)
+and fails while an owed box is unticked or a ticked id is unknown. Items due
+after merge (`design-publish`) are only listed; `ci-run` is met by CI itself.
 `pnpm verify` needs Postgres (`pnpm db:setup`), Atlas and Docker for the
 checks that use them; a missing dependency shows as **blocked**, not passed.
 
@@ -134,7 +147,8 @@ Run in this order. Drift checks regenerate a committed file and fail if it chang
 ### Obligations
 
 A class with an obligation must ship with a matching test change, or a
-`Verify-Waive: <id>: <reason>` trailer on one of the branch's commits.
+`Verify-Waive: <id>: <reason>` line in one of the branch's commits or the PR
+description.
 
 | Obligation                                                         | Met by a change to                       |
 | ------------------------------------------------------------------ | ---------------------------------------- |
@@ -147,14 +161,16 @@ A class with an obligation must ship with a matching test change, or a
 
 ### Manual evidence
 
-| Evidence                                                                                       | How                                                                                                                                                                                                                                                                                                        |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visual-check`: Agent visual check of the changed screens                                      | Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.                                                                                                                                                                      |
-| `openapi-review`: Review the OpenAPI snapshot diff                                             | Read the apps/api/openapi.json diff. A removed path, a removed or newly required request field, or a removed or narrowed response field is breaking; say so in the PR.                                                                                                                                     |
-| `lockfile-review`: Review the lockfile diff                                                    | New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.                                                                                                                                                                                                     |
-| `contract-readiness`: Nothing in the compatibility window still uses what the contract removes | For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. Until deployed versions are recorded, search the code at the base branch. |
-| `design-publish`: Republish the design-system artifact                                         | After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.                                                                                                                                   |
-| `ci-run`: Green CI run of the change                                                           | Tooling changes affect CI itself; push and link the run.                                                                                                                                                                                                                                                   |
+On a PR, each owed item due `pr` must be ticked in the description (`- [x] \`<id>\``) or the `obligations` job fails.
+
+| Evidence                                                                                       | Due         | How                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `visual-check`: Agent visual check of the changed screens                                      | pr          | Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.                                                                                                                                                                      |
+| `openapi-review`: Review the OpenAPI snapshot diff                                             | pr          | Read the apps/api/openapi.json diff. A removed path, a removed or newly required request field, or a removed or narrowed response field is breaking; say so in the PR.                                                                                                                                     |
+| `lockfile-review`: Review the lockfile diff                                                    | pr          | New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.                                                                                                                                                                                                     |
+| `contract-readiness`: Nothing in the compatibility window still uses what the contract removes | pr          | For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. Until deployed versions are recorded, search the code at the base branch. |
+| `design-publish`: Republish the design-system artifact                                         | after-merge | After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.                                                                                                                                   |
+| `ci-run`: Green CI run of the change                                                           | ci          | Tooling changes affect CI itself; push and link the run.                                                                                                                                                                                                                                                   |
 
 ### E2E map
 

@@ -16,6 +16,10 @@
  *   --only <a,b,...>      run only these checks of the plan (CI splits jobs this way)
  *   --report <file>       also write the report to a file
  *   --json                print the plan as JSON (with `plan`)
+ *
+ * VERIFY_PR_BODY (set by CI's obligations job on a pull request): the PR
+ * description. Its `Verify-Waive:` lines count as waivers, and every owed
+ * evidence item due before merge must be ticked in it (`- [x] \`<id>\``).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,7 +28,7 @@ import { createConnection } from "node:net";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { injectRules } from "./docs.ts";
-import { type Plan, parseWaivers, plan, remoteDatabases } from "./plan.ts";
+import { type Plan, parseEvidence, parseWaivers, plan, remoteDatabases } from "./plan.ts";
 import { CHECKS, type Check, type CheckId, type Need } from "./rules.ts";
 
 const root = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout.trim();
@@ -182,6 +186,11 @@ async function runCheck(check: Check, p: Plan, why: string[], skips: Map<string,
 // ---------------------------------------------------------------- report
 
 const icon = {
+  ticked: "✅",
+  owed: "❌",
+  listed: "⬜",
+  "after-merge": "⏳",
+  ci: "🤖",
   passed: "✅",
   failed: "❌",
   skipped: "⏭️",
@@ -196,6 +205,7 @@ function report(
   base: { ref: string; sha: string },
   results: Result[] | null,
   unknownWaivers: string[],
+  unknownEvidence: string[] = [],
 ): string {
   const out: string[] = ["## Verification report", ""];
   out.push(`Base \`${base.ref}\` (${base.sha.slice(0, 8)}), ${p.files.length} changed files.`, "");
@@ -231,11 +241,23 @@ function report(
   }
   for (const id of unknownWaivers)
     out.push(`- ❌ unknown obligation in a Verify-Waive trailer: \`${id}\``);
-  out.push("", "### Manual evidence still needed", "");
+  out.push("", "### Manual evidence", "");
   if (p.evidence.length === 0) out.push("None.");
-  for (const { evidence, why } of p.evidence) {
-    out.push(`- [ ] \`${evidence.id}\` ${evidence.title} (${why.join(", ")}): ${evidence.how}`);
+  const note = {
+    listed: "",
+    ticked: " **ticked** in the PR description.",
+    owed: " **owed**: do it, then tick its box in the PR description.",
+    "after-merge": " Due **after merge**.",
+    ci: " **CI**: this run's green `check` is the evidence.",
+  };
+  for (const { evidence, why, status } of p.evidence) {
+    const box = status === "listed" ? "- [ ]" : `- ${icon[status]}`;
+    out.push(
+      `${box} \`${evidence.id}\` ${evidence.title} (${why.join(", ")}): ${evidence.how}${note[status]}`,
+    );
   }
+  for (const id of unknownEvidence)
+    out.push(`- ❌ unknown evidence id ticked in the PR description: \`${id}\``);
   return out.join("\n");
 }
 
@@ -273,24 +295,32 @@ async function main(): Promise<number> {
   loadDotEnv();
   const base = resolveBase();
   const { files, deleted } = changedFiles(base.sha);
+  const prBody = process.env.VERIFY_PR_BODY?.split("\n");
   const fromCommits = parseWaivers(commitWaiverLines(base.sha));
+  const fromBody = parseWaivers(prBody ?? []);
   const fromFlags = parseWaivers(values.waive.map((w) => `Verify-Waive: ${w}`));
-  const waivers = new Map([...fromCommits.waivers, ...fromFlags.waivers]);
-  const unknown = [...fromCommits.unknown, ...fromFlags.unknown];
-  const full = plan(files, waivers, { all: values.all, deleted });
+  const waivers = new Map([...fromCommits.waivers, ...fromBody.waivers, ...fromFlags.waivers]);
+  const unknown = [...fromCommits.unknown, ...fromBody.unknown, ...fromFlags.unknown];
+  const ticks = prBody ? parseEvidence(prBody) : undefined;
+  const unknownEvidence = ticks?.unknown ?? [];
+  const full = plan(files, waivers, { all: values.all, deleted, ticked: ticks?.ticked });
   const only = values.only?.split(",").map((s) => s.trim());
   const unknownOnly = only?.filter((id) => !CHECKS.some((c) => c.id === id)) ?? [];
   if (unknownOnly.length > 0) throw new Error(`--only: unknown checks ${unknownOnly.join(", ")}`);
   const p = only ? { ...full, checks: full.checks.filter((c) => only.includes(c.id)) } : full;
-  const obligationsOk = unknown.length === 0 && p.obligations.every((o) => o.status !== "missing");
+  const obligationsOk =
+    unknown.length === 0 &&
+    unknownEvidence.length === 0 &&
+    p.obligations.every((o) => o.status !== "missing") &&
+    p.evidence.every((e) => e.status !== "owed");
 
   if (command === "plan") {
     if (values.json) console.log(JSON.stringify({ base, ...p }, null, 2));
-    else await emit(report(p, base, null, unknown));
+    else await emit(report(p, base, null, unknown, unknownEvidence));
     return 0;
   }
   if (command === "obligations") {
-    await emit(report(p, base, null, unknown));
+    await emit(report(p, base, null, unknown, unknownEvidence));
     return obligationsOk ? 0 : 1;
   }
   if (command !== "run") {
@@ -305,7 +335,7 @@ async function main(): Promise<number> {
     if (!check) continue;
     results.push({ id, why, ...(await runCheck(check, p, why, skips)) });
   }
-  await emit(report(p, base, results, unknown));
+  await emit(report(p, base, results, unknown, unknownEvidence));
   const checksOk = results.every((r) => r.status === "passed" || r.status === "skipped");
   return checksOk && obligationsOk ? 0 : 1;
 }

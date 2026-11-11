@@ -66,13 +66,6 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 
 ### Rules follow-ups
 
-- [ ] **Waivers from the PR description.** Today waivers are commit trailers
-  only. With squash merges, also accepting `Verify-Waive:` lines in the PR
-  body would read more naturally; needs the PR body in the `obligations` job
-  (`github.event.pull_request.body`, passed via an env var, not inlined).
-- [ ] **Manual evidence in CI.** The report lists owed evidence but nothing
-  checks it was supplied. Option: a PR template with one checkbox per
-  evidence id, and the `obligations` job fails on unchecked boxes.
 - [ ] **Grow the e2e map** as specs are added (`E2E_MAP` in rules.ts); an
   unmapped file runs the whole suite, which is safe but slow once the suite
   grows.

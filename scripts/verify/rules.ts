@@ -11,9 +11,11 @@
  *     a command that passes or fails.
  *  3. Each class can carry obligations: "this kind of change must come with a
  *     change to that kind of test". An obligation is met when some changed path
- *     matches it, or waived with a `Verify-Waive: <id>: <reason>` commit trailer.
+ *     matches it, or waived with a `Verify-Waive: <id>: <reason>` line in a
+ *     commit message or the PR description.
  *  4. Each class can require manual evidence: things only a person or agent
- *     can judge (screenshots, reviewing a diff). The report lists them.
+ *     can judge (screenshots, reviewing a diff). The report lists them; on a
+ *     PR, each one due before merge must be ticked in the description.
  */
 
 export type CheckId =
@@ -198,6 +200,13 @@ export interface Evidence {
   id: EvidenceId;
   title: string;
   how: string;
+  /**
+   * When it can be supplied. `pr`: before merge, ticked in the PR description
+   * (the obligations job fails on an owed, unticked box). `after-merge`: only
+   * possible once merged, so CI just lists it. `ci`: CI's own green `check`
+   * is the evidence.
+   */
+  due: "pr" | "after-merge" | "ci";
 }
 
 export const EVIDENCE: Evidence[] = [
@@ -205,31 +214,37 @@ export const EVIDENCE: Evidence[] = [
     id: "visual-check",
     title: "Agent visual check of the changed screens",
     how: "Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.",
+    due: "pr",
   },
   {
     id: "openapi-review",
     title: "Review the OpenAPI snapshot diff",
     how: "Read the apps/api/openapi.json diff. A removed path, a removed or newly required request field, or a removed or narrowed response field is breaking; say so in the PR.",
+    due: "pr",
   },
   {
     id: "lockfile-review",
     title: "Review the lockfile diff",
     how: "New packages, major version bumps, packages with install scripts. Versions in package.json stay exact.",
+    due: "pr",
   },
   {
     id: "contract-readiness",
     title: "Nothing in the compatibility window still uses what the contract removes",
     how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. Until deployed versions are recorded, search the code at the base branch.",
+    due: "pr",
   },
   {
     id: "design-publish",
     title: "Republish the design-system artifact",
     how: "After merge, run `pnpm design:system` and publish packages/design/.system/project to the artifact (see packages/design/README.md), so the published system matches main.",
+    due: "after-merge",
   },
   {
     id: "ci-run",
     title: "Green CI run of the change",
     how: "Tooling changes affect CI itself; push and link the run.",
+    due: "ci",
   },
 ];
 

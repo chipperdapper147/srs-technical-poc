@@ -43,7 +43,18 @@ export interface Plan {
   e2e: string[] | null;
   e2eWhy: string[];
   obligations: ObligationResult[];
-  evidence: { evidence: Evidence; why: string[] }[];
+  evidence: EvidenceResult[];
+}
+
+export interface EvidenceResult {
+  evidence: Evidence;
+  why: string[];
+  /**
+   * Only with a PR description (`opts.ticked`): `ticked`, `owed` (due before
+   * merge and not ticked: fails), or the evidence's own `after-merge`/`ci`.
+   * Without one: `listed`.
+   */
+  status: "listed" | "ticked" | "owed" | "after-merge" | "ci";
 }
 
 /** Specs for one file under `e2e: "mapped"`, or null for "whole suite". */
@@ -61,7 +72,8 @@ export function plan(
   changed: readonly string[],
   waivers: ReadonlyMap<string, string> = new Map(),
   /** `deleted`: paths that no longer exist. They still need checks, but deleting a test never meets an obligation. */
-  opts: { all?: boolean; deleted?: ReadonlySet<string> } = {},
+  /** `ticked`: evidence ids ticked in the PR description (parseEvidence); omit outside a PR. */
+  opts: { all?: boolean; deleted?: ReadonlySet<string>; ticked?: ReadonlySet<string> } = {},
 ): Plan {
   const files = [...new Set(changed)].sort();
   const byClass = new Map<string, { cls: ChangeClass; files: string[] }>();
@@ -133,10 +145,14 @@ export function plan(
       evidenceWhy.set(id, [...(evidenceWhy.get(id) ?? []), cls.id]);
     }
   }
-  const evidence = EVIDENCE.filter((e) => evidenceWhy.has(e.id)).map((e) => ({
-    evidence: e,
-    why: evidenceWhy.get(e.id) ?? [],
-  }));
+  const { ticked } = opts;
+  const evidence = EVIDENCE.filter((e) => evidenceWhy.has(e.id)).map(
+    (e): EvidenceResult => ({
+      evidence: e,
+      why: evidenceWhy.get(e.id) ?? [],
+      status: evidenceStatus(e, ticked),
+    }),
+  );
 
   return { files, classes, checks, e2e, e2eWhy: [...e2eWhy], obligations, evidence };
 }
@@ -160,6 +176,32 @@ export function parseWaivers(lines: readonly string[]): {
     else unknown.push(m[1]);
   }
   return { waivers, unknown };
+}
+
+function evidenceStatus(e: Evidence, ticked?: ReadonlySet<string>): EvidenceResult["status"] {
+  if (!ticked) return "listed";
+  if (ticked.has(e.id)) return "ticked";
+  return e.due === "pr" ? "owed" : e.due;
+}
+
+/**
+ * Ticked evidence boxes in a PR description: `- [x] \`visual-check\` …`.
+ * Unknown ids are flagged, so a typo can't supply nothing.
+ */
+export function parseEvidence(lines: readonly string[]): {
+  ticked: Set<string>;
+  unknown: string[];
+} {
+  const known = new Set<string>(EVIDENCE.map((e) => e.id));
+  const ticked = new Set<string>();
+  const unknown: string[] = [];
+  for (const line of lines) {
+    const m = /^[-*]\s+\[[xX]\]\s+`([\w-]+)`/.exec(line.trim());
+    if (!m?.[1]) continue;
+    if (known.has(m[1])) ticked.add(m[1]);
+    else unknown.push(m[1]);
+  }
+  return { ticked, unknown };
 }
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
