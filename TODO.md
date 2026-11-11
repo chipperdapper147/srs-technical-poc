@@ -77,10 +77,6 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 
 - [ ] **Screenshot diffs** of each screen, beside the axe browser scans
   (`apps/e2e/tests/a11y.spec.ts`).
-- [ ] **axe best-practice rules** in the browser scans: they flag that the
-  new-course, settings and study screens have no level-one heading. Give
-  each screen an `h1`, then add the `best-practice` tag in
-  `apps/e2e/support/a11y.ts`.
 - [ ] **Mobile app** (`apps/mobile`, Expo): views, screens and `platform/`
   adapters over `@app/client` (ADR 0002). Add `mobile-*` classes to the rules.
 - [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.

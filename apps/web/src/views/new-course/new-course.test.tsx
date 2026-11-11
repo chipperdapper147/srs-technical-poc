@@ -12,6 +12,8 @@ describe("NewCourseScreen", () => {
   it("creates a course and navigates to it", async () => {
     const user = userEvent.setup();
     const { deps, container } = renderScreen(<NewCourseScreen />);
+    expect(screen.getByRole("heading", { level: 1, name: "New course" })).toBeTruthy();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     await expectNoA11yViolations(container);
     await user.type(screen.getByLabelText("Title"), "My French");
     await user.type(screen.getByLabelText("Learning (language code)"), "fr");

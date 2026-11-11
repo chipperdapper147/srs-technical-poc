@@ -20,7 +20,9 @@ export function NewCourseView({ vm, actions }: { vm: NewCourseVM; actions: NewCo
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{vm.title}</CardTitle>
+        <CardTitle>
+          <h1>{vm.title}</h1>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form

@@ -1,12 +1,13 @@
 /**
  * Accessibility scan of the page as rendered in a real browser: the WCAG 2.x
- * A and AA rules, including colour contrast, which needs real rendering and
- * so is off in the jsdom scans (apps/web/src/test/a11y.ts).
+ * A and AA rules plus axe's best practices (one `h1` per page, landmarks,
+ * heading order). Colour contrast needs real rendering and so is off in the
+ * jsdom scans (apps/web/src/test/a11y.ts).
  */
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 
-const WCAG_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 
 /**
  * Violations already tracked in TODO.md, by rule and node selector. Each one
@@ -24,7 +25,7 @@ const KNOWN: { rule: string; target: string; todo: string }[] = [
 
 /** One line per violating node: `rule: help (selector)`. Empty means none. */
 export async function a11yViolations(page: Page): Promise<string[]> {
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
+  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   return violations.flatMap((v) =>
     v.nodes
       .map((n) => ({ target: n.target.join(" "), summary: n.failureSummary ?? "" }))

@@ -12,6 +12,8 @@ describe("SettingsScreen", () => {
   it("saves each setting", async () => {
     const user = userEvent.setup();
     const { container } = renderScreen(<SettingsScreen />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     await user.selectOptions(await screen.findByLabelText("Answer grading"), "strict");
     await user.click(screen.getByRole("switch", { name: "Require accents" }));
     const n = screen.getByLabelText<HTMLInputElement>("New words per learn session");

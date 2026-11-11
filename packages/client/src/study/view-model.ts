@@ -56,6 +56,8 @@ export type StudyVM =
   | { kind: "empty"; message: string; backLabel: string; back: Route }
   | {
       kind: "session";
+      /** The screen's level-one heading, for assistive tech: it names the course being studied. */
+      heading: string;
       courseTitle: string;
       back: Route;
       /** 0–100. */
@@ -99,6 +101,7 @@ export function studyViewModel(
       const step = currentStep(session);
       return {
         kind: "session",
+        heading: `Study: ${state.course.title}`,
         courseTitle: state.course.title,
         back,
         progress: progress(session) * 100,

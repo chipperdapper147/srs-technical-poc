@@ -18,7 +18,7 @@ export function StudyView({ vm, actions }: { vm: StudyVM; actions: StudyActions 
     case "empty":
       return (
         <div className="space-y-4">
-          <p>{vm.message}</p>
+          <h1>{vm.message}</h1>
           <RouteLink to={vm.back} className={buttonVariants({ variant: "outline" })}>
             {vm.backLabel}
           </RouteLink>
@@ -27,6 +27,7 @@ export function StudyView({ vm, actions }: { vm: StudyVM; actions: StudyActions 
     case "session":
       return (
         <div className="space-y-6" data-testid="study-session" data-step={vm.stepIndex}>
+          <h1 className="sr-only">{vm.heading}</h1>
           <div className="flex items-center gap-4">
             <RouteLink to={vm.back} className="text-sm text-muted-foreground">
               ← {vm.courseTitle}
@@ -118,7 +119,9 @@ function Step({ step, lang, actions }: { step: StudyStepVM; lang: string; action
     case "summary":
       return (
         <Card>
-          <CardHeader className="text-lg font-semibold">{step.title}</CardHeader>
+          <CardHeader className="text-lg font-semibold">
+            <h2>{step.title}</h2>
+          </CardHeader>
           <CardContent className="space-y-1 text-sm" data-testid="session-summary">
             {step.tally.map((t) => (
               <p key={t.verdict}>
