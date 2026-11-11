@@ -325,7 +325,7 @@ skill (`.claude/skills/verify/SKILL.md`) walks through it.
 | 6   | **Nightly**                                    | Flake hunting (each test repeated many times); full browser matrix; dependency audit; canary build on upcoming versions (Node 26, TypeScript 7, latest deps)                                   | complete                                     | unbounded   |
 | 7   | **Production**                                 | Error tracking; a synthetic check of the study flow                                                                                                                                            | realistic                                    | continuous  |
 
-Stages 4–5 need a deploy target; see [ADR 0001](adr/0001-dedicated-repository.md).
+Stages 4–5 need the deploy: Vercel Hobby and Neon, decided on 2026-11-11 (`TODO.md`, section 4).
 
 ## Changing the rules
 
