@@ -118,6 +118,12 @@ Not blocked, can start now:
 - [ ] **Cross-browser e2e in the merge gate**: Firefox, WebKit and the
   mobile projects run nightly (`.github/workflows/nightly.yml`). Move them
   into `ci.yml` once they have been stable for a while.
+- [ ] **axe scans on Firefox**: `apps/e2e/tests/a11y.spec.ts` skips the
+  Firefox project because Firefox's content process crashes inside `axe.run`
+  on the settings screen. That is a browser crash, not a violation: the
+  investigation is on PR #10, and the functional specs pass on Firefox.
+  Remove the skip after a Playwright or Firefox upgrade and check the
+  nightly `browsers (firefox)` job.
 - [ ] **Audit findings below `high`**, both in the shadcn CLI's own
   dependencies (`apps/web > shadcn`): `minimatch` <11.0.1 (moderate,
   GHSA-g3hv-75wg-m249, through ts-morph) and `deepmerge` 4.2–4.3.1 (low,
