@@ -46,7 +46,7 @@ jobs:
         with:
           atlas: "true"
       - run: pnpm db:migrate && pnpm db:seed
-      - run: pnpm --filter @app/e2e exec playwright install --with-deps chromium
+      - run: ./scripts/install-browsers.sh chromium
       - run: pnpm --filter @app/web build
       - name: Every e2e test, 20 times
         run: pnpm --filter @app/e2e exec playwright test --trace off --project chromium --repeat-each 20 --retries 0
@@ -83,7 +83,7 @@ jobs:
         with:
           atlas: "true"
       - run: pnpm db:migrate && pnpm db:seed
-      - run: pnpm --filter @app/e2e exec playwright install --with-deps ${{ matrix.browser }}
+      - run: ./scripts/install-browsers.sh ${{ matrix.browser }}
       - run: pnpm --filter @app/web build
       - name: e2e on ${{ matrix.project }}
         run: pnpm --filter @app/e2e exec playwright test --trace off --project ${{ matrix.project }}
