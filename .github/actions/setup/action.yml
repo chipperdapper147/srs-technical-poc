@@ -13,6 +13,9 @@ inputs:
   latest:
     description: Upgrade every dependency to its latest version after installing (the nightly canary)
     default: "false"
+  cache:
+    description: setup-node's package cache; "" turns it off (the canary must not write the cache other jobs read)
+    default: pnpm
 runs:
   using: composite
   steps:
@@ -22,7 +25,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         node-version-file: .nvmrc # node-version, when set, takes precedence
-        cache: pnpm
+        cache: ${{ inputs.cache }}
 
     - name: Install Atlas
       if: inputs.atlas == 'true'
@@ -46,12 +49,13 @@ runs:
     - shell: bash
       run: pnpm install --frozen-lockfile
 
-    - name: Upgrade every dependency to latest (at least 3 days old)
+    - name: Upgrade every dependency to latest (at least 14 days old)
       if: inputs.latest == 'true'
       shell: bash
-      env:
-        # Skip releases under 3 days old (minutes): a just-published tarball
-        # can 404 on npm for a while, and broken or hijacked releases are
-        # usually pulled or patched within days.
-        npm_config_minimum_release_age: "4320"
-      run: pnpm up --recursive --latest && git diff --stat -- '**/package.json'
+      # Only releases at least 14 days old (minutes; the flag overrides the
+      # repo's 7-day minimumReleaseAge). Most malicious or broken releases are
+      # pulled within days, and the upgrade-path signal barely ages. No
+      # install scripts.
+      run: >-
+        pnpm up --recursive --latest --ignore-scripts --config.minimum-release-age=20160
+        && git diff --stat -- '**/package.json'

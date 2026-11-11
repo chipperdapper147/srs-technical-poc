@@ -104,20 +104,26 @@ jobs:
         run: pnpm audit --audit-level high
 
   # Upcoming versions: Node 26 and every dependency at its latest release at
-  # least 3 days old (TypeScript 7 among them). An early warning, not a target
+  # least 14 days old (TypeScript 7 among them). An early warning, not a target
   # to keep green at any cost: a failure here is a TODO, not a broken build.
   canary:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # It runs third-party code nobody has pinned: no token permissions, no
+    # saved credentials, no shared cache, and never any secrets.
+    permissions: {}
     services:
       postgres: *postgres
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
         with:
           atlas: "true"
           node-version: "26"
           latest: "true"
+          cache: ""
       - run: node --version && pnpm exec tsc --version
       - run: psql "$DATABASE_URL" -c "CREATE DATABASE srs_test"
       - name: Lint, types, unit and integration tests, production build
