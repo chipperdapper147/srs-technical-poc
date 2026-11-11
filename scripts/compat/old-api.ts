@@ -6,8 +6,9 @@
  * API rollback (migrations are not rolled back). Expand/contract is meant to
  * make it hold; this proves it for each change.
  *
- * Runs only when the change adds migrations: otherwise the base API runs on
- * the base schema, which the base commit's own CI already tested.
+ * Runs only when the change adds migrations (otherwise the base API runs on
+ * the base schema, which the base commit's own CI already tested), or when
+ * the compatibility tooling itself changes.
  */
 import { schemaChange } from "../schema/change.ts";
 import {
@@ -25,7 +26,9 @@ if (!change) {
   console.log("compat-old-api: no base ref (shallow clone?); nothing to compare");
   process.exit(0);
 }
-if (change.added.length === 0) {
+// A change to the compatibility tooling runs it anyway, so CI exercises it.
+const selfTest = change.changed.some((p) => p.startsWith("scripts/compat/"));
+if (change.added.length === 0 && !selfTest) {
   console.log(
     `compat-old-api: no new migrations since ${change.ref}; the base API already ran on this schema`,
   );
