@@ -14,11 +14,13 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
   Require a pull request with 0 approvals (you can't approve your own PR).
   Require the status check `check` only, and require branches to be up to
   date before merging. `check` is an aggregate job that fails unless every
-  other CI job (`commit-messages`, `obligations`, `static`, `database`, `e2e`)
-  passed, so later job splits never touch the ruleset.
-- [ ] **Merge settings** (Settings → General → Pull Requests): squash merging
-  only. Allow auto-merge, always suggest updating PR branches, and delete head
-  branches automatically.
+  other CI job (`commit-messages`, `pr-description`, `obligations`,
+  `static`, `database`, `e2e`) passed, so later job splits never touch the
+  ruleset.
+- [ ] **Merge settings** (Settings → General → Pull Requests): allow squash
+  merging only (decided 2026-11-11, see `docs/decisions.md`); merge commits
+  and rebase merging off. Allow auto-merge, always suggest updating PR
+  branches, and delete head branches automatically.
 - [ ] **Actions** (Settings → Actions → General): read-only workflow token.
   Require approval for fork PR workflows from all outside collaborators.
 - [ ] **Merge queue** (stage 4): GitHub offers it only on organization-owned
@@ -36,8 +38,9 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
 
 ## 3. Decisions needed
 
-- [ ] **Confirm plain `.githooks/`** as the hook manager (decided provisionally
-  on 2026-11-09, see `docs/decisions.md`; reverse it if lefthook is wanted).
+- [ ] **Confirm plain `.githooks/`** as the hook manager: provisionally
+  confirmed on 2026-11-11 (`docs/decisions.md`). Whether to adopt Lefthook
+  is tracked in issue #23.
 
 ## 4. Deploy (Vercel Hobby + Neon)
 
@@ -162,7 +165,9 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 
 - [ ] **A product identity.** The design system documents shadcn's stock
   neutral theme. Decide a palette, a display face and the verdict colours,
-  change `packages/design/tokens.json`, and republish the artifact.
+  change `packages/design/tokens.json`, and republish the artifact. The
+  palette and fonts are the owner's choice; the token hierarchy they go
+  into is issue #22.
 - [ ] **Contrast gaps** flagged in the token notes: `muted-foreground` on
   `muted` (4.3:1, light) and the focus `ring` (2.6:1, light). The browser
   axe scan also finds `muted-foreground` on the verdict tints in the study
@@ -174,8 +179,13 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 ## 7. Product
 
 - [ ] **Auth0 integration:** replace the dev stub in
-  `apps/api/src/plugins/auth.ts` and the web client. This unblocks the Auth0
-  mock, real integration and the environment secrets.
-- Open product questions (the learn-session review interval, mapping fast
-  answers to Easy, reverse and listening modes) are tracked in
-  [`docs/decisions.md`](docs/decisions.md#open-questions).
+  `apps/api/src/plugins/auth.ts` and the web client. Auth0 is required, not
+  to be replaced by Neon Auth or similar (decided 2026-11-11). This unblocks
+  the Auth0 mock, real integration and the environment secrets.
+- [ ] **Reverse and listening modes** (issue #24).
+- [ ] **Mobile app** (issue #25); its verification is under "Missing test
+  kinds" above.
+- Open product questions are tracked in
+  [`docs/decisions.md`](docs/decisions.md#open-questions). The learn-session
+  interval is decided (learning steps); mapping fast answers to Easy is
+  deferred.
