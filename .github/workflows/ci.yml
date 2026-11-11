@@ -111,10 +111,10 @@ jobs:
         with:
           atlas: "true"
       - run: psql "$DATABASE_URL" -c "CREATE DATABASE srs_test"
-      - name: Schema, migration lint and rehearsal, codegen drift, API integration tests, seed
+      - name: Schema, migration lint and rehearsal, old API on the new schema, codegen drift, API integration tests, seed
         run: >-
           pnpm verify --all
-          --only db:check,migration-lint,codegen-drift,migration-rehearsal,test:api,db:seed
+          --only db:check,migration-lint,codegen-drift,migration-rehearsal,compat-old-api,test:api,db:seed
 
   e2e:
     runs-on: ubuntu-latest

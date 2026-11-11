@@ -280,3 +280,15 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - Intended breaks go in `apps/api/openapi-breaking.ignore`, with the reason
   in the PR. The default is expand/contract, as for the database.
 - `openapi-review` stays for what a structural diff can't see.
+
+## 2026-11-11: The old API is tested on the new schema
+
+- `compat-old-api` checks out the base commit in a git worktree, swaps in
+  the change's migrations, and runs that API's integration tests. The base
+  stands in for production and the rollback candidate until deployed
+  versions are recorded (ADR 0003).
+- It runs when a change adds migrations, locally through `pnpm verify` and
+  in CI's `database` job.
+- It turns "expand/contract keeps old versions working" from a policy into
+  a test. It also checks the API part of `contract-readiness`: a contract
+  migration passes only once the base API no longer uses what it removes.

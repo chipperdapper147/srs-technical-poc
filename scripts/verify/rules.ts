@@ -27,6 +27,7 @@ export type CheckId =
   | "db:check"
   | "migration-lint"
   | "migration-rehearsal"
+  | "compat-old-api"
   | "codegen-drift"
   | "openapi-drift"
   | "openapi-breaking"
@@ -95,6 +96,12 @@ export const CHECKS: Check[] = [
     id: "migration-rehearsal",
     title: "New migrations applied to production-shaped data: timed, invariants hold",
     command: "pnpm db:rehearse",
+    needs: ["postgres", "atlas"],
+  },
+  {
+    id: "compat-old-api",
+    title: "The base commit's API passes its integration tests on the new schema",
+    command: "pnpm compat:old-api",
     needs: ["postgres", "atlas"],
   },
   {
@@ -238,7 +245,7 @@ export const EVIDENCE: Evidence[] = [
   {
     id: "contract-readiness",
     title: "Nothing in the compatibility window still uses what the contract removes",
-    how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. Until deployed versions are recorded, search the code at the base branch.",
+    how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. `compat-old-api` proves it for the API at the base branch; cover any other consumer, and the deployed versions once they are recorded.",
     due: "pr",
   },
   {
@@ -373,6 +380,7 @@ export const CLASSES: ChangeClass[] = [
       "migration-lint",
       "codegen-drift",
       "migration-rehearsal",
+      "compat-old-api",
       "test:api",
       "db:seed",
     ],
@@ -391,6 +399,7 @@ export const CLASSES: ChangeClass[] = [
       "migration-lint",
       "codegen-drift",
       "migration-rehearsal",
+      "compat-old-api",
       "test:api",
       "db:seed",
     ],
