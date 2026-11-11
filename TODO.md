@@ -91,21 +91,36 @@ unit treated as its own repository); these details are open.
 - [ ] **Versioned consumption between units.** Units publish versions and
   consumers pin exact ones, instead of workspace links. Proposal to evaluate:
   changesets for versions, a local registry (Verdaccio) in CI and dev.
-- [ ] **Record deployed versions** per environment: production and the rollback
-  candidate, per consumer. Needs the deploy pipeline.
-- [ ] **Compatibility-window test:** `compat-old-api` runs the base commit's
-  API tests on the migrated schema. Extend it to each consumer version in
-  the window (its database-facing tests, from its published artifact) once
-  the two items above exist.
+- [ ] **Record deployed versions (long-term desired state).** Today the
+  window is approximated: every commit on main whose CI passed gets a
+  `release/*` tag (`.github/workflows/release-tag.yml`), and the
+  compatibility checks treat the newest tag as production and the one
+  before as the rollback target. That assumes every green main commit
+  deploys, to one environment, as one unit. The desired state:
+  - the deploy pipeline records each deploy, per environment (preview,
+    staging, production) and per deployable unit (API, web, later each
+    mobile release still supported in the stores);
+  - production and the rollback target are read from those records, not
+    from git tags, so a failed or skipped deploy never counts as deployed;
+  - a rollback updates the record, so the window follows what actually runs;
+  - each unit is published as a versioned artifact (see "Versioned
+    consumption"), and the checks run those artifacts rather than worktrees
+    of commits.
+
+  Until then, release tags are the source; the deploy job writes them
+  instead of the CI-success workflow once the deploy exists (section 4).
+- [ ] **Compatibility-window test:** `compat-old-api` runs the API tests of
+  production and the rollback target (release tags) on the migrated schema.
+  Extend it to every consumer of the database, from published artifacts,
+  once the two items above exist.
 - [ ] **When is it safe to contract?** Today `contract-readiness` is written
   evidence. Decide how consumers publish what they use (for example a usage
   manifest per release) so readiness can be checked automatically.
 - [ ] **HTTP API compatibility with deployed clients**: `openapi-breaking`
-  (oasdiff) compares against the base branch's spec, and `compat-old-client`
-  runs the base branch's web app and specs against the new API. Once
-  deployed versions are recorded, test every deployed client version (web,
-  and each supported mobile release) instead. Also: tolerant parsing of
-  enums in clients.
+  (oasdiff) and `compat-old-client` cover the web app of production and the
+  rollback target (release tags). Once deployed versions are recorded, cover
+  every deployed client version (web, and each supported mobile release).
+  Also: tolerant parsing of enums in clients.
 - [ ] **Rehearse on a branch of production** (Neon) instead of generated data,
   with the deploy. Also set `lock_timeout` and `statement_timeout` on the
   deploy's migration connection (Squawk's per-file timeout rules are off for

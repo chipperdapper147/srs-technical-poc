@@ -101,13 +101,15 @@ export const CHECKS: Check[] = [
   },
   {
     id: "compat-old-api",
-    title: "The base commit's API passes its integration tests on the new schema",
+    title:
+      "Production's and the rollback target's API pass their integration tests on the new schema",
     command: "pnpm compat:old-api",
     needs: ["postgres", "atlas"],
   },
   {
     id: "compat-old-client",
-    title: "The base commit's web app passes its e2e specs against the new API",
+    title:
+      "Production's and the rollback target's web apps pass their e2e specs against the new API",
     command: "pnpm compat:old-client",
     needs: ["postgres", "atlas"],
   },
@@ -119,7 +121,8 @@ export const CHECKS: Check[] = [
   },
   {
     id: "openapi-breaking",
-    title: "The OpenAPI spec makes no breaking change against the base (oasdiff)",
+    title:
+      "The OpenAPI spec makes no breaking change against production or the rollback target (oasdiff)",
     command: "pnpm api:breaking",
     needs: ["oasdiff"],
   },
@@ -252,7 +255,7 @@ export const EVIDENCE: Evidence[] = [
   {
     id: "contract-readiness",
     title: "Nothing in the compatibility window still uses what the contract removes",
-    how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. `compat-old-api` proves it for the API at the base branch; cover any other consumer, and the deployed versions once they are recorded.",
+    how: "For each consumer of the database, list the versions in production, the rollback candidate and the deployment candidate (ADR 0003), and show that none of them reads or writes what this contract migration removes or tightens. `compat-old-api` proves it for the API of production and the rollback target; cover any other consumer.",
     due: "pr",
   },
   {
