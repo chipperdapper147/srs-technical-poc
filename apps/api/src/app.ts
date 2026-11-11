@@ -15,13 +15,16 @@ import auth from "./plugins/auth.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { meRoutes } from "./routes/me.ts";
 import { studyRoutes } from "./routes/study.ts";
+import { createScheduler, type Scheduler } from "./srs.ts";
 
 export interface AppOptions {
   db: Database;
   env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL">;
+  /** Defaults to the learning steps in `learning-steps.ts`; tests pass their own. */
+  scheduler?: Scheduler;
 }
 
-export async function buildApp({ db, env }: AppOptions) {
+export async function buildApp({ db, env, scheduler }: AppOptions) {
   const app = Fastify({ logger: { level: env.LOG_LEVEL } }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
@@ -42,7 +45,7 @@ export async function buildApp({ db, env }: AppOptions) {
   await app.register(auth, { db, mode: env.AUTH_MODE });
   await app.register(meRoutes, { db });
   await app.register(courseRoutes, { db });
-  await app.register(studyRoutes, { db });
+  await app.register(studyRoutes, { db, scheduler: scheduler ?? (await createScheduler()) });
 
   return app;
 }

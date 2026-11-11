@@ -99,3 +99,12 @@ Around town,el ordenador,computer,la computadora|computadora,"Spain vs Latin Ame
 
 `term` is what the learner types (target language), `definition` is the prompt,
 `alternatives` are other accepted answers separated by `|`.
+
+## Learning steps
+
+A new word answered correctly is due again after 10 minutes, then after a
+day, and FSRS schedules it from then on. A wrong answer during the steps
+brings it back after 10 minutes and starts the steps over. To change the
+waits, edit `LEARNING_STEPS` in `apps/api/src/learning-steps.ts`; the
+scheduler (`apps/api/src/srs.ts`) reads it and needs no change. Cards already
+on a step keep their step number and continue with the new waits.
