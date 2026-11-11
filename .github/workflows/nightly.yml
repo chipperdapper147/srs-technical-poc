@@ -57,7 +57,7 @@ jobs:
       - run: pnpm --filter @app/e2e exec playwright install --with-deps ${{ matrix.browser }}
       - run: pnpm --filter @app/web build
       - name: e2e on ${{ matrix.project }}
-        run: pnpm --filter @app/e2e exec playwright test --trace off --project ${{ matrix.project }} probe --reporter=list
+        run: pnpm --filter @app/e2e exec playwright test probe --trace off --reporter=list --project ${{ matrix.project }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
