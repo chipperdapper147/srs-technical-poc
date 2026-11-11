@@ -98,7 +98,10 @@ Missing ones show as blocked, never as passed.
   `Claude-Session:` trailer or a `claude.ai/code/session_…` URL in a commit
   message or PR description. `Co-Authored-By` is fine. Several layers guard this
   (`.claude/settings.json` turns the link off, the commit-msg hook strips the
-  trailer, the pre-push hook and CI reject any link), but don't rely on them.
+  trailer, the pre-push hook and CI reject any link in commits, and CI's
+  `pr-description` job rejects one in a PR's title or description), but don't
+  rely on them. Some PR tools append a session-link footer on creation: read
+  the description back after opening a PR and remove it.
 - **Git hooks live in `.githooks/`.** `pnpm install` and a Claude Code
   SessionStart hook enable them. If `git config core.hooksPath` doesn't print
   `.githooks`, run `git config core.hooksPath .githooks` before committing.
