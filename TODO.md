@@ -93,9 +93,10 @@ unit treated as its own repository); these details are open.
   changesets for versions, a local registry (Verdaccio) in CI and dev.
 - [ ] **Record deployed versions** per environment: production and the rollback
   candidate, per consumer. Needs the deploy pipeline.
-- [ ] **Compatibility-window test:** run each consumer version in the window
-  (its database-facing tests, from its published artifact) against the
-  migrated schema. Depends on the two items above.
+- [ ] **Compatibility-window test:** `compat-old-api` runs the base commit's
+  API tests on the migrated schema. Extend it to each consumer version in
+  the window (its database-facing tests, from its published artifact) once
+  the two items above exist.
 - [ ] **When is it safe to contract?** Today `contract-readiness` is written
   evidence. Decide how consumers publish what they use (for example a usage
   manifest per release) so readiness can be checked automatically.
