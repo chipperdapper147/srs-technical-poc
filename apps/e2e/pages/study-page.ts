@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { open } from "./navigation.ts";
 
 export type Verdict = "exact" | "typo" | "wrong";
 
@@ -38,7 +39,7 @@ export class StudyPage {
   }
 
   async goto(courseId: string, mode: "learn" | "review") {
-    await this.page.goto(`/courses/${courseId}/study?mode=${mode}`);
+    await open(this.page, `/courses/${courseId}/study?mode=${mode}`);
   }
 
   private async stepIndex(): Promise<number> {

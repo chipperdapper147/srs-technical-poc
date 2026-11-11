@@ -398,6 +398,22 @@ skill (`.claude/skills/verify/SKILL.md`) walks through it.
 
 Stages 4–5 need the deploy: Vercel Hobby and Neon, decided on 2026-11-11 (`TODO.md`, section 4).
 
+### The nightly workflow
+
+`.github/workflows/nightly.yml` runs at 02:17 UTC, on demand, and on a PR that
+changes it. It is not a required check: its jobs find problems early rather
+than gate a merge.
+
+| Job          | What                                                                                                                                                                                     | A failure means                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `flake-hunt` | every e2e test 20 times on Chromium, no retries                                                                                                                                          | a flaky test: find the race, don't add a retry     |
+| `browsers`   | the e2e suite on Firefox, WebKit, Pixel 7 and iPhone 15 (`E2E_ALL_BROWSERS=1`)                                                                                                           | a browser-specific bug, or a test that assumes one |
+| `audit`      | `pnpm audit --audit-level high`                                                                                                                                                          | a high or critical advisory: upgrade or override   |
+| `canary`     | Node 26 and every dependency at its latest release at least 14 days old, then lint, types, tests, build. Isolated: no token permissions, no shared cache, no install scripts, no secrets | an upgrade to plan; a TODO, not a broken build     |
+
+Run one browser locally with `E2E_ALL_BROWSERS=1 pnpm --filter @app/e2e exec
+playwright test --project <name>` (`playwright install <browser>` first).
+
 ## Changing the rules
 
 Edit `scripts/verify/rules.ts`, then `pnpm verify docs` and commit both.
@@ -422,4 +438,5 @@ the tests until someone decides what verifying it means.
 | Accessibility checks                                                        | ✅ axe in jsdom per view; ✅ in the browser (e2e)  |
 | Migration lint, expand/contract policy, rehearsal on generated data         | ✅ (ADR 0003); rehearsal on a production branch ❌ |
 | Branch protection making `check` required                                   | ❌ manual GitHub settings (TODO.md section 1)      |
-| Merge gate, preview deploys, real integration, post-deploy, nightly         | ❌ blocked on the deploy target and Auth0          |
+| Nightly: flake hunt, browser matrix, audit, canary (`nightly.yml`)          | ✅ not a required check                            |
+| Merge gate, preview deploys, real integration, post-deploy                  | ❌ blocked on the deploy target and Auth0          |

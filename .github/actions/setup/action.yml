@@ -7,6 +7,15 @@ inputs:
   oasdiff:
     description: Install oasdiff (the openapi-breaking check)
     default: "false"
+  node-version:
+    description: Node version instead of .nvmrc (the nightly canary)
+    default: ""
+  latest:
+    description: Upgrade every dependency to its latest version after installing (the nightly canary)
+    default: "false"
+  cache:
+    description: setup-node's package cache; "" turns it off (the canary must not write the cache other jobs read)
+    default: pnpm
 runs:
   using: composite
   steps:
@@ -14,8 +23,9 @@ runs:
 
     - uses: actions/setup-node@v5
       with:
-        node-version-file: .nvmrc
-        cache: pnpm
+        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc # node-version, when set, takes precedence
+        cache: ${{ inputs.cache }}
 
     - name: Install Atlas
       if: inputs.atlas == 'true'
@@ -38,3 +48,16 @@ runs:
 
     - shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: Upgrade every dependency to its newest release at least 14 days old
+      if: inputs.latest == 'true'
+      shell: bash
+      # scripts/canary/upgrade.ts picks each direct dependency's newest stable
+      # release at least 14 days old (`pnpm up --latest` aims at the `latest`
+      # tag and fails when it is younger). The install then resolves the rest
+      # under the same floor (the flag overrides the repo's 7 days), without
+      # install scripts.
+      run: >-
+        node scripts/canary/upgrade.ts --min-age-days 14
+        && pnpm install --no-frozen-lockfile --ignore-scripts --config.minimum-release-age=20160
+        && git diff --stat -- '**/package.json'

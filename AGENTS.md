@@ -53,7 +53,9 @@ container); migrations against Neon run from CI or the deploy.
   `@/` alias without extensions).
 - **`apps/web/src/components/ui/` is shadcn-generated.** Prefer
   `pnpm dlx shadcn@4.23.0 add <component>` over hand-writing primitives.
-- **Pin exact dependency versions** (no `^`).
+- **Pin exact dependency versions** (no `^`). pnpm won't resolve a release
+  younger than 7 days (`minimumReleaseAge` in `pnpm-workspace.yaml`); exclude
+  a package there only for an urgent security fix, with the reason.
 - **E2E tests use page objects.** Specs in `apps/e2e/tests` talk to pages only
   through classes in `apps/e2e/pages` (one per screen); selectors live there,
   never in specs. Prefer role/label locators; use `data-testid` only where there
