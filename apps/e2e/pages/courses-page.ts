@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { open } from "./navigation.ts";
 
 /** `/`: list of courses. */
 export class CoursesPage {
@@ -14,7 +15,7 @@ export class CoursesPage {
   }
 
   async goto() {
-    await this.page.goto("/");
+    await open(this.page, "/");
     await this.heading.waitFor();
   }
 
