@@ -317,3 +317,18 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   stand-in. The long-term state, with deploys recorded per environment and
   per unit, is in TODO.md. Until a tag exists the checks use the merge-base,
   as before.
+
+## 2026-11-11: A nightly workflow, not a required check
+
+- `.github/workflows/nightly.yml` (stage 6):
+  - flake hunt: e2e × 20, no retries;
+  - the other browsers: Firefox, WebKit, Pixel 7, iPhone 15;
+  - `pnpm audit --audit-level high`;
+  - a canary on Node 26 with every dependency at latest.
+- None of it gates a merge. The extra browsers are Playwright projects that
+  appear only with `E2E_ALL_BROWSERS=1`, so PR runs stay on Chromium until
+  they prove stable.
+- The audit level is `high` because the two current findings (low and
+  moderate) are in the shadcn CLI's own dependencies; they are in TODO.md.
+- The canary upgrades with `pnpm up --latest` in the job only. What breaks
+  there becomes a planned upgrade, not an emergency.

@@ -133,12 +133,15 @@ unit treated as its own repository); these details are open.
 
 Not blocked, can start now:
 
-- [ ] **Stage 6, nightly workflow** (`schedule:` in a second workflow): flake
-  hunting (`pnpm e2e --repeat-each 20`), the full browser matrix, `pnpm audit`,
-  and a canary build on Node 26, TypeScript 7 and the latest dependencies.
-- [ ] **Cross-browser e2e** (Firefox, WebKit, mobile viewport) as Playwright
-  projects. Run them nightly first; move them into the merge gate once
-  they are stable.
+- [ ] **Cross-browser e2e in the merge gate**: Firefox, WebKit and the
+  mobile projects run nightly (`.github/workflows/nightly.yml`). Move them
+  into `ci.yml` once they have been stable for a while.
+- [ ] **Audit findings below `high`**, both in the shadcn CLI's own
+  dependencies (`apps/web > shadcn`): `minimatch` <11.0.1 (moderate,
+  GHSA-g3hv-75wg-m249, through ts-morph) and `deepmerge` 4.2–4.3.1 (low,
+  GHSA-gcqx-w48m-w2h4, no patch). Clear them with a shadcn upgrade or a
+  `pnpm.overrides` entry for minimatch, then lower the nightly
+  `--audit-level`.
 
 Blocked on the deploy setup (section 4) and the Auth0 integration:
 
