@@ -103,9 +103,9 @@ jobs:
       - name: No high or critical advisories in the dependency tree
         run: pnpm audit --audit-level high
 
-  # Upcoming versions: Node 26 and every dependency at its latest release
-  # (TypeScript 7 among them). An early warning, not a target to keep green
-  # at any cost: a failure here is a TODO, not a broken build.
+  # Upcoming versions: Node 26 and every dependency at its latest release at
+  # least 3 days old (TypeScript 7 among them). An early warning, not a target
+  # to keep green at any cost: a failure here is a TODO, not a broken build.
   canary:
     runs-on: ubuntu-latest
     timeout-minutes: 30
