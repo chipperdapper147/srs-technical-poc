@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { open } from "./navigation.ts";
 
 /** `/courses/new`. */
 export class NewCoursePage {
@@ -22,7 +23,7 @@ export class NewCoursePage {
   }
 
   async goto() {
-    await this.page.goto("/courses/new");
+    await open(this.page, "/courses/new");
   }
 
   async create(course: { title: string; targetLang: string; sourceLang?: string }) {

@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { open } from "./navigation.ts";
 
 /** `/settings`: learner defaults. */
 export class SettingsPage {
@@ -16,7 +17,7 @@ export class SettingsPage {
   }
 
   async goto() {
-    await this.page.goto("/settings");
+    await open(this.page, "/settings");
     await this.gradingSelect.waitFor();
   }
 
