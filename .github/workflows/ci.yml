@@ -62,7 +62,11 @@ jobs:
           # Node only: no pnpm here, so don't let setup-node look for its cache.
           package-manager-cache: false
 
-      - name: Behaviour changes come with tests (or a Verify-Waive trailer)
+      - name: Behaviour changes come with tests (or a waiver); owed evidence is ticked
+        env:
+          # Waivers and evidence boxes in the description. Passed as data; never
+          # interpolated into the script.
+          VERIFY_PR_BODY: ${{ github.event.pull_request.body }}
         run: node scripts/verify/cli.ts obligations --committed --base "origin/$GITHUB_BASE_REF"
 
   static:

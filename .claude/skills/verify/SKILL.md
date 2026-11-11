@@ -41,7 +41,10 @@ pnpm verify --report /tmp/verify-report.md
 
 ## 3. Manual evidence
 
-Do every item under "Manual evidence still needed".
+Do every item under "Manual evidence". When the change goes up as a PR, tick
+each item's box in the description (`- [x] \`<id>\` what you did`; the
+template lists them): CI's `obligations` job fails while an owed box is
+unticked.
 
 **`visual-check`** (agent visual check, `docs/verification.md`):
 

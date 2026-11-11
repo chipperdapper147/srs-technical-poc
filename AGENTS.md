@@ -86,7 +86,9 @@ Or use the `/verify` skill, which also does the manual evidence (visual check
 for UI changes). What a change needs is decided by `scripts/verify/rules.ts`,
 not by judgment: see "The rule" in `docs/verification.md`. Behaviour changes
 must ship with a test of the matching kind; when none can express the change,
-add a `Verify-Waive: <id>: <reason>` trailer to the commit. Only claim a change
+add a `Verify-Waive: <id>: <reason>` trailer to the commit (or a line in the PR
+description). On a PR, tick each owed evidence box in the description (the
+template lists them); CI fails while one is unticked. Only claim a change
 is verified with the report as evidence.
 
 Checks need Postgres (`pnpm db:setup`), Atlas on the PATH and Docker running.

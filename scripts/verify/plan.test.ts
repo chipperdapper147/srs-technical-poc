@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { END, injectRules, START } from "./docs.ts";
-import { classify, parseWaivers, plan, remoteDatabases } from "./plan.ts";
-import { CLASSES, E2E_MAP } from "./rules.ts";
+import { classify, parseEvidence, parseWaivers, plan, remoteDatabases } from "./plan.ts";
+import { CLASSES, E2E_MAP, EVIDENCE } from "./rules.ts";
 
 const ids = (p: ReturnType<typeof plan>) => p.checks.map((c) => c.id);
 
@@ -18,6 +19,7 @@ describe("classify", () => {
     [".github/workflows/ci.yml", "tooling"],
     ["scripts/db-check.sh", "tooling"],
     [".squawk.toml", "tooling"],
+    [".github/pull_request_template.md", "tooling"],
     ["db/schema.sql", "schema"],
     ["db/migrations/20261109065014_init.sql", "schema"],
     ["apps/api/src/db/types.ts", "schema"],
@@ -197,6 +199,52 @@ describe("parseWaivers", () => {
     assert.equal(waivers.get("api-test"), "pure rename, covered by existing tests");
     assert.equal(waivers.get("e2e-spec"), "styling only");
     assert.deepEqual(unknown, ["e2e-specs"]);
+  });
+});
+
+describe("parseEvidence", () => {
+  it("reads ticked boxes only and flags unknown ids", () => {
+    const { ticked, unknown } = parseEvidence([
+      "- [x] `visual-check` desktop and mobile: fine\r",
+      "* [X] `openapi-review`",
+      "- [ ] `lockfile-review` the lockfile diff:",
+      "  - [x] `visual-checks` typo",
+      "[x] `contract-readiness` not a list item",
+    ]);
+    assert.deepEqual([...ticked].sort(), ["openapi-review", "visual-check"]);
+    assert.deepEqual(unknown, ["visual-checks"]);
+  });
+});
+
+describe("evidence in a PR", () => {
+  const status = (p: ReturnType<typeof plan>) =>
+    Object.fromEntries(p.evidence.map((e) => [e.evidence.id, e.status]));
+
+  it("is only listed without a PR description", () => {
+    assert.deepEqual(status(plan(["apps/web/src/views/study/study-view.tsx"])), {
+      "visual-check": "listed",
+    });
+  });
+
+  it("is owed until ticked; after-merge and CI evidence never are", () => {
+    const files = ["packages/design/tokens.json", ".github/workflows/ci.yml"];
+    assert.deepEqual(status(plan(files, new Map(), { ticked: new Set() })), {
+      "visual-check": "owed",
+      "design-publish": "after-merge",
+      "ci-run": "ci",
+    });
+    const ticked = new Set(["visual-check", "design-publish"]);
+    const p = plan(["packages/design/tokens.json"], new Map(), { ticked });
+    assert.deepEqual(status(p), { "visual-check": "ticked", "design-publish": "ticked" });
+  });
+
+  it("has a box in the PR template for each item due before merge", () => {
+    const template = readFileSync(".github/pull_request_template.md", "utf8");
+    const boxes = [...template.matchAll(/^- \[ \] `([\w-]+)`/gm)].map((m) => m[1]);
+    assert.deepEqual(
+      boxes,
+      EVIDENCE.filter((e) => e.due === "pr").map((e) => e.id),
+    );
   });
 });
 
