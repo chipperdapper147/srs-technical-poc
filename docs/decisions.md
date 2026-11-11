@@ -48,10 +48,12 @@ than delete when a decision is reversed.
   review about **5 days** out (FSRS-7 defaults skip learning steps). Memrise-style
   apps review new words within hours. Options: `allowModelOverride: false` with
   explicit learning steps, or make the learn-session quiz not count as an FSRS
-  review.
+  review. **Decided 2026-11-11:** explicit learning steps before FSRS (see
+  "Squash merges, Auth0, learning steps").
 - Map fast exact answers to **Easy**? It would need per-learner timing baselines.
+  **Deferred 2026-11-11:** it isn't clear that it is a good idea.
 - Prompt direction is fixed (definition → type term); add reverse or
-  listening modes later.
+  listening modes later (issue #24).
 
 ## 2026-11-09: Atlas pinned, Playwright e2e with page objects
 
@@ -312,7 +314,9 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   deployment candidate is the change itself.
 - With rebase merges one PR lands as several commits, and only some get a
   green CI run, so "the previous commit" isn't a release. A tag written
-  after CI passes on main is.
+  after CI passes on main is. (Since 2026-11-11 PRs are squash-merged, so
+  each push to main is one commit; the tags still mark the ones whose CI
+  passed.)
 - `release-tag.yml` writes the tags (contents: write, nothing else). It is a
   stand-in. The long-term state, with deploys recorded per environment and
   per unit, is in TODO.md. Until a tag exists the checks use the merge-base,
@@ -345,3 +349,24 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   `pnpm-workspace.yaml`): adding or upgrading a dependency never resolves a
   release younger than a week. Installs from the lockfile are unaffected. An
   urgent security fix can go in `minimumReleaseAgeExclude`, with the reason.
+
+## 2026-11-11: Squash merges, Auth0, learning steps
+
+Decided by the repository owner.
+
+- **Squash merges** (provisional), replacing rebase merges. Each PR lands
+  on main as one commit whose message sums up its main ideas. One push to
+  main is then one green CI run and one `release/*` tag, which is what the
+  compatibility window assumes, and main reads as a list of changes.
+- **Auth0 is a requirement**, not one option among others. It is not to be
+  replaced by Neon Auth or a similar service.
+- **Git hooks stay plain `.githooks/`** (provisional). Whether to move to
+  Lefthook is tracked in issue #23.
+- **New words get learning steps.** A correct first answer no longer goes
+  straight to an FSRS review about 5 days out. New words first pass through
+  short explicit steps (for example 10 minutes, then 1 day), then FSRS
+  takes over. The steps must be easy to change and loosely coupled to the
+  scheduler. This answers the first open question of the trainer entry.
+- **Fast answers as Easy: deferred.** It isn't clear that it is a good idea.
+- **Follow-up issues:** a hierarchy for the design tokens (#22), reverse and
+  listening modes (#24), the mobile app (#25).
