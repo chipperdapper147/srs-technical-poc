@@ -332,6 +332,16 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   moderate) are in the shadcn CLI's own dependencies; they are in TODO.md.
 - The canary upgrades with `pnpm up --latest` in the job only. What breaks
   there becomes a planned upgrade, not an emergency.
-- It skips releases under 3 days old (`minimumReleaseAge`). A just-published
-  tarball can 404 for a while (seen with `lucide-react` 1.72.0 on #10), and
-  broken or hijacked releases are usually pulled or patched within days.
+- It skips releases under 14 days old (`minimumReleaseAge`). Its question is
+  whether the upgrade path is open, which a two-week-old answer settles as
+  well as a fresh one. A just-published tarball can 404 for a while (seen
+  with `lucide-react` 1.72.0 on #10), and most malicious or broken releases
+  are pulled within days.
+- The canary runs third-party code nobody pinned, so it is isolated:
+  `permissions: {}`, `persist-credentials: false`, no setup-node cache (it
+  can't write the store other jobs restore), `--ignore-scripts`, and never
+  any secrets.
+- The whole repo has a 7-day floor (`minimumReleaseAge: 10080` in
+  `pnpm-workspace.yaml`): adding or upgrading a dependency never resolves a
+  release younger than a week. Installs from the lockfile are unaffected. An
+  urgent security fix can go in `minimumReleaseAgeExclude`, with the reason.

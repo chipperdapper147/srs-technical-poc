@@ -404,12 +404,12 @@ Stages 4–5 need the deploy: Vercel Hobby and Neon, decided on 2026-11-11 (`TOD
 changes it. It is not a required check: its jobs find problems early rather
 than gate a merge.
 
-| Job          | What                                                                                                   | A failure means                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| `flake-hunt` | every e2e test 20 times on Chromium, no retries                                                        | a flaky test: find the race, don't add a retry     |
-| `browsers`   | the e2e suite on Firefox, WebKit, Pixel 7 and iPhone 15 (`E2E_ALL_BROWSERS=1`)                         | a browser-specific bug, or a test that assumes one |
-| `audit`      | `pnpm audit --audit-level high`                                                                        | a high or critical advisory: upgrade or override   |
-| `canary`     | Node 26 and every dependency at its latest release at least 3 days old, then lint, types, tests, build | an upgrade to plan; a TODO, not a broken build     |
+| Job          | What                                                                                                                                                                                     | A failure means                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `flake-hunt` | every e2e test 20 times on Chromium, no retries                                                                                                                                          | a flaky test: find the race, don't add a retry     |
+| `browsers`   | the e2e suite on Firefox, WebKit, Pixel 7 and iPhone 15 (`E2E_ALL_BROWSERS=1`)                                                                                                           | a browser-specific bug, or a test that assumes one |
+| `audit`      | `pnpm audit --audit-level high`                                                                                                                                                          | a high or critical advisory: upgrade or override   |
+| `canary`     | Node 26 and every dependency at its latest release at least 14 days old, then lint, types, tests, build. Isolated: no token permissions, no shared cache, no install scripts, no secrets | an upgrade to plan; a TODO, not a broken build     |
 
 Run one browser locally with `E2E_ALL_BROWSERS=1 pnpm --filter @app/e2e exec
 playwright test --project <name>` (`playwright install <browser>` first).
