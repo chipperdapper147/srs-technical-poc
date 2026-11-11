@@ -60,9 +60,7 @@ jobs:
         run: |
           set +e
           cd apps/e2e
-          echo "PROBE 1: a11y spec alone"; pnpm exec playwright test a11y --trace off --retries 0 --reporter=list --project ${{ matrix.project }}; echo "PROBE 1 exit=$?"
-          echo "PROBE 2: whole suite, 1 worker"; pnpm exec playwright test --trace off --retries 0 --workers 1 --reporter=list --project ${{ matrix.project }}; echo "PROBE 2 exit=$?"
-          echo "PROBE 3: whole suite, default workers"; pnpm exec playwright test --trace off --retries 0 --reporter=list --project ${{ matrix.project }}; echo "PROBE 3 exit=$?"
+          pnpm exec playwright test probe --trace off --retries 0 --reporter=list --project ${{ matrix.project }} | grep PROBE
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
