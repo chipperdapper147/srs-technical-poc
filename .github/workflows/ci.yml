@@ -8,6 +8,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # `edited`: re-check after the title or description changes (pr-description).
+    # The whole run repeats so `check` always reflects every job on this commit.
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -31,6 +34,18 @@ jobs:
 
       - name: No Claude session links in commit messages
         run: ./scripts/check-commit-messages.sh
+
+  pr-description:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: No Claude session links in the PR title or description
+        env:
+          # Passed as data; never interpolated into the script.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: ./scripts/check-pr-description.sh
 
   obligations:
     if: github.event_name == 'pull_request'
@@ -118,7 +133,7 @@ jobs:
 
   check:
     if: always()
-    needs: [commit-messages, obligations, static, database, e2e]
+    needs: [commit-messages, pr-description, obligations, static, database, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: All verification jobs passed

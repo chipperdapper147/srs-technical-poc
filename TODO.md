@@ -135,12 +135,6 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 - [ ] **Stage 7, production:** error tracking and a synthetic check of the
   study flow.
 
-### Session-link guard
-
-- [ ] Optional: a CI check that PR descriptions contain no Claude session
-  links. Today only `attribution.sessionUrl` and the `AGENTS.md` rule cover PR
-  descriptions.
-
 ## 6. Design
 
 - [ ] **A product identity.** The design system documents shadcn's stock

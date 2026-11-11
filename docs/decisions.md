@@ -244,3 +244,14 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - Risks to settle in a trial before relying on it, and the steps that need
   the owner's accounts and secrets: `TODO.md`, section 4. This closes the
   open question in ADR 0001.
+
+## 2026-11-11: PR descriptions are checked for session links too
+
+- The PR-creation tool appended a `claude.ai/code/session_…` footer to every
+  pull request description so far; it was removed by hand each time. CI's
+  `pr-description` job (`scripts/check-pr-description.sh`) now fails on one
+  in the title or description, with the same patterns as commit messages.
+- CI also runs on `edited` pull-request events, so fixing the description
+  re-runs it. The whole workflow repeats rather than only that job: skipping
+  jobs on an edit would let a green `check` from the edit replace a red one
+  from the same commit.
