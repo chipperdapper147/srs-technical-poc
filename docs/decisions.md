@@ -267,3 +267,16 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   due after merge and only listed;`ci-run`is met by the green`check`.
 - A ticked box is the author's attestation, with what they did beside it.
   CI can't judge a screenshot, but it can make sure nobody forgot one.
+
+## 2026-11-11: oasdiff checks the API for breaking changes
+
+- `openapi-breaking` runs `oasdiff breaking` between the base branch's
+  `apps/api/openapi.json` and the head copy, and fails on its errors. It runs
+  for every change to the API spec, routes, domain or contracts, and in CI's
+  `static` job.
+- oasdiff is pinned (v1.34.1) and taken from its official image, as Atlas is.
+- The base branch stands in for the deployed clients until deployed versions
+  are recorded (ADR 0003).
+- Intended breaks go in `apps/api/openapi-breaking.ignore`, with the reason
+  in the PR. The default is expand/contract, as for the database.
+- `openapi-review` stays for what a structural diff can't see.

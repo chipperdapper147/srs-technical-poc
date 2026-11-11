@@ -12,6 +12,7 @@ set -euo pipefail
 
 NODE_VERSION=24.22.2 # keep on the .nvmrc major; bump deliberately
 ATLAS_VERSION=1.3.8  # keep in sync with .github/actions/setup and README
+OASDIFF_VERSION=1.34.1  # keep in sync with .github/actions/setup
 TOOLS="${SRS_TOOLS_DIR:-/opt/srs-tools}"
 LOG="${TMPDIR:-/tmp}/srs-agent-setup.log"
 
@@ -82,6 +83,15 @@ if ! atlas version 2>/dev/null | grep -q "v$ATLAS_VERSION"; then
   run docker pull "arigaio/atlas:$ATLAS_VERSION" || fail "pulling the Atlas image"
   cid="$(docker create "arigaio/atlas:$ATLAS_VERSION")"
   run docker cp "$cid:/atlas" "$TOOLS/bin/atlas" || fail "extracting Atlas"
+  run docker rm "$cid"
+fi
+
+# --- oasdiff (OpenAPI breaking-change check), from its pinned official image --
+if ! oasdiff --version 2>/dev/null | grep -q "$OASDIFF_VERSION"; then
+  step "installing oasdiff $OASDIFF_VERSION"
+  run docker pull "tufin/oasdiff:v$OASDIFF_VERSION" || fail "pulling the oasdiff image"
+  cid="$(docker create "tufin/oasdiff:v$OASDIFF_VERSION")"
+  run docker cp "$cid:/usr/bin/oasdiff" "$TOOLS/bin/oasdiff" || fail "extracting oasdiff"
   run docker rm "$cid"
 fi
 
