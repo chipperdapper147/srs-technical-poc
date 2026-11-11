@@ -319,3 +319,6 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   moderate) are in the shadcn CLI's own dependencies; they are in TODO.md.
 - The canary upgrades with `pnpm up --latest` in the job only. What breaks
   there becomes a planned upgrade, not an emergency.
+- It skips releases under 3 days old (`minimumReleaseAge`). A just-published
+  tarball can 404 for a while (seen with `lucide-react` 1.72.0 on #10), and
+  broken or hijacked releases are usually pulled or patched within days.
