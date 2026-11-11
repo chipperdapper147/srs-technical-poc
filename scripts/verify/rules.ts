@@ -325,6 +325,7 @@ export const CLASSES: ChangeClass[] = [
       ".claude/**",
       "turbo.json",
       "biome.json",
+      ".squawk.toml",
       "tsconfig.base.json",
       "atlas.hcl",
       "docker-compose.yml",

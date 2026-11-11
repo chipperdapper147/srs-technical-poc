@@ -17,6 +17,7 @@ describe("classify", () => {
     ["apps/api/package.json", "dependencies"],
     [".github/workflows/ci.yml", "tooling"],
     ["scripts/db-check.sh", "tooling"],
+    [".squawk.toml", "tooling"],
     ["db/schema.sql", "schema"],
     ["db/migrations/20261109065014_init.sql", "schema"],
     ["apps/api/src/db/types.ts", "schema"],
