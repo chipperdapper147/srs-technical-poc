@@ -29,6 +29,7 @@ export type CheckId =
   | "migration-rehearsal"
   | "codegen-drift"
   | "openapi-drift"
+  | "openapi-breaking"
   | "test:shared"
   | "test:design"
   | "design-drift"
@@ -40,7 +41,7 @@ export type CheckId =
   | "build:web"
   | "e2e";
 
-export type Need = "postgres" | "atlas" | "docker";
+export type Need = "postgres" | "atlas" | "docker" | "oasdiff";
 
 export interface Check {
   id: CheckId;
@@ -101,6 +102,12 @@ export const CHECKS: Check[] = [
     title: "OpenAPI snapshot matches the routes",
     command: "pnpm api:openapi",
     drift: ["apps/api/openapi.json"],
+  },
+  {
+    id: "openapi-breaking",
+    title: "The OpenAPI spec makes no breaking change against the base (oasdiff)",
+    command: "pnpm api:breaking",
+    needs: ["oasdiff"],
   },
   {
     id: "design-drift",
@@ -219,7 +226,7 @@ export const EVIDENCE: Evidence[] = [
   {
     id: "openapi-review",
     title: "Review the OpenAPI snapshot diff",
-    how: "Read the apps/api/openapi.json diff. A removed path, a removed or newly required request field, or a removed or narrowed response field is breaking; say so in the PR.",
+    how: "Read the apps/api/openapi.json diff for what `openapi-breaking` cannot judge: a field whose meaning, units or default changed, and whether each new field and path is what clients need. Say in the PR what changes for clients.",
     due: "pr",
   },
   {
@@ -410,8 +417,8 @@ export const CLASSES: ChangeClass[] = [
     id: "api-spec",
     side: "backend",
     title: "OpenAPI snapshot",
-    paths: ["apps/api/openapi.json", "apps/api/src/openapi.ts"],
-    checks: ["openapi-drift"],
+    paths: ["apps/api/openapi.json", "apps/api/openapi-breaking.ignore", "apps/api/src/openapi.ts"],
+    checks: ["openapi-drift", "openapi-breaking"],
     e2e: "none",
     evidence: ["openapi-review"],
   },
@@ -428,7 +435,7 @@ export const CLASSES: ChangeClass[] = [
     side: "backend",
     title: "API routes, plugins and app wiring",
     paths: ["apps/api/src/routes/**", "apps/api/src/plugins/**", "apps/api/src/app.ts"],
-    checks: ["lint", "typecheck", "openapi-drift", "test:api"],
+    checks: ["lint", "typecheck", "openapi-drift", "openapi-breaking", "test:api"],
     e2e: "mapped",
     obligations: ["api-test"],
   },
@@ -437,7 +444,7 @@ export const CLASSES: ChangeClass[] = [
     side: "backend",
     title: "API domain logic (scheduling, import, config)",
     paths: ["apps/api/**"],
-    checks: ["lint", "typecheck", "openapi-drift", "test:api"],
+    checks: ["lint", "typecheck", "openapi-drift", "openapi-breaking", "test:api"],
     e2e: "mapped",
     obligations: ["api-test"],
   },
@@ -452,6 +459,7 @@ export const CLASSES: ChangeClass[] = [
       "lint",
       "typecheck",
       "openapi-drift",
+      "openapi-breaking",
       "test:shared",
       "test:client",
       "test:web",

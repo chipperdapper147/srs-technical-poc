@@ -123,12 +123,15 @@ const needHints: Record<Need, string> = {
   postgres: "Postgres is not reachable at DATABASE_URL. Run `pnpm db:setup`.",
   atlas: "Atlas is not on the PATH. See README prerequisites.",
   docker: "Docker is not running (Atlas uses it for its dev database).",
+  oasdiff: "oasdiff is not on the PATH. Rerun scripts/setup-agent-env.sh.",
 };
 
 /** null when the need is met, otherwise why not. */
 async function needUnmet(need: Need): Promise<string | null> {
   if (need === "atlas")
     return spawnSync("atlas", ["version"]).status === 0 ? null : needHints.atlas;
+  if (need === "oasdiff")
+    return spawnSync("oasdiff", ["--version"]).status === 0 ? null : needHints.oasdiff;
   if (need === "docker") {
     return spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0
       ? null

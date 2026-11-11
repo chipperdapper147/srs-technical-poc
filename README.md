@@ -44,7 +44,9 @@ docs/            decisions.md, verification.md, adr/
 
 Prerequisites: Node 24 (`.nvmrc`), pnpm 10 (`corepack enable`), Docker, and the
 [Atlas CLI](https://atlasgo.io/getting-started#installation)
-(`curl -sSf https://atlasgo.sh | ATLAS_VERSION=v1.3.8 sh`, the version CI pins).
+(`curl -sSf https://atlasgo.sh | ATLAS_VERSION=v1.3.8 sh`, the version CI pins),
+and [oasdiff](https://github.com/oasdiff/oasdiff) v1.34.1 for the
+`openapi-breaking` check.
 
 ```sh
 cp .env.example .env

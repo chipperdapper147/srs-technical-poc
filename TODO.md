@@ -99,10 +99,11 @@ unit treated as its own repository); these details are open.
 - [ ] **When is it safe to contract?** Today `contract-readiness` is written
   evidence. Decide how consumers publish what they use (for example a usage
   manifest per release) so readiness can be checked automatically.
-- [ ] **HTTP API compatibility with deployed clients** (web, and every supported
-  mobile version): an automated breaking-change check against what's deployed.
-  `oasdiff` (compares two OpenAPI documents and labels breaking changes) is
-  one option, not a decision. Includes tolerant parsing of enums in clients.
+- [ ] **HTTP API compatibility with deployed clients**: `openapi-breaking`
+  (oasdiff) compares against the base branch's spec. Once deployed versions
+  are recorded, compare against every deployed client's version (web, and
+  each supported mobile release) instead. Also: tolerant parsing of enums in
+  clients.
 - [ ] **Rehearse on a branch of production** (Neon) instead of generated data,
   with the deploy. Also set `lock_timeout` and `statement_timeout` on the
   deploy's migration connection (Squawk's per-file timeout rules are off for

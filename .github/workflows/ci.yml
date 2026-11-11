@@ -71,13 +71,20 @@ jobs:
 
   static:
     runs-on: ubuntu-latest
+    env:
+      # openapi-breaking compares the spec with the base branch's copy.
+      VERIFY_BASE: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the base branch, for openapi-breaking
       - uses: ./.github/actions/setup
-      - name: Lint, types, unit tests, generated-file drift
+        with:
+          oasdiff: "true"
+      - name: Lint, types, unit tests, generated-file drift, API breaking changes
         run: >-
           pnpm verify --all
-          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,design-drift,test:shared,test:design,test:client,test:web
+          --only lint,typecheck,test:scripts,rules-drift,shell-syntax,openapi-drift,openapi-breaking,design-drift,test:shared,test:design,test:client,test:web
 
   database:
     runs-on: ubuntu-latest

@@ -79,7 +79,7 @@ consumer's code at one commit doesn't exist at all.
 | Versioned consumption  | Workspace links (same commit)                                                                              | Units publish versions; consumers pin exact versions (open)                                           |
 | Compatibility window   | Not checked                                                                                                | Each consumer version in the window runs its database-facing tests against the migrated schema (open) |
 | Deployed versions      | Not recorded                                                                                               | The deploy pipeline records production and the rollback candidate per environment (open)              |
-| HTTP API compatibility | OpenAPI snapshot diff, reviewed by a person                                                                | An automated breaking-change check against deployed clients (open; tool not chosen)                   |
+| HTTP API compatibility | oasdiff against the base branch's spec (`openapi-breaking`), plus review of the diff                       | The same check against each deployed client's version (open)                                          |
 
 ## Consequences
 
