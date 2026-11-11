@@ -7,6 +7,12 @@ inputs:
   oasdiff:
     description: Install oasdiff (the openapi-breaking check)
     default: "false"
+  node-version:
+    description: Node version instead of .nvmrc (the nightly canary)
+    default: ""
+  latest:
+    description: Upgrade every dependency to its latest version after installing (the nightly canary)
+    default: "false"
 runs:
   using: composite
   steps:
@@ -14,7 +20,8 @@ runs:
 
     - uses: actions/setup-node@v5
       with:
-        node-version-file: .nvmrc
+        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc # node-version, when set, takes precedence
         cache: pnpm
 
     - name: Install Atlas
@@ -38,3 +45,8 @@ runs:
 
     - shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: Upgrade every dependency to latest
+      if: inputs.latest == 'true'
+      shell: bash
+      run: pnpm up --recursive --latest && git diff --stat -- '**/package.json'
