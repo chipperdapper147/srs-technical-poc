@@ -72,9 +72,12 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 
 ### Missing test kinds (stage 3)
 
-- [ ] **Accessibility checks in the browser** (`@axe-core/playwright`): axe
-  already scans every view in jsdom; a browser pass adds colour contrast and
-  real layout. Screenshot diffs later.
+- [ ] **Screenshot diffs** of each screen, beside the axe browser scans
+  (`apps/e2e/tests/a11y.spec.ts`).
+- [ ] **axe best-practice rules** in the browser scans: they flag that the
+  new-course, settings and study screens have no level-one heading. Give
+  each screen an `h1`, then add the `best-practice` tag in
+  `apps/e2e/support/a11y.ts`.
 - [ ] **Mobile app** (`apps/mobile`, Expo): views, screens and `platform/`
   adapters over `@app/client` (ADR 0002). Add `mobile-*` classes to the rules.
 - [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.
@@ -134,7 +137,10 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
   neutral theme. Decide a palette, a display face and the verdict colours,
   change `packages/design/tokens.json`, and republish the artifact.
 - [ ] **Contrast gaps** flagged in the token notes: `muted-foreground` on
-  `muted` (4.3:1, light) and the focus `ring` (2.6:1, light).
+  `muted` (4.3:1, light) and the focus `ring` (2.6:1, light). The browser
+  axe scan also finds `muted-foreground` on the verdict tints in the study
+  feedback box ("Next review …", 3.98 to 4.39:1). It is listed as known in
+  `apps/e2e/support/a11y.ts`; remove that entry with the fix.
 - [ ] **Dark theme is unreachable**: defined in tokens, but nothing sets
   `.dark`. Follow the OS setting, or add a toggle in Settings.
 

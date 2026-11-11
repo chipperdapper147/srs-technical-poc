@@ -620,7 +620,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/views/study/**",
       "apps/web/src/app/courses/[[]id[]]/study/**",
     ],
-    specs: ["study", "grading"],
+    specs: ["study", "grading", "a11y"],
   },
   {
     paths: [
@@ -633,7 +633,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
     ],
-    specs: ["course-authoring", "courses", "grading"],
+    specs: ["course-authoring", "courses", "grading", "a11y"],
   },
   {
     paths: [
@@ -642,7 +642,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/views/settings/**",
       "apps/web/src/app/settings/**",
     ],
-    specs: ["grading", "courses"],
+    specs: ["grading", "courses", "a11y"],
   },
   {
     paths: [
@@ -654,6 +654,6 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/views/app-shell/**",
       "apps/web/src/app/page.tsx",
     ],
-    specs: ["courses"],
+    specs: ["courses", "a11y"],
   },
 ];
