@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { END, injectRules, START } from "./docs.ts";
 import { classify, parseEvidence, parseWaivers, plan, remoteDatabases } from "./plan.ts";
-import { CLASSES, E2E_MAP, EVIDENCE } from "./rules.ts";
+import { CHECKS, CLASSES, E2E_MAP, EVIDENCE } from "./rules.ts";
 
 const ids = (p: ReturnType<typeof plan>) => p.checks.map((c) => c.id);
 
@@ -277,5 +277,13 @@ describe("remoteDatabases", () => {
         "TEST_DATABASE_URL (not a valid URL)",
       ],
     );
+  });
+});
+
+describe("CI", () => {
+  it("runs every check in exactly one job", () => {
+    const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+    const listed = [...ci.matchAll(/--only ([\w:,-]+)/g)].flatMap((m) => (m[1] ?? "").split(","));
+    assert.deepEqual([...listed].sort(), CHECKS.map((c) => c.id).sort());
   });
 });
