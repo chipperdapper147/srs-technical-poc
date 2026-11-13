@@ -22,6 +22,7 @@ export type CheckId =
   | "lint"
   | "typecheck"
   | "test:scripts"
+  | "release-age"
   | "rules-drift"
   | "shell-syntax"
   | "db:check"
@@ -63,6 +64,11 @@ export const CHECKS: Check[] = [
   { id: "lint", title: "Biome lint and format", command: "pnpm lint" },
   { id: "typecheck", title: "TypeScript, all packages", command: "pnpm typecheck" },
   { id: "test:scripts", title: "Repo script tests", command: "pnpm test:scripts" },
+  {
+    id: "release-age",
+    title: "Every locked package is at least minimumReleaseAge old (when the lockfile changed)",
+    command: "node scripts/deps/release-age.ts",
+  },
   {
     id: "rules-drift",
     title: "Rule tables in docs/verification.md match rules.ts",
