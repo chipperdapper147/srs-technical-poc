@@ -50,6 +50,14 @@ SELECT
 FROM (SELECT id, row_number() OVER (ORDER BY auth_sub) AS n FROM users) AS u
 WHERE u.n % 10 = 0;
 
+-- Prebuilt-course ledger: one key per loaded course, and one whose course was
+-- deleted since (course_id NULL).
+INSERT INTO prebuilt_courses (key, course_id)
+SELECT 'prebuilt-' || i, (SELECT id FROM courses WHERE title = 'Shared course ' || i)
+FROM generate_series(1, 3) AS i
+UNION ALL
+SELECT 'prebuilt-deleted', NULL;
+
 INSERT INTO units (course_id, position, title)
 SELECT c.id, p, 'Unit ' || p
 FROM courses AS c, generate_series(1, 10) AS p;

@@ -175,11 +175,6 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 - [ ] **Prebuilt courses, later parts** (issue #41): a catalog with search,
   and who may own and publish prebuilt courses (an admin role, once Auth0
   is in). The empty-state hint is #40.
-- [ ] **A stable key for prebuilt courses.** The deploy step finds a
-  prebuilt course by its title among shared courses, so renaming or
-  deleting one in the database makes the next deploy insert it again.
-  Harmless while nobody does either; settle it before the first rename or
-  delete (decisions log, "Prebuilt courses").
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
   access key (`plugins/access-key.ts`, the client's `AccessGate` and the web

@@ -80,7 +80,7 @@ holds the key); without a key it skips that step.
 | `pnpm db:lint`                                 | Lint new migrations: Squawk and the expand/contract policy (ADR 0003)                 |
 | `pnpm db:rehearse`                             | Apply new migrations to production-shaped data, timed, then check invariants          |
 | `pnpm db:hash`                                 | Re-hash `atlas.sum` after editing a new, unapplied migration                          |
-| `pnpm db:seed`                                 | Load the prebuilt courses and the sample course, where missing (idempotent)           |
+| `pnpm db:seed`                                 | Load the prebuilt courses and the sample course, once per database (idempotent)       |
 | `pnpm api:openapi`                             | Regenerate the committed OpenAPI snapshot `apps/api/openapi.json`                     |
 | `pnpm design:build`                            | Regenerate token files from `packages/design/tokens.json` (web CSS, native TS)        |
 | `pnpm design:system`                           | Build the design-system artifact's files into `packages/design/.system/`              |

@@ -7,7 +7,10 @@ import { loadEnv } from "../env.ts";
 import { createDb } from "./index.ts";
 import { type CourseSource, describe, ensureCourse, ensurePrebuiltCourses } from "./prebuilt.ts";
 
+// Loaded and recorded like a prebuilt course, so it too is inserted once.
+// To get it back after deleting it, delete its prebuilt_courses row as well.
 const SAMPLE: CourseSource = {
+  key: "spanish-basics-sample",
   title: "Spanish basics (sample)",
   description: "Placeholder content: three short units of everyday vocabulary.",
   sourceLang: "en",

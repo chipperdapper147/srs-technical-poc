@@ -7,6 +7,7 @@ import {
   ensurePrebuiltCourses,
   PREBUILT_COURSES,
 } from "../src/db/prebuilt.ts";
+import { importVocabulary } from "../src/import.ts";
 import { gradeAnswer } from "../src/shared.ts";
 import { setupTestApp } from "./helpers.ts";
 
@@ -16,10 +17,20 @@ afterAll(ctx.close);
 beforeEach(ctx.reset);
 
 const CAPITALS = "Capitals of the 20 most populous countries";
-const capitals = PREBUILT_COURSES.find((c) => c.title === CAPITALS) as CourseSource;
+const KEY = "capitals-20-most-populous";
+const capitals = PREBUILT_COURSES.find((c) => c.key === KEY) as CourseSource;
 
 const sharedCourses = () =>
   db.selectFrom("courses").selectAll().where("ownerId", "is", null).orderBy("createdAt").execute();
+const ledger = () =>
+  db.selectFrom("prebuiltCourses").select(["key", "courseId"]).orderBy("key").execute();
+
+/** Load the capitals course and return its id. */
+async function load() {
+  const [result] = await ensurePrebuiltCourses(db);
+  expect(result?.status).toBe("created");
+  return result?.courseId as string;
+}
 
 /** Everything a later edit could touch, in a comparable shape. */
 async function snapshot(courseId: string) {
@@ -45,10 +56,16 @@ async function snapshot(courseId: string) {
 }
 
 describe("prebuilt courses", () => {
-  it("inserts the capitals course as a shared, read-only course", async () => {
+  it("inserts the capitals course as a shared, read-only course and records its key", async () => {
     const [result] = await ensurePrebuiltCourses(db);
-    expect(result).toMatchObject({ title: CAPITALS, created: true, unitsCreated: 2 });
-    expect(result?.created && result.itemsCreated).toBe(20);
+    expect(result).toMatchObject({
+      key: KEY,
+      title: CAPITALS,
+      status: "created",
+      unitsCreated: 2,
+      itemsCreated: 20,
+    });
+    expect(await ledger()).toEqual([{ key: KEY, courseId: result?.courseId }]);
 
     const list = await app.inject({ url: "/courses", headers: { "x-dev-user": "learner" } });
     expect(list.json()).toContainEqual(
@@ -65,26 +82,22 @@ describe("prebuilt courses", () => {
         { title: "Ranks 11–20", itemCount: 10 },
       ],
     });
-    const course = await db
-      .selectFrom("courses")
-      .select("ownerId")
-      .where("id", "=", result?.courseId as string)
-      .executeTakeFirstOrThrow();
-    expect(course.ownerId).toBeNull();
+    const [course] = await sharedCourses();
+    expect(course?.ownerId).toBeNull();
   });
 
   it("is idempotent: a second run inserts nothing", async () => {
-    const [first] = await ensurePrebuiltCourses(db);
-    const before = await snapshot(first?.courseId as string);
+    const courseId = await load();
+    const before = await snapshot(courseId);
     const [second] = await ensurePrebuiltCourses(db);
-    expect(second).toEqual({ title: CAPITALS, courseId: first?.courseId, created: false });
-    expect(await sharedCourses()).toHaveLength(PREBUILT_COURSES.length);
-    expect(await snapshot(first?.courseId as string)).toEqual(before);
+    expect(second).toEqual({ key: KEY, title: CAPITALS, status: "present", courseId });
+    expect(await sharedCourses()).toHaveLength(1);
+    expect(await ledger()).toHaveLength(1);
+    expect(await snapshot(courseId)).toEqual(before);
   });
 
   it("leaves an existing, edited course alone", async () => {
-    const [first] = await ensurePrebuiltCourses(db);
-    const courseId = first?.courseId as string;
+    const courseId = await load();
     // Edits made in the database after the first deploy.
     await db
       .updateTable("courses")
@@ -111,10 +124,54 @@ describe("prebuilt courses", () => {
     const edited = await snapshot(courseId);
 
     const [again] = await ensurePrebuiltCourses(db);
-    expect(again).toMatchObject({ courseId, created: false });
+    expect(again).toMatchObject({ courseId, status: "present" });
     expect(await snapshot(courseId)).toEqual(edited);
     expect(edited.items).toHaveLength(19);
-    expect(await sharedCourses()).toHaveLength(PREBUILT_COURSES.length);
+    expect(await sharedCourses()).toHaveLength(1);
+  });
+
+  it("does not insert a renamed course again", async () => {
+    const courseId = await load();
+    await db
+      .updateTable("courses")
+      .set({ title: "World capitals" })
+      .where("id", "=", courseId)
+      .execute();
+
+    const [again] = await ensurePrebuiltCourses(db);
+    expect(again).toMatchObject({ status: "present", courseId });
+    expect((await sharedCourses()).map((c) => c.title)).toEqual(["World capitals"]);
+  });
+
+  it("does not insert a deleted course again", async () => {
+    const courseId = await load();
+    await db.deleteFrom("courses").where("id", "=", courseId).execute();
+    expect(await ledger()).toEqual([{ key: KEY, courseId: null }]);
+
+    const [again] = await ensurePrebuiltCourses(db);
+    expect(again).toEqual({ key: KEY, title: CAPITALS, status: "present", courseId: null });
+    expect(await sharedCourses()).toEqual([]);
+    expect(await db.selectFrom("items").select("id").execute()).toEqual([]);
+  });
+
+  it("records a course loaded before the ledger existed instead of inserting it", async () => {
+    // What the first version of this step left behind: the course, no ledger row.
+    const { id } = await db
+      .insertInto("courses")
+      .values({ title: CAPITALS, description: "Edited before", sourceLang: "en", targetLang: "en" })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await importVocabulary(db, id, "unit,term,definition\nTop 10,Beijing,China\n");
+    const before = await snapshot(id);
+
+    const [result] = await ensurePrebuiltCourses(db);
+    expect(result).toEqual({ key: KEY, title: CAPITALS, status: "recorded", courseId: id });
+    expect(await ledger()).toEqual([{ key: KEY, courseId: id }]);
+    expect(await snapshot(id)).toEqual(before);
+    expect(await sharedCourses()).toHaveLength(1);
+
+    const [again] = await ensurePrebuiltCourses(db);
+    expect(again).toMatchObject({ status: "present", courseId: id });
   });
 
   it("ignores courses a learner owns with the same title", async () => {
@@ -125,13 +182,15 @@ describe("prebuilt courses", () => {
       payload: { title: CAPITALS, sourceLang: "en", targetLang: "en" },
     });
     const [result] = await ensurePrebuiltCourses(db);
-    expect(result?.created).toBe(true);
+    expect(result?.status).toBe("created");
+    expect(await sharedCourses()).toHaveLength(1);
   });
 
   it("concurrent runs insert the course once", async () => {
     const results = await Promise.all([ensureCourse(db, capitals), ensureCourse(db, capitals)]);
-    expect(results.filter((r) => r.created)).toHaveLength(1);
+    expect(results.map((r) => r.status).sort()).toEqual(["created", "present"]);
     expect(await sharedCourses()).toHaveLength(1);
+    expect(await ledger()).toHaveLength(1);
   });
 
   it("runs as the command the deploy uses, against DATABASE_URL", async () => {
@@ -140,8 +199,14 @@ describe("prebuilt courses", () => {
         env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL },
       });
     expect((await run()).stdout).toContain(`created "${CAPITALS}" (2 units, 20 items)`);
-    expect((await run()).stdout).toContain(`"${CAPITALS}" already present, left as it is`);
-    expect(await sharedCourses()).toHaveLength(PREBUILT_COURSES.length);
+    expect((await run()).stdout).toContain(`${KEY} was loaded before; left as it is`);
+    expect(await sharedCourses()).toHaveLength(1);
+  });
+
+  it("gives every prebuilt course its own key", () => {
+    const keys = PREBUILT_COURSES.map((c) => c.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const key of keys) expect(key).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
   });
 });
 

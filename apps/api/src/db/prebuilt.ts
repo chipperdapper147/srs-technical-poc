@@ -1,8 +1,12 @@
 /**
  * Prebuilt courses: shared courses (no owner, so read-only for learners)
- * that every environment gets. A course is inserted only if no shared course
- * with its title exists yet, through the same CSV import path users get. It
- * is never deleted or overwritten, so edits made later in the database stick.
+ * that every environment gets, through the same CSV import path users get.
+ *
+ * Each has a stable key. A course is inserted only while its key is missing
+ * from the `prebuilt_courses` ledger, and the key is recorded in the same
+ * transaction. From then on it is never inserted again, whatever happens to
+ * the course: edited, renamed or deleted, it stays that way. Nothing here
+ * deletes or overwrites.
  *
  *   node src/db/prebuilt.ts      loads them into DATABASE_URL
  *
@@ -15,6 +19,8 @@ import { importVocabulary } from "../import.ts";
 import { createDb, type Database } from "./index.ts";
 
 export interface CourseSource {
+  /** Stable identity in the ledger. Never change it: a new key inserts the course again. */
+  key: string;
   title: string;
   description: string;
   sourceLang: string;
@@ -33,6 +39,7 @@ export const PREBUILT_COURSES: readonly CourseSource[] = [
     // Accents are optional unless a learner turns them on ("Brasilia"
     // passes for "Brasília"), and punctuation is ignored, so the
     // alternatives are only other names: "Washington", "Delhi", "Ha Noi"…
+    key: "capitals-20-most-populous",
     title: "Capitals of the 20 most populous countries",
     description:
       "Type the capital of each country. Ranked by population in the UN World Population Prospects 2024.",
@@ -42,28 +49,50 @@ export const PREBUILT_COURSES: readonly CourseSource[] = [
   },
 ];
 
-export type EnsureResult =
-  | { title: string; courseId: string; created: false }
-  | { title: string; courseId: string; created: true; unitsCreated: number; itemsCreated: number };
+/**
+ * - `created`: inserted now.
+ * - `recorded`: no ledger row yet, but a shared course with this exact
+ *   title was already there (loaded before the ledger existed); recorded
+ *   as this key, unchanged.
+ * - `present`: the key was recorded before; nothing done. `courseId` is
+ *   null once the course has been deleted.
+ */
+export type EnsureResult = { key: string; title: string } & (
+  | { status: "created"; courseId: string; unitsCreated: number; itemsCreated: number }
+  | { status: "recorded"; courseId: string }
+  | { status: "present"; courseId: string | null }
+);
 
-/** Insert the course unless a shared course with its title exists. */
+/** Insert the course unless its key is in the ledger. */
 export async function ensureCourse(db: Database, course: CourseSource): Promise<EnsureResult> {
   const csv = await readFile(course.csv, "utf8");
+  const { key, title } = course;
   return db.transaction().execute(async (trx) => {
     // Two deploys of the same database at once must not both insert it.
-    await sql`SELECT pg_advisory_xact_lock(hashtext(${`course:${course.title}`}))`.execute(trx);
+    await sql`SELECT pg_advisory_xact_lock(hashtext(${`prebuilt-course:${key}`}))`.execute(trx);
+    const recorded = await trx
+      .selectFrom("prebuiltCourses")
+      .select("courseId")
+      .where("key", "=", key)
+      .executeTakeFirst();
+    if (recorded) return { key, title, status: "present", courseId: recorded.courseId };
+
     const existing = await trx
       .selectFrom("courses")
       .select("id")
-      .where("title", "=", course.title)
+      .where("title", "=", title)
       .where("ownerId", "is", null)
+      .orderBy("createdAt")
       .executeTakeFirst();
-    if (existing) return { title: course.title, courseId: existing.id, created: false };
+    if (existing) {
+      await trx.insertInto("prebuiltCourses").values({ key, courseId: existing.id }).execute();
+      return { key, title, status: "recorded", courseId: existing.id };
+    }
 
     const { id } = await trx
       .insertInto("courses")
       .values({
-        title: course.title,
+        title,
         description: course.description,
         sourceLang: course.sourceLang,
         targetLang: course.targetLang,
@@ -71,7 +100,8 @@ export async function ensureCourse(db: Database, course: CourseSource): Promise<
       .returning("id")
       .executeTakeFirstOrThrow();
     const imported = await importVocabulary(trx, id, csv);
-    return { title: course.title, courseId: id, created: true, ...imported };
+    await trx.insertInto("prebuiltCourses").values({ key, courseId: id }).execute();
+    return { key, title, status: "created", courseId: id, ...imported };
   });
 }
 
@@ -85,9 +115,16 @@ export async function ensurePrebuiltCourses(
 }
 
 export function describe(result: EnsureResult): string {
-  return result.created
-    ? `created "${result.title}" (${result.unitsCreated} units, ${result.itemsCreated} items)`
-    : `"${result.title}" already present, left as it is`;
+  switch (result.status) {
+    case "created":
+      return `created "${result.title}" (${result.unitsCreated} units, ${result.itemsCreated} items)`;
+    case "recorded":
+      return `"${result.title}" was already here; recorded it as ${result.key}, unchanged`;
+    case "present":
+      return result.courseId
+        ? `${result.key} was loaded before; left as it is`
+        : `${result.key} was loaded before and its course deleted since; not inserting it again`;
+  }
 }
 
 async function main(): Promise<void> {

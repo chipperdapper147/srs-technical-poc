@@ -28,7 +28,7 @@ export async function setupTestApp({
     scheduler,
   });
   const reset = () =>
-    sql`TRUNCATE users, courses, units, items, cards, review_logs RESTART IDENTITY CASCADE`.execute(
+    sql`TRUNCATE users, courses, units, items, cards, review_logs, prebuilt_courses RESTART IDENTITY CASCADE`.execute(
       db,
     );
   const close = async () => {

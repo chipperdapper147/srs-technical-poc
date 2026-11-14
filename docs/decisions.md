@@ -471,26 +471,40 @@ Decided by the repository owner (#12), out of three options: a darker
 - The browser axe scan no longer lists the feedback box as a known
   violation, so it enforces this.
 
-## 2026-11-14: Prebuilt courses, inserted where missing on every deploy
+## 2026-11-14: Prebuilt courses, inserted once per database
 
 Decided by the repository owner in issue #41; built here.
 
 - **A prebuilt course is an ordinary shared course** (`owner_id` null,
-  read-only for learners) whose content lives in the database. Edits there
+  read-only for learners) whose content lives in the database. Its owner
+  can edit or delete it; then it simply changes or ceases to be. Edits
   change nothing for learners: their cards keep pointing at the edited
   items. Deleting content deletes the learner data that points at it.
 - **Getting it there:** `apps/api/src/db/prebuilt.ts` lists the courses,
-  each a CSV in `db/courses/`, and inserts a course only when no shared
-  course with its title exists, through the CSV import path users get. It
-  never deletes or overwrites, so later edits in the database stick. A
-  transaction-level advisory lock on the title keeps two deploys of the
-  same database from both inserting.
+  each with a stable key and a CSV in `db/courses/`. A course is inserted,
+  through the CSV import path users get, only while its key is missing from
+  the `prebuilt_courses` ledger, and the key is recorded in the same
+  transaction. After that it is never inserted again, whether the course
+  is edited, renamed or deleted (`course_id` becomes NULL; the row stays).
+  Nothing deletes or overwrites. A transaction-level advisory lock on the
+  key keeps two deploys of the same database from both inserting.
+- **Databases from before the ledger:** with no ledger row but a shared
+  course of exactly that title, the step records the key against that
+  course instead of inserting a second copy. That covers local databases
+  seeded by the first version of this change; production had none.
+- **A new key means a new course.** Never change a key; a renamed course
+  keeps its old key.
 - **It runs everywhere:** on Vercel, `scripts/deploy/migrate.ts` (the API's
   `vercel-build`) runs it right after the migrations, on the same
   `DATABASE_URL_UNPOOLED`: a short batch job needs no pooler, and it needs
   the migrated schema. Either step failing fails the build. Locally,
   `pnpm db:seed` runs it, and CI's e2e job seeds the same way.
-- **The Spanish sample stays local:** only `pnpm db:seed` loads it.
+- **The Spanish sample stays local:** only `pnpm db:seed` loads it. It is
+  recorded in the ledger too (key `spanish-basics-sample`), so a local
+  database that deletes it gets it back only if its ledger row goes too.
+- **Schema:** `prebuilt_courses (key text PRIMARY KEY, course_id uuid NULL
+  REFERENCES courses ON DELETE SET NULL, inserted_at)`, a new table, so an
+  expand-only migration. Older API versions never read it.
 - **The first course:** the capitals of the 20 most populous countries,
   ranked by the UN World Population Prospects 2024 (the latest edition;
   estimates for 1 July 2023), with English names. Grading already ignores
@@ -499,9 +513,5 @@ Decided by the repository owner in issue #41; built here.
   other names and spellings: "Washington", "Washington DC" (otherwise one
   edit from "Washington, D.C.", a typo), "Delhi", "Ha Noi", "Teheran" and
   "Metro Manila".
-- **Known limit:** the title is the key, so renaming or deleting a
-  prebuilt course in the database makes the next deploy insert it again.
-  A stable key (a column, or a table recording what was inserted) would fix
-  it; it is in TODO.md until a rename or delete is wanted.
 - **Later:** a catalog with search, and who may own and publish prebuilt
   courses (an admin role, once Auth0 is in).

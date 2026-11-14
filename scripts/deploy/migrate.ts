@@ -1,8 +1,8 @@
 /**
  * Prepare the database during the API's Vercel build, before the new
  * version goes live: apply pending migrations, then insert the prebuilt
- * courses that are missing (apps/api/src/db/prebuilt.ts, which never
- * deletes or overwrites). Production prepares Neon's production branch;
+ * courses this database has never had (apps/api/src/db/prebuilt.ts, which
+ * never deletes or overwrites). Production prepares Neon's production branch;
  * each preview its own branch (the Neon integration injects
  * DATABASE_URL_UNPOOLED, the direct URL that migrations need). A step runs
  * only after the one before it succeeded, and a failed step fails the build.
