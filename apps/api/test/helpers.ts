@@ -3,13 +3,24 @@ import { buildApp } from "../src/app.ts";
 import { createDb, type Database } from "../src/db/index.ts";
 import type { Scheduler } from "../src/srs.ts";
 
-export async function setupTestApp({ scheduler }: { scheduler?: Scheduler } = {}) {
+export async function setupTestApp({
+  scheduler,
+  accessKey,
+}: {
+  scheduler?: Scheduler;
+  accessKey?: string;
+} = {}) {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) throw new Error("TEST_DATABASE_URL is not set");
   const db = createDb(url);
   const app = await buildApp({
     db,
-    env: { WEB_ORIGIN: "http://localhost:3000", AUTH_MODE: "dev", LOG_LEVEL: "silent" },
+    env: {
+      WEB_ORIGIN: "http://localhost:3000",
+      AUTH_MODE: "dev",
+      LOG_LEVEL: "silent",
+      API_ACCESS_KEY: accessKey,
+    },
     scheduler,
   });
   const reset = () =>
