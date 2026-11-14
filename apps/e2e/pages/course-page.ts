@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { open } from "./navigation.ts";
 
 /** `/courses/:id`: overview, study entry points, grading and import. */
 export class CoursePage {
@@ -30,7 +31,7 @@ export class CoursePage {
   }
 
   async goto(courseId: string) {
-    await this.page.goto(`/courses/${courseId}`);
+    await open(this.page, `/courses/${courseId}`);
     await this.title.waitFor();
   }
 

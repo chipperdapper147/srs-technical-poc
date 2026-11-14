@@ -12,6 +12,10 @@ for (const viewport of [
 ]) {
   test.describe(`accessibility (${viewport.name})`, () => {
     test.use({ viewport: viewport.size });
+    // Firefox's content process crashes inside axe.run on the settings screen
+    // (a browser crash, not a violation; investigated on PR #10). The suite's
+    // functional specs still run on Firefox nightly. TODO.md tracks re-enabling.
+    test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox (PR #10)");
 
     test("courses, course, new course and settings", async ({
       api,

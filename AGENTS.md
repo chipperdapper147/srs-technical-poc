@@ -4,7 +4,8 @@ Prototype suite of SRS language-learning tools. The first tool is a typed-recall
 vocabulary trainer. Start with `README.md` (stack, layout, commands) and
 `docs/decisions.md` (what was chosen and why, plus open questions). How to
 verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`. Open
-follow-up work is in `TODO.md`. Check the decisions log before proposing
+follow-up work is in `TODO.md`; candidate features that aren't chosen yet
+are in `docs/product-ideas.md`. Check the decisions log before proposing
 alternatives to anything listed there.
 
 ## Environment
@@ -53,7 +54,9 @@ container); migrations against Neon run from CI or the deploy.
   `@/` alias without extensions).
 - **`apps/web/src/components/ui/` is shadcn-generated.** Prefer
   `pnpm dlx shadcn@4.23.0 add <component>` over hand-writing primitives.
-- **Pin exact dependency versions** (no `^`).
+- **Pin exact dependency versions** (no `^`). pnpm won't resolve a release
+  younger than 7 days (`minimumReleaseAge` in `pnpm-workspace.yaml`); exclude
+  a package there only for an urgent security fix, with the reason.
 - **E2E tests use page objects.** Specs in `apps/e2e/tests` talk to pages only
   through classes in `apps/e2e/pages` (one per screen); selectors live there,
   never in specs. Prefer role/label locators; use `data-testid` only where there
