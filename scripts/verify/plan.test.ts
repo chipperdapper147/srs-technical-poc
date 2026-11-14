@@ -27,6 +27,8 @@ describe("classify", () => {
     ["db/migrations/20261109065014_init.sql", "schema"],
     ["apps/api/src/db/types.ts", "schema"],
     ["db/seed/spanish-basics.csv", "seed"],
+    ["db/courses/capitals-20-most-populous.csv", "seed"],
+    ["apps/api/src/db/prebuilt.ts", "api-domain"],
     ["db/rehearsal/seed.sql", "schema-rehearsal"],
     ["db/rehearsal/invariants/card_status_matches_state.sql", "schema-rehearsal"],
     ["db/migrations/20261201000000_contract_drop_alternatives.sql", "schema-contract"],

@@ -1,8 +1,11 @@
 /**
- * Apply pending migrations during the API's Vercel build, before the new
- * version goes live. Production migrates Neon's production branch; each
- * preview its own branch (the Neon integration injects DATABASE_URL_UNPOOLED,
- * the direct URL that migrations need).
+ * Prepare the database during the API's Vercel build, before the new
+ * version goes live: apply pending migrations, then insert the prebuilt
+ * courses this database has never had (apps/api/src/db/prebuilt.ts, which
+ * never deletes or overwrites). Production prepares Neon's production branch;
+ * each preview its own branch (the Neon integration injects
+ * DATABASE_URL_UNPOOLED, the direct URL that migrations need). A step runs
+ * only after the one before it succeeded, and a failed step fails the build.
  *
  * Vercel's build has no Docker, so this downloads Atlas's release binary,
  * pinned to the version CI and the setup script use and checked against a
@@ -61,6 +64,38 @@ export function applyArgs(url: string, dir: string): string[] {
   ];
 }
 
+export interface Step {
+  name: string;
+  file: string;
+  args: string[];
+  /** Variables set for this step, on top of the build's own. */
+  env?: Record<string, string>;
+}
+
+/**
+ * The deploy steps, in order. Both use the direct URL: each is one short
+ * batch job, and the prebuilt courses need the migrated schema.
+ */
+export function steps(url: string, atlas: string, repo: string = root): Step[] {
+  return [
+    { name: "migrations", file: atlas, args: applyArgs(url, join(repo, "db/migrations")) },
+    {
+      name: "prebuilt courses",
+      file: process.execPath,
+      args: [join(repo, "apps/api/src/db/prebuilt.ts")],
+      env: { DATABASE_URL: url },
+    },
+  ];
+}
+
+/** Run the steps in order. `exec` throws when a step fails, which skips the rest. */
+export function runSteps(list: Step[], exec: (step: Step) => void): void {
+  for (const step of list) {
+    console.log(`deploy: ${step.name}`);
+    exec(step);
+  }
+}
+
 async function atlasBinary(): Promise<string> {
   const path = join(tmpdir(), `atlas-${ATLAS_VERSION}`);
   if (!existsSync(path) || sha256(readFileSync(path)) !== ATLAS_SHA256) {
@@ -85,8 +120,10 @@ async function main(): Promise<void> {
   console.log(
     `migrate: applying db/migrations with Atlas ${ATLAS_VERSION} (${process.env.VERCEL_ENV})`,
   );
-  // The URL is an argument, never printed; Atlas doesn't echo it.
-  execFileSync(atlas, applyArgs(p.url, join(root, "db/migrations")), { stdio: "inherit" });
+  // The URL is an argument or a variable, never printed; neither step echoes it.
+  runSteps(steps(p.url, atlas), (step) =>
+    execFileSync(step.file, step.args, { stdio: "inherit", env: { ...process.env, ...step.env } }),
+  );
 }
 
 if (import.meta.main) await main();
