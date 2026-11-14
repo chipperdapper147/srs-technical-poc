@@ -1,10 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { SAMPLE_CSV, setupTestApp } from "./helpers.ts";
+import { createScheduler } from "../src/srs.ts";
+import { SAMPLE_CSV, setupTestApp, travel } from "./helpers.ts";
 
 const ctx = await setupTestApp();
 const { app, db } = ctx;
 afterAll(ctx.close);
 beforeEach(ctx.reset);
+
+const MINUTE = 60 * 1000;
+const DAY = 24 * 60 * MINUTE;
 
 async function createCourse(headers: Record<string, string> = {}) {
   const res = await app.inject({
@@ -212,5 +216,81 @@ describe("study flow", () => {
     await app.inject({ method: "PATCH", url: "/me", payload: { accentSensitive: true } });
     const after = (await app.inject(`/courses/${id}/study?mode=learn`)).json();
     expect(after.grading).toEqual({ mode: "strict", accentSensitive: true });
+  });
+});
+
+describe("learning steps", () => {
+  /** Answers an item; returns how long until it is due again, from just before the request. */
+  async function answerAndWait(itemId: string, answer: string, target = app) {
+    const before = Date.now();
+    const res = await target.inject({
+      method: "POST",
+      url: "/study/answers",
+      payload: { itemId, answer },
+    });
+    expect(res.statusCode).toBe(200);
+    return new Date(res.json().nextDue).getTime() - before;
+  }
+
+  /** The server's clock is read a moment after `before`, so allow a little slack. */
+  function expectWait(wait: number, ms: number) {
+    expect(wait).toBeGreaterThanOrEqual(ms);
+    expect(wait).toBeLessThan(ms + 5000);
+  }
+
+  async function dueTerms(courseId: string) {
+    const session = (await app.inject(`/courses/${courseId}/study?mode=review`)).json();
+    return session.items.map((i: { term: string }) => i.term);
+  }
+
+  async function firstNewWord() {
+    const courseId = await createCourse();
+    const [item] = (await app.inject(`/courses/${courseId}/study?mode=learn&limit=1`)).json().items;
+    return { courseId, itemId: item.itemId as string };
+  }
+
+  it("reviews a new word after 10 minutes, then a day, then as FSRS schedules", async () => {
+    const { courseId, itemId } = await firstNewWord();
+
+    expectWait(await answerAndWait(itemId, "hola"), 10 * MINUTE);
+    expect(await dueTerms(courseId)).toEqual([]);
+
+    await travel(db, 10 * MINUTE);
+    expect(await dueTerms(courseId)).toEqual(["hola"]);
+    expectWait(await answerAndWait(itemId, "hola"), DAY);
+    expect(await dueTerms(courseId)).toEqual([]);
+
+    await travel(db, DAY);
+    expect(await dueTerms(courseId)).toEqual(["hola"]);
+    expect(await answerAndWait(itemId, "hola")).toBeGreaterThan(2 * DAY);
+
+    const card = await db.selectFrom("cards").selectAll().executeTakeFirstOrThrow();
+    expect(card).toMatchObject({ scheduleStatus: "review", reps: 3, lapses: 0 });
+  });
+
+  it("starts the steps over after a wrong answer", async () => {
+    const { courseId, itemId } = await firstNewWord();
+    await answerAndWait(itemId, "hola");
+    await travel(db, 10 * MINUTE);
+
+    expectWait(await answerAndWait(itemId, "adiós"), 10 * MINUTE);
+    await travel(db, 10 * MINUTE);
+    expect(await dueTerms(courseId)).toEqual(["hola"]);
+    // Back on the first step: the next correct answer waits 10 minutes, not a day.
+    expectWait(await answerAndWait(itemId, "hola"), 10 * MINUTE);
+  });
+
+  it("schedules with the learning steps the app is given", async () => {
+    const custom = await setupTestApp({
+      scheduler: await createScheduler({ learning: ["1m", "1h"], relearning: [], retry: "1m" }),
+    });
+    try {
+      const { itemId } = await firstNewWord();
+      expectWait(await answerAndWait(itemId, "hola", custom.app), MINUTE);
+      await travel(db, MINUTE);
+      expectWait(await answerAndWait(itemId, "hola", custom.app), 60 * MINUTE);
+    } finally {
+      await custom.close();
+    }
   });
 });

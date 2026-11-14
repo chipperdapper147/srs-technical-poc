@@ -12,7 +12,7 @@ import {
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { sql } from "kysely";
 import type { Database } from "../db/index.ts";
-import { newCard, review } from "../srs.ts";
+import type { Scheduler } from "../srs.ts";
 
 const DEFAULT_REVIEW_LIMIT = 20;
 
@@ -36,7 +36,10 @@ async function gradingFor(db: Database, userId: string, courseId: string) {
   return { grading, newItemsPerSession: row.newItemsPerSession };
 }
 
-export const studyRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app, { db }) => {
+export const studyRoutes: FastifyPluginAsyncZod<{ db: Database; scheduler: Scheduler }> = async (
+  app,
+  { db, scheduler },
+) => {
   app.get(
     "/courses/:id/study",
     {
@@ -130,7 +133,8 @@ export const studyRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app, 
           .where("itemId", "=", itemId)
           .forUpdate()
           .executeTakeFirst();
-        const reviewed = review(existing ?? newCard(userId, itemId, now), rating, now);
+        const current = existing ?? scheduler.newCard(userId, itemId, now);
+        const reviewed = scheduler.review(current, rating, now);
         const { userId: _u, itemId: _i, ...state } = reviewed.row;
         await trx
           .insertInto("cards")
