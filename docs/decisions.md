@@ -410,6 +410,10 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   and serves `/docs/json` itself; locally `/docs` is unchanged.
   `test/vercel-runtime.test.ts` builds the app with
   `--no-experimental-require-module` to catch such dependencies first.
+- Vercel's runtime replaces `http.Server#listen` with a stub that never
+  calls back, so `await app.listen()` hung every request. On Vercel,
+  `src/server.ts` exports a `(req, res)` handler and doesn't listen.
+  `test/vercel-runtime.test.ts` loads it behind the same stub.
 
 ## 2026-11-13: The lockfile always passes the release-age floor
 
