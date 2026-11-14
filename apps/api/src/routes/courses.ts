@@ -1,3 +1,9 @@
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { type ExpressionBuilder, sql } from "kysely";
+import { z } from "zod";
+import type { Database } from "../db/index.ts";
+import type { DB } from "../db/types.ts";
+import { CsvImportError, importVocabulary } from "../import.ts";
 import {
   CourseDetailSchema,
   CourseSummarySchema,
@@ -7,13 +13,7 @@ import {
   ImportCsvSchema,
   ImportResultSchema,
   UpdateCourseSchema,
-} from "@app/shared";
-import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { type ExpressionBuilder, sql } from "kysely";
-import { z } from "zod";
-import type { Database } from "../db/index.ts";
-import type { DB } from "../db/types.ts";
-import { CsvImportError, importVocabulary } from "../import.ts";
+} from "../shared.ts";
 
 /** Courses a user can see: shared (no owner) or their own. */
 const visibleTo = (userId: string) => (eb: ExpressionBuilder<DB, "courses">) =>

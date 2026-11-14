@@ -1,6 +1,6 @@
-import { MeSchema, UpdateMeSchema } from "@app/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import type { Database } from "../db/index.ts";
+import { MeSchema, UpdateMeSchema } from "../shared.ts";
 
 const columns = [
   "id",
