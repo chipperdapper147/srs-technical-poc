@@ -44,3 +44,55 @@ describe("Vercel's runtime", () => {
     expect(buildUnderVercelLimits(undefined)).toMatch(/ERR_REQUIRE_ESM/);
   });
 });
+
+// Vercel's Node runtime (@vercel/node bundling-handler) imports the entry
+// point with http.Server#listen replaced by a stub that never calls back,
+// then uses its default export as the (req, res) handler. Reproduce that:
+// the import must finish, and the handler must answer.
+function serveLikeVercel(): string {
+  const script = `
+    import http from "node:http";
+    const original = http.Server.prototype.listen;
+    http.Server.prototype.listen = function () { return this; };
+    const timer = setTimeout(() => { console.log("import hung"); process.exit(1); }, 5000);
+    const mod = await import("./src/server.ts");
+    clearTimeout(timer);
+    http.Server.prototype.listen = original;
+    if (typeof mod.default !== "function") { console.log("no default handler"); process.exit(1); }
+    const server = http.createServer(mod.default);
+    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    const base = "http://127.0.0.1:" + server.address().port;
+    const me = await fetch(base + "/me");
+    const docs = await fetch(base + "/docs/json");
+    console.log(me.status + " " + docs.status);
+    server.close();
+    process.exit(0);
+  `;
+  try {
+    return execFileSync(
+      process.execPath,
+      ["--no-experimental-require-module", "--input-type=module", "-e", script],
+      {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          VERCEL_ENV: "production",
+          API_ACCESS_KEY: "k".repeat(40),
+          DATABASE_URL: "postgres://u:p@127.0.0.1:1/none",
+          LOG_LEVEL: "silent",
+        },
+      },
+    ).trim();
+  } catch (error) {
+    const e = error as { stdout?: string; stderr?: string };
+    return `${e.stdout ?? ""}${e.stderr ?? ""}`.trim();
+  }
+}
+
+describe("Vercel's handler", () => {
+  it("loads without waiting on listen() and answers through the default export", () => {
+    expect(serveLikeVercel()).toBe("401 200");
+  });
+});
