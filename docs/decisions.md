@@ -350,6 +350,25 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   release younger than a week. Installs from the lockfile are unaffected. An
   urgent security fix can go in `minimumReleaseAgeExclude`, with the reason.
 
+## 2026-11-14: Migrations run in the API's Vercel build
+
+- `apps/api`'s `vercel-build` runs `scripts/deploy/migrate.ts`: `atlas
+  migrate apply` on `DATABASE_URL_UNPOOLED`, which the Neon integration
+  injects per environment. Production migrates Neon's production branch,
+  each preview its own branch, and a failed migration fails the build, so
+  the new version never goes live on an unmigrated database.
+- Chosen over a GitHub Actions job: no database secret in GitHub, and no
+  race between the job and Vercel's own deploy of the same commit.
+- Vercel's build has no Docker, so the script downloads Atlas's release
+  binary, pinned to the same version as CI and the setup script (a test
+  checks) and to a SHA-256 checked before it runs. Off Vercel it does
+  nothing.
+- `--revisions-schema public`: on Neon, Atlas created its own
+  `atlas_schema_revisions` schema but put the table in `public`, then read
+  from the schema and failed. Naming the schema keeps both in `public`.
+- Expand/contract still holds: the old version keeps serving while the new
+  one builds, so every migration must work with both (ADR 0003).
+
 ## 2026-11-14: A shared access key until Auth0
 
 - **Why:** the API is about to be public on Vercel, and auth is still the
