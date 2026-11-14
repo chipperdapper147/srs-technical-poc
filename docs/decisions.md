@@ -402,6 +402,9 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   `apps/api/src/shared.ts`, a relative re-export compiled with the API.
   Biome forbids importing `@app/shared` elsewhere in the API; the web app
   keeps the package import.
+- Vercel takes `src/app.*` as the entry point before `src/server.*`, so
+  the app builder is `src/build-app.ts` and `src/server.ts`, which starts
+  the server, is the only candidate (`scripts/deploy/entrypoint.test.ts`).
 
 ## 2026-11-13: The lockfile always passes the release-age floor
 

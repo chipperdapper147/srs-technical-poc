@@ -5,7 +5,7 @@
  * Never edit the JSON by hand: run `pnpm api:openapi`.
  */
 import { writeFileSync } from "node:fs";
-import { buildApp } from "./app.ts";
+import { buildApp } from "./build-app.ts";
 import { createDb } from "./db/index.ts";
 
 // Building the app opens no connection; the pool connects on first query.

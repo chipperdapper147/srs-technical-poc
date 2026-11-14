@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import { buildApp } from "../src/app.ts";
+import { buildApp } from "../src/build-app.ts";
 import { createDb, type Database } from "../src/db/index.ts";
 import type { Scheduler } from "../src/srs.ts";
 
