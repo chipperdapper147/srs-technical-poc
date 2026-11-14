@@ -12,7 +12,9 @@ export function SettingsView({ vm, actions }: { vm: SettingsVM; actions: Setting
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{vm.title}</CardTitle>
+        <CardTitle>
+          <h1>{vm.title}</h1>
+        </CardTitle>
         <CardDescription>{vm.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

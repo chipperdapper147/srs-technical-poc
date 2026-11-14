@@ -126,6 +126,7 @@ describe("studyViewModel", () => {
     const v = vm(done);
     expect(v).toMatchObject({
       kind: "session",
+      heading: "Study: Spanish",
       progress: 100,
       progressLabel: "Session progress",
       stepIndex: 2,

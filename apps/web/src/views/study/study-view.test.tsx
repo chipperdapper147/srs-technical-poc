@@ -8,6 +8,7 @@ import { StudyView } from "./study-view";
 const actions = (): StudyActions => ({ setInput: vi.fn(), submit: vi.fn(), next: vi.fn() });
 const session = (step: StudyStepVM): StudyVM => ({
   kind: "session",
+  heading: "Study: Spanish",
   courseTitle: "Spanish",
   back: { to: "course", courseId: "c1" },
   progress: 40,
@@ -27,6 +28,12 @@ const present: StudyStepVM = {
   input: "",
   placeholder: "Type it to continue",
   miss: null,
+};
+/** The one level-one heading on the screen (axe's `page-has-heading-one`). */
+const h1 = () => {
+  const headings = screen.getAllByRole("heading", { level: 1 });
+  expect(headings).toHaveLength(1);
+  return headings[0]?.textContent;
 };
 const quiz = (over: Partial<Extract<StudyStepVM, { kind: "quiz" }>> = {}): StudyStepVM => ({
   kind: "quiz",
@@ -60,6 +67,7 @@ describe("StudyView", () => {
         actions={actions()}
       />,
     );
+    expect(h1()).toBe("Nothing due right now.");
     expect(screen.getByRole("link", { name: "Back to course" }).getAttribute("href")).toBe(
       "/courses/c1",
     );
@@ -69,6 +77,7 @@ describe("StudyView", () => {
     const a = actions();
     const { container } = render(<StudyView vm={session(present)} actions={a} />);
     expect(screen.getByTestId("study-session").dataset.step).toBe("2");
+    expect(h1()).toBe("Study: Spanish");
     expect(screen.getByTestId("study-term").textContent).toBe("la biblioteca");
     expect(screen.getByText("Also: biblioteca")).toBeTruthy();
     const input = screen.getByRole("textbox", { name: "Type it to continue" });
@@ -112,6 +121,7 @@ describe("StudyView", () => {
         actions={a}
       />,
     );
+    expect(h1()).toBe("Study: Spanish");
     const status = screen.getByRole("status");
     expect(status.dataset.verdict).toBe("typo");
     // Tinted with the verdict token (packages/design/tokens.json), never a palette literal.
@@ -147,6 +157,8 @@ describe("StudyView", () => {
         actions={actions()}
       />,
     );
+    expect(h1()).toBe("Study: Spanish");
+    expect(screen.getByRole("heading", { level: 2, name: "Session complete" })).toBeTruthy();
     expect(screen.getByTestId("tally-exact").textContent).toBe("2");
     expect(screen.getByTestId("tally-typo").textContent).toBe("1");
     await expectNoA11yViolations(container);
