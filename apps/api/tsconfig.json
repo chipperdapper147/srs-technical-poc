@@ -1,5 +1,22 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "types": ["node"] },
+  "//": "Self-contained on purpose: Vercel builds this app from apps/api and typechecks it without tsconfig.base.json, which then silently drops strict. Keep the options in step with tsconfig.base.json (scripts/tsconfig-sync.test.ts checks).",
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
   "include": ["src", "test", "vitest.config.ts"]
 }
