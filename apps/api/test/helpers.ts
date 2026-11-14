@@ -6,9 +6,12 @@ import type { Scheduler } from "../src/srs.ts";
 export async function setupTestApp({
   scheduler,
   accessKey,
+  vercelEnv,
 }: {
   scheduler?: Scheduler;
   accessKey?: string;
+  /** Build the app as on a Vercel deploy (no Swagger UI). */
+  vercelEnv?: string;
 } = {}) {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) throw new Error("TEST_DATABASE_URL is not set");
@@ -20,6 +23,7 @@ export async function setupTestApp({
       AUTH_MODE: "dev",
       LOG_LEVEL: "silent",
       API_ACCESS_KEY: accessKey,
+      VERCEL_ENV: vercelEnv,
     },
     scheduler,
   });

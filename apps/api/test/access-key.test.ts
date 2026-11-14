@@ -73,3 +73,18 @@ describe("with an access key", () => {
     expect(preflight.headers["access-control-allow-headers"]).toMatch(/authorization/i);
   });
 });
+
+describe("on Vercel", () => {
+  let ctx: Awaited<ReturnType<typeof setupTestApp>>;
+  beforeAll(async () => {
+    ctx = await setupTestApp({ accessKey: KEY, vercelEnv: "production" });
+  });
+  afterAll(() => ctx.close());
+
+  it("serves the OpenAPI document without Swagger UI", async () => {
+    const json = await ctx.app.inject("/docs/json");
+    expect(json.statusCode).toBe(200);
+    expect(Object.keys(json.json().paths)).toContain("/study/answers");
+    expect((await ctx.app.inject("/docs")).statusCode).toBe(404);
+  });
+});
