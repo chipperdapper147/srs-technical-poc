@@ -25,7 +25,7 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
   Require the status check `check` only, and require branches to be up to
   date before merging. `check` is an aggregate job that fails unless every
   other CI job (`commit-messages`, `pr-description`, `obligations`,
-  `static`, `database`, `e2e`) passed, so later job splits never touch the
+  `static`, `database`, `e2e`, `mobile`) passed, so later job splits never touch the
   ruleset.
 - [ ] **Merge settings** (Settings → General → Pull Requests): allow squash
   merging only (decided 2026-11-11, see `docs/decisions.md`); merge commits
@@ -88,8 +88,9 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 
 - [ ] **Screenshot diffs** of each screen, beside the axe browser scans
   (`apps/e2e/tests/a11y.spec.ts`).
-- [ ] **Mobile app** (`apps/mobile`, Expo): views, screens and `platform/`
-  adapters over `@app/client` (ADR 0002). Add `mobile-*` classes to the rules.
+- [ ] **Mobile device e2e** (Maestro or Detox) and EAS builds in CI. The
+  minimal app (`apps/mobile`) has `mobile-*` classes, view tests and a
+  bundle check; the rest is in issue #48.
 - [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.
   Needs the Auth0 integration first.
 
@@ -192,8 +193,9 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
   to be replaced by Neon Auth or similar (decided 2026-11-11). This unblocks
   the Auth0 mock, real integration and the environment secrets.
 - [ ] **Reverse and listening modes** (issue #24).
-- [ ] **Mobile app** (issue #25); its verification is under "Missing test
-  kinds" above.
+- [ ] **Mobile app** (issue #48, after the minimal app): designed together
+  with a mobile design for the web app; its verification is under "Missing
+  test kinds" above.
 - Candidate features that aren't chosen yet are in
   [`docs/product-ideas.md`](docs/product-ideas.md); they aren't TODOs.
 - Open product questions are tracked in

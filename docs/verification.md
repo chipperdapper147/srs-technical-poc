@@ -362,7 +362,12 @@ Rows marked _planned_ don't exist yet; when one lands, add its check to
 ## The agent visual check
 
 A throwaway verification method used during development, required as manual
-evidence for the `web-*` classes. It can be done by the coding agent or by a
+evidence for the `web-*` and `mobile-*` view classes. For the Expo app
+without a simulator, `pnpm --filter @app/mobile preview:web` exports the
+native views through react-native-web; serve `apps/mobile/dist/web` and
+screenshot it at a phone viewport (`--device "iPhone 15"`), with the API's
+`WEB_ORIGIN` set to the preview's origin (CORS; native apps don't need it).
+Say in the report that it is the web preview, not a device. It can be done by the coding agent or by a
 person: change something, look at it, report what you saw. The `/verify`
 skill (`.claude/skills/verify/SKILL.md`) walks through it.
 
@@ -445,6 +450,7 @@ the tests until someone decides what verifying it means.
 | Parallel CI jobs behind one `check` gate                                    | ✅                                                 |
 | `/verify` skill, including the agent visual check                           | ✅                                                 |
 | Frontend mocked integration (MSW, Testing Library)                          | ✅ (ADR 0002)                                      |
+| Mobile: view and screen tests (RNTL), Metro bundle check                    | ✅ minimal app; device e2e and EAS ❌ (#48)        |
 | Accessibility checks                                                        | ✅ axe in jsdom per view; ✅ in the browser (e2e)  |
 | Migration lint, expand/contract policy, rehearsal on generated data         | ✅ (ADR 0003); rehearsal on a production branch ❌ |
 | Branch protection making `check` required                                   | ❌ manual GitHub settings (TODO.md section 1)      |

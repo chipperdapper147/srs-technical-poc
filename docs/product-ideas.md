@@ -18,7 +18,8 @@ These are tracked elsewhere and are listed here only for completeness.
   to change (decided 2026-11-11, `docs/decisions.md`).
 - **Auth0 login.** Required for real accounts (`TODO.md`, section 7).
 - **Reverse and listening modes.** First to be thought through: issue #24.
-- **Mobile app (Expo)** on the shared client: issue #25.
+- **Mobile app (Expo)** on the shared client: a minimal app exists; the
+  full one, with a mobile design shared by the web app, is issue #48.
 - **Home dashboard.** Reviews due across all courses, one "Review all due"
   session, and a 7-day forecast (chosen and built 2026-11-14,
   `docs/decisions.md`).

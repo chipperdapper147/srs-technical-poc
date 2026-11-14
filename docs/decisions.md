@@ -541,3 +541,68 @@ Decided by the repository owner in issue #41; built here.
   "Metro Manila".
 - **Later:** a catalog with search, and who may own and publish prebuilt
   courses (an admin role, once Auth0 is in).
+
+## 2026-11-14: A minimal Expo app; the full one waits for a mobile design
+
+Decided by the repository owner: `apps/mobile` starts minimal, only enough
+to prove that the layering of ADR 0002 and the unit boundaries of ADR 0003
+hold on React Native. The full app is designed together with a mobile
+design shared by the responsive web app and the native app (issue #48),
+which supersedes the scope in #25.
+
+- **Scope:** the app shell, the course list and the access-key screen.
+  Controllers and view models come from `@app/client` unchanged; the app
+  writes only views, screens, routes and `platform/` adapters, as the web
+  does.
+- **Versions:** Expo SDK 58 (`expo` 58.0.23, published 2026-11-03), React
+  Native 0.88.1 (2026-10-27), all pinned exactly and at least 7 days old.
+  React stays at the web's 19.3.1, while SDK 58's `bundledNativeModules`
+  lists 19.3.0: the two tarballs differ only in their version strings,
+  19.3.1 meets React Native's peer range (`^19.3.0`), and React Native's
+  renderer has no exact-version check (react-dom has one). One React in the
+  workspace means `@app/client/react` and the renderer share it, with no
+  Metro or Jest aliasing. `expo install --check` flags the patch; ignore it
+  until Expo lists 19.3.1.
+- **Layers:** `src/app/` is the root and the router (route in, screen out);
+  `src/views/<screen>/` holds `*-view.tsx` (renders `{ vm, actions }`) and
+  `*-screen.tsx` (binds with `useScreen`); `src/platform/` provides the
+  ports: the API client (base URL from `EXPO_PUBLIC_API_URL`), the access
+  gate with the key in the keychain (`expo-secure-store` behind
+  `KeyStorage`), the query client, the navigator, the clock (with the time
+  zone) and the environment (`__DEV__`). Biome enforces the same import
+  rules per layer as on the web, and forbids importing the web app, Next or
+  React DOM, so the app stays its own deployable.
+- **Navigation, the minimum:** an in-memory stack of platform-neutral routes
+  in `platform/navigator.ts`; the shell's destinations start a fresh stack,
+  like tabs, and Android's back button pops. Routes without a mobile screen
+  show a temporary placeholder, and home shows the course list until the
+  dashboard is on mobile. Expo Router or React Navigation comes with the
+  full app.
+- **Tokens:** views style only through `platform/theme.ts`, built from
+  `@app/design`'s TypeScript export. Light theme only, like the web. Geist
+  isn't bundled yet (`expo-font`), so the system face stands in.
+- **Tests: Jest, not Vitest.** React Native ships Flow sources and its test
+  setup is a Jest preset, so the app uses `jest-expo` with React Native
+  Testing Library 14. Three adapters let it reuse `@app/client/testing`
+  unchanged: `--experimental-vm-modules`, so Jest can `require()` the
+  ESM-only msw; `vitest` mapped to Jest's lifecycle hooks; and Node's fetch
+  restored, because Expo replaces the global fetch with `expo/fetch`, whose
+  native module never answers under Jest. Queries in tests are never
+  garbage-collected, or the 5-minute timer would keep Jest's worker alive.
+- **Checks:** `test:mobile` (views and screens, RNTL) and `bundle:mobile`
+  (`expo export` for iOS: Metro resolves the app, the workspace packages
+  and their `.ts` imports, compiled to Hermes bytecode). They run in their
+  own CI job, `mobile`, so the other jobs don't wait on them. Changes to the
+  client, shared contracts or design tokens run them too: the app consumes
+  those units (workspace links standing in for published versions).
+- **Visual check without a device:** `pnpm --filter @app/mobile
+  preview:web` renders the same native views through react-native-web, for
+  screenshots at a phone viewport. React DOM and react-native-web are dev
+  dependencies for that; the web is not a target of this app, and the
+  preview is no substitute for a simulator or device.
+- **Postponed** (issue #48): the remaining screens and the study flow,
+  a navigation library, the mobile design, fonts and dark mode, EAS
+  builds, store releases and their place in the compatibility window,
+  device e2e (Maestro or Detox), push notifications, offline study, Auth0,
+  and platform-neutral access-screen copy ("this browser remembers it" is
+  the shared view model's text).
