@@ -1,5 +1,5 @@
 {
-  "//": "Self-contained on purpose: Vercel builds this app from apps/api and typechecks it without tsconfig.base.json, which then silently drops strict. Keep the options in step with tsconfig.base.json (scripts/tsconfig-sync.test.ts checks).",
+  "//": "Self-contained on purpose: Vercel builds this app from apps/api and typechecks it without tsconfig.base.json, which then silently drops strict. Keep the options in step with tsconfig.base.json (scripts/tsconfig-sync.test.ts checks). rewriteRelativeImportExtensions: Vercel compiles each .ts file to .js, so imports of ./x.ts must become ./x.js in its output.",
   "compilerOptions": {
     "target": "ES2024",
     "lib": ["ES2024"],
@@ -16,7 +16,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
+    "types": ["node"],
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src", "test", "vitest.config.ts"]
 }
