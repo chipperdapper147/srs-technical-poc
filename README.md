@@ -57,7 +57,10 @@ pnpm dev             # API on :4000 (docs at /docs), web on :3000
 
 Claude Code cloud sessions set all of this up automatically through a
 SessionStart hook; see `scripts/setup-agent-env.sh`, which also works by hand
-on a Linux machine where you are root.
+on a Linux machine where you are root. It also installs the Neon CLI and
+pulls the deployed database's connection strings into the git-ignored
+`.env.neon` (with `NEON_API_KEY` set, or in a cloud session whose environment
+holds the key); without a key it skips that step.
 
 ## Common tasks
 

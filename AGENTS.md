@@ -23,6 +23,10 @@ next session gets the fix. Elsewhere, follow "Getting started" in `README.md`.
 local dev, seeds and tests migrate and truncate whatever `DATABASE_URL`
 points at, so `pnpm verify` refuses non-local databases. `neon init` writes
 into `.env` by itself; restore `.env` from `.env.example` after running it.
+In cloud sessions the setup script installs the Neon CLI (pinned) and pulls
+`.env.neon` when it is missing (delete it to pull fresh strings). The Neon API
+key is a network secret on the environment, injected by the proxy, so there is
+no key to set; without it the script prints a `setup: note:` and carries on.
 Cloud sessions can't reach Neon over Postgres TCP (only HTTPS leaves the
 container); migrations against Neon run from CI or the deploy.
 
