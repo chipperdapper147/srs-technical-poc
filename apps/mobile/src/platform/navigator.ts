@@ -11,13 +11,15 @@ export interface StackNavigator extends Navigator {
   back(): boolean;
 }
 
-export function createStackNavigator(root: Route = { to: "courses" }): StackNavigator {
+/** The shell's destinations (shellViewModel): each starts a fresh stack, like a tab. */
+const TABS: ReadonlySet<Route["to"]> = new Set(["home", "courses", "settings"]);
+
+export function createStackNavigator(root: Route = { to: "home" }): StackNavigator {
   const stack = createStore<Route[]>([root]);
   return {
     stack,
     navigate(route) {
-      // The root is a tab, not a page on top of the stack.
-      stack.set((routes) => (route.to === root.to ? [root] : [...routes, route]));
+      stack.set((routes) => (TABS.has(route.to) ? [route] : [...routes, route]));
     },
     back() {
       const routes = stack.get();

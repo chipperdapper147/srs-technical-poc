@@ -6,6 +6,8 @@ import { CoursesScreen } from "@/views/courses/courses-screen";
 export function Router() {
   const route = useCurrentRoute();
   switch (route.to) {
+    // The dashboard isn't on mobile yet; until it is, home is the course list.
+    case "home":
     case "courses":
       return <CoursesScreen />;
     default:

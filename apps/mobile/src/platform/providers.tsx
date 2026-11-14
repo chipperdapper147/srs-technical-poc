@@ -37,7 +37,12 @@ export function createPlatform(): { deps: ClientDeps; navigator: StackNavigator 
       access,
       queryClient: createQueryClient(),
       navigator,
-      clock: { now: () => performance.now() },
+      clock: {
+        now: () => performance.now(),
+        timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      // Metro's development builds set __DEV__; release builds (and `expo export`) don't.
+      environment: __DEV__ ? "development" : "production",
     },
   };
 }
@@ -70,7 +75,7 @@ export function useCurrentRoute(): Route {
     navigator.stack.get,
     navigator.stack.get,
   );
-  return routes.at(-1) ?? { to: "courses" };
+  return routes.at(-1) ?? { to: "home" };
 }
 
 /** Back one route (the placeholder for screens the app doesn't have yet). */

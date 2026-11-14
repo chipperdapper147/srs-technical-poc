@@ -5,6 +5,16 @@ items come from [`docs/verification.md`](docs/verification.md), which stays the
 source of truth for the target state. When an item is done, update its row
 under "Where we are today" there and delete it here.
 
+## Priorities (owner, 2026-11-14)
+
+1. **Auth0 integration** (section 7) comes next: it unblocks the environment
+   secrets, the Auth0 mock, real-integration tests and removing the shared
+   access key. It waits on the owner creating the Auth0 tenant and
+   application.
+2. **Postponed:** preview pairing (#43) and deployed integration tests (#42).
+3. **Kept open, not scheduled:** the controller-style comparison (#3),
+   reverse and listening modes (#24), the proper mobile app (its own issue).
+
 ## 1. GitHub setup (unblocks the merge gate)
 
 Done by hand in the repo's Settings, as `chipperdapper147` (admin).
@@ -57,7 +67,8 @@ step starts with something only the repo owner can do.
   (`scripts/deploy/migrate.ts`, decisions log 2026-11-14), before the new
   version goes live: production on Neon's production branch, each preview
   on its own branch. Still open: `lock_timeout` and `statement_timeout` on
-  that connection (section 5).
+  that connection (section 5). The same build then inserts missing
+  prebuilt courses (decisions log, "Prebuilt courses").
 - [ ] **A Neon branch per preview deploy**, so stage 4 runs against a copy of
   production. This also replaces the generated rehearsal data (ADR 0003).
 
@@ -164,16 +175,16 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
   change `packages/design/tokens.json`, and republish the artifact. The
   palette and fonts are the owner's choice; the token hierarchy they go
   into is issue #22.
-- [ ] **Contrast gaps** flagged in the token notes: `muted-foreground` on
-  `muted` (4.3:1, light) and the focus `ring` (2.6:1, light). The browser
-  axe scan also finds `muted-foreground` on the verdict tints in the study
-  feedback box ("Next review …", 3.98 to 4.39:1). It is listed as known in
-  `apps/e2e/support/a11y.ts`; remove that entry with the fix.
+- [ ] **Contrast gap** flagged in the token notes: the focus `ring` (2.6:1
+  on `background`, light), under the 3:1 floor for focus indicators.
 - [ ] **Dark theme is unreachable**: defined in tokens, but nothing sets
   `.dark`. Follow the OS setting, or add a toggle in Settings.
 
 ## 7. Product
 
+- [ ] **Prebuilt courses, later parts** (issue #41): a catalog with search,
+  and who may own and publish prebuilt courses (an admin role, once Auth0
+  is in). The empty-state hint is #40.
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
   access key (`plugins/access-key.ts`, the client's `AccessGate` and the web

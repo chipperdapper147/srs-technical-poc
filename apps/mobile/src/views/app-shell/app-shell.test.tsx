@@ -5,18 +5,18 @@ import { renderWithDeps } from "@/test/render";
 import { AppShell } from "./app-shell";
 
 describe("AppShell", () => {
-  it("links to courses and settings around the screen", async () => {
+  it("links home, to courses and to settings around the screen", async () => {
     const { deps } = await renderWithDeps(
       <AppShell>
         <Text>page</Text>
       </AppShell>,
     );
     expect(screen.getByText("page")).toBeOnTheScreen();
-    expect(screen.getAllByRole("link")).toHaveLength(3);
+    expect(screen.getAllByRole("link")).toHaveLength(4);
     const user = userEvent.setup();
-    await user.press(screen.getByRole("link", { name: "SRS" }));
-    await user.press(screen.getByRole("link", { name: "Courses" }));
-    await user.press(screen.getByRole("link", { name: "Settings" }));
-    expect(deps.routes).toEqual([{ to: "courses" }, { to: "courses" }, { to: "settings" }]);
+    for (const name of ["SRS", "Home", "Courses", "Settings"]) {
+      await user.press(screen.getByRole("link", { name }));
+    }
+    expect(deps.routes.map((r) => r.to)).toEqual(["home", "home", "courses", "settings"]);
   });
 });

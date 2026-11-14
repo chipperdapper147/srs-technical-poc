@@ -38,6 +38,16 @@ CREATE TABLE courses (
 );
 CREATE INDEX courses_owner_id_idx ON courses (owner_id);
 
+-- Ledger of the prebuilt courses (apps/api/src/db/prebuilt.ts) loaded into
+-- this database, one row per stable key. A course is inserted only while its
+-- key is missing here, so one renamed, edited or deleted later stays that way.
+-- `course_id` becomes NULL when the course is deleted; the row stays.
+CREATE TABLE prebuilt_courses (
+  key text PRIMARY KEY,
+  course_id uuid NULL REFERENCES courses (id) ON DELETE SET NULL,
+  inserted_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Ordered groups of items within a course.
 CREATE TABLE units (
   id uuid PRIMARY KEY DEFAULT uuidv7(),

@@ -10,10 +10,14 @@ import {
   type CourseSummary,
   CourseSummarySchema,
   type CreateCourse,
+  type Dashboard,
+  DashboardSchema,
   type ImportResult,
   ImportResultSchema,
   type Me,
   MeSchema,
+  type ReviewSession,
+  ReviewSessionSchema,
   type StudyMode,
   type StudySession,
   StudySessionSchema,
@@ -41,6 +45,10 @@ export interface ApiClient {
   updateCourse(id: string, body: UpdateCourse): Promise<CourseDetail>;
   importCsv(id: string, csv: string): Promise<ImportResult>;
   study(id: string, mode: StudyMode): Promise<StudySession>;
+  /** Due items across every course, for one mixed review session. */
+  reviewAll(): Promise<ReviewSession>;
+  /** Home screen summary; `timeZone` sets the forecast's calendar days. */
+  dashboard(timeZone: string): Promise<Dashboard>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
 }
 
@@ -94,6 +102,9 @@ export function createApiClient({
     importCsv: (id, csv) =>
       request(ImportResultSchema, `/courses/${id}/import`, { method: "POST", body: { csv } }),
     study: (id, mode) => request(StudySessionSchema, `/courses/${id}/study?mode=${mode}`),
+    reviewAll: () => request(ReviewSessionSchema, "/study/review"),
+    dashboard: (timeZone) =>
+      request(DashboardSchema, `/dashboard?timeZone=${encodeURIComponent(timeZone)}`),
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
   };
 }

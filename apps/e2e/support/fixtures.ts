@@ -8,6 +8,7 @@ import { type APIRequestContext, test as base, expect } from "@playwright/test";
 import { AppShell } from "../pages/app-shell.ts";
 import { CoursePage } from "../pages/course-page.ts";
 import { CoursesPage } from "../pages/courses-page.ts";
+import { DashboardPage } from "../pages/dashboard-page.ts";
 import { NewCoursePage } from "../pages/new-course-page.ts";
 import { SettingsPage } from "../pages/settings-page.ts";
 import { StudyPage } from "../pages/study-page.ts";
@@ -15,6 +16,8 @@ import { closeDb } from "./db.ts";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 export const SAMPLE_COURSE = "Spanish basics (sample)";
+/** A prebuilt course: every environment gets it (apps/api/src/db/prebuilt.ts). */
+export const CAPITALS_COURSE = "Capitals of the 20 most populous countries";
 
 /** Thin API client for arranging test state faster than through the UI. */
 export class Api {
@@ -57,6 +60,21 @@ export class Api {
     return course.id;
   }
 
+  /** Learn every new word in a course, answering each correctly. Its cards fall due later. */
+  async learnAll(courseId: string) {
+    const session = await this.json<{ items: { itemId: string; term: string }[] }>(
+      await this.request.get(`/courses/${courseId}/study?mode=learn&limit=100`),
+    );
+    for (const item of session.items) {
+      await this.json(
+        await this.request.post("/study/answers", {
+          data: { itemId: item.itemId, answer: item.term },
+        }),
+      );
+    }
+    return session.items.length;
+  }
+
   async updateMe(body: Record<string, unknown>) {
     return this.json(await this.request.patch("/me", { data: body }));
   }
@@ -67,6 +85,7 @@ interface Fixtures {
   learner: string;
   api: Api;
   shell: AppShell;
+  dashboardPage: DashboardPage;
   coursesPage: CoursesPage;
   coursePage: CoursePage;
   newCoursePage: NewCoursePage;
@@ -86,6 +105,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
     await request.dispose();
   },
   shell: async ({ page }, use) => use(new AppShell(page)),
+  dashboardPage: async ({ page }, use) => use(new DashboardPage(page)),
   coursesPage: async ({ page }, use) => use(new CoursesPage(page)),
   coursePage: async ({ page }, use) => use(new CoursePage(page)),
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),

@@ -6,18 +6,24 @@
  * It keeps state (a created course shows up in the list, an answered word
  * counts as learned) and grades with the shared grader. It is a fake, not a
  * second implementation: scheduling is a fixed date, and CSV parsing is naive
- * (no quoted fields).
+ * (no quoted fields). The dashboard's forecast is whatever the seed says
+ * (zeros from FORECAST_START by default), and its due counts are the courses'.
  */
 import {
   type CourseDetail,
   CourseDetailSchema,
   CourseSummarySchema,
   CreateCourseSchema,
+  DashboardQuerySchema,
+  DashboardSchema,
+  FORECAST_DAYS,
+  type ForecastDay,
   type GradingMode,
   gradeAnswer,
   ImportCsvSchema,
   type Me,
   MeSchema,
+  ReviewSessionSchema,
   ratingForVerdict,
   type StudyItem,
   StudyModeSchema,
@@ -30,6 +36,17 @@ import { aMe, aUnit, nextId } from "./fixtures.ts";
 
 export const FAKE_API_URL = "http://api.test";
 export const NEXT_DUE = "2026-11-14T09:00:00.000Z";
+/** First day of the default forecast. */
+export const FORECAST_START = "2026-11-14";
+
+/** FORECAST_DAYS days from FORECAST_START with these counts (missing ones are 0). */
+export function aForecast(counts: number[] = []): ForecastDay[] {
+  return Array.from({ length: FORECAST_DAYS }, (_, i) => {
+    const d = new Date(`${FORECAST_START}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + i);
+    return { date: d.toISOString().slice(0, 10), dueCount: counts[i] ?? 0 };
+  });
+}
 
 export interface FakeApiSeed {
   me?: Me;
@@ -38,6 +55,8 @@ export interface FakeApiSeed {
   items?: Record<string, StudyItem[]>;
   /** Item ids due for review, per course id. */
   due?: Record<string, string[]>;
+  /** The dashboard's forecast. */
+  forecast?: ForecastDay[];
   /** Require `Authorization: Bearer <accessKey>` on every request, as the API does with API_ACCESS_KEY. */
   accessKey?: string;
 }
@@ -45,6 +64,8 @@ export interface FakeApiSeed {
 export interface RecordedRequest {
   method: string;
   path: string;
+  /** The query string, with its "?", or "". */
+  search: string;
   body: unknown;
 }
 
@@ -55,6 +76,7 @@ export interface FakeApi {
     courses: CourseDetail[];
     items: Record<string, StudyItem[]>;
     due: Record<string, string[]>;
+    forecast: ForecastDay[];
   };
   requests: RecordedRequest[];
   /** Make the next request matching method and path fail with this status and message. */
@@ -73,6 +95,7 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
     courses: structuredClone(seed.courses ?? []),
     items: structuredClone(seed.items ?? {}),
     due: structuredClone(seed.due ?? {}),
+    forecast: structuredClone(seed.forecast ?? aForecast()),
   };
   const requests: RecordedRequest[] = [];
   const failures: { method: string; path: string; status: number; message: string }[] = [];
@@ -89,9 +112,14 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
 
   /** Records the request and returns an injected failure, if one matches. */
   async function record(request: Request): Promise<Response | undefined> {
-    const { pathname } = new URL(request.url);
+    const { pathname, search } = new URL(request.url);
     const text = request.method === "GET" ? "" : await request.clone().text();
-    requests.push({ method: request.method, path: pathname, body: text ? JSON.parse(text) : null });
+    requests.push({
+      method: request.method,
+      path: pathname,
+      search,
+      body: text ? JSON.parse(text) : null,
+    });
     if (seed.accessKey && request.headers.get("authorization") !== `Bearer ${seed.accessKey}`) {
       return HttpResponse.json({ message: "Access key required" }, { status: 401 });
     }
@@ -215,6 +243,48 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
           ? all.filter((i) => i.isNew).slice(0, state.me.newItemsPerSession)
           : all.filter((i) => due.has(i.itemId));
       return HttpResponse.json({ mode, grading: grading(course), items });
+    }),
+
+    http.get(url("/study/review"), async ({ request }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const items = state.courses.flatMap((course) => {
+        const due = new Set(state.due[course.id] ?? []);
+        return (state.items[course.id] ?? [])
+          .filter((i) => due.has(i.itemId))
+          .map((i) => ({
+            ...i,
+            isNew: false,
+            courseId: course.id,
+            courseTitle: course.title,
+            targetLang: course.targetLang,
+            grading: grading(course),
+          }));
+      });
+      return HttpResponse.json(ReviewSessionSchema.parse({ items }));
+    }),
+
+    http.get(url("/dashboard"), async ({ request }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const query = DashboardQuerySchema.safeParse(
+        Object.fromEntries(new URL(request.url).searchParams),
+      );
+      if (!query.success) return error(400, query.error.issues[0]?.message ?? "Invalid query");
+      const courses = state.courses.map(({ id, title, sourceLang, targetLang, dueCount }) => ({
+        id,
+        title,
+        sourceLang,
+        targetLang,
+        dueCount,
+      }));
+      return HttpResponse.json(
+        DashboardSchema.parse({
+          dueCount: courses.reduce((sum, c) => sum + c.dueCount, 0),
+          courses,
+          forecast: state.forecast,
+        }),
+      );
     }),
 
     http.post(url("/study/answers"), async ({ request }) => {

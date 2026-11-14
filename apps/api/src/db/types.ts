@@ -65,6 +65,12 @@ export interface Items {
   unitId: string;
 }
 
+export interface PrebuiltCourses {
+  courseId: string | null;
+  insertedAt: Generated<Timestamp>;
+  key: string;
+}
+
 export interface ReviewLogs {
   answer: string;
   durationMs: number | null;
@@ -98,6 +104,7 @@ export interface DB {
   cards: Cards;
   courses: Courses;
   items: Items;
+  prebuiltCourses: PrebuiltCourses;
   reviewLogs: ReviewLogs;
   units: Units;
   users: Users;

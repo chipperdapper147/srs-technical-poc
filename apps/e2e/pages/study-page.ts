@@ -2,9 +2,11 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { open } from "./navigation.ts";
 
 export type Verdict = "exact" | "typo" | "wrong";
+/** A word as the present step shows it. */
+export type Word = { term: string; definition: string };
 
 /**
- * `/courses/:id/study?mode=learn|review`.
+ * `/courses/:id/study?mode=learn|review`, and `/review` (all courses).
  * A step is either "present" (new word shown, type it to copy) or "quiz"
  * (prompt shown, type the answer, get feedback, continue).
  */
@@ -14,6 +16,9 @@ export class StudyPage {
   readonly copyInput: Locator;
   readonly copyMiss: Locator;
   readonly prompt: Locator;
+  /** The current item's course; shown only in a review of all courses. */
+  readonly courseBadge: Locator;
+  readonly backToHomeLink: Locator;
   readonly answerInput: Locator;
   readonly feedback: Locator;
   readonly continueButton: Locator;
@@ -31,6 +36,8 @@ export class StudyPage {
     this.copyInput = page.getByPlaceholder("Type it to continue");
     this.copyMiss = page.getByText("Type the word as shown above.");
     this.prompt = page.getByTestId("study-prompt");
+    this.courseBadge = page.getByTestId("study-course");
+    this.backToHomeLink = page.getByRole("link", { name: "Back to home" });
     this.answerInput = page.getByPlaceholder("Type the answer");
     this.feedback = page.getByRole("status");
     this.continueButton = page.getByRole("button", { name: "Continue" });
@@ -40,6 +47,10 @@ export class StudyPage {
 
   async goto(courseId: string, mode: "learn" | "review") {
     await open(this.page, `/courses/${courseId}/study?mode=${mode}`);
+  }
+
+  async gotoReviewAll() {
+    await open(this.page, "/review");
   }
 
   private async stepIndex(): Promise<number> {
@@ -61,7 +72,7 @@ export class StudyPage {
   }
 
   /** Present step: read the new word, then type it to move on. */
-  async copyWord(): Promise<{ term: string; definition: string }> {
+  async copyWord(): Promise<Word> {
     const term = (await this.term.textContent()) ?? "";
     const definition = (await this.definition.textContent()) ?? "";
     await this.copyInput.fill(term);
@@ -91,12 +102,15 @@ export class StudyPage {
   }
 
   /**
-   * Drive a whole session. `respond` gets each quiz prompt (the definition)
-   * and the attempt number for that prompt, and returns the text to type.
+   * Drive a whole session. `respond` gets each quiz prompt (the definition),
+   * the attempt number for that prompt and the words presented so far, and
+   * returns the text to type.
    * Returns the words presented (learn mode) and every verdict in order.
    */
-  async completeSession(respond: (prompt: string, attempt: number) => string) {
-    const presented: { term: string; definition: string }[] = [];
+  async completeSession(
+    respond: (prompt: string, attempt: number, presented: readonly Word[]) => string,
+  ) {
+    const presented: Word[] = [];
     const verdicts: { prompt: string; verdict: Verdict }[] = [];
     const attempts = new Map<string, number>();
     for (let guard = 0; guard < 200; guard++) {
@@ -109,7 +123,7 @@ export class StudyPage {
       const prompt = (await this.prompt.textContent()) ?? "";
       const attempt = (attempts.get(prompt) ?? 0) + 1;
       attempts.set(prompt, attempt);
-      verdicts.push({ prompt, verdict: await this.answer(respond(prompt, attempt)) });
+      verdicts.push({ prompt, verdict: await this.answer(respond(prompt, attempt, presented)) });
       await this.continue();
     }
     throw new Error("Study session did not finish within 200 steps");

@@ -55,9 +55,30 @@ describe("courses", () => {
     expect(coursesViewModel(s).body).toEqual({ kind: "error", message: "Database down" });
   });
 
+  it("mentions the seed only in a development build (#40)", () => {
+    const empty = { status: "ready" as const, data: [] };
+    expect(coursesViewModel({ courses: empty, environment: "development" }).body).toEqual({
+      kind: "empty",
+      message: "No courses yet. Create one or run `pnpm db:seed`.",
+    });
+    expect(coursesViewModel({ courses: empty, environment: "production" }).body).toEqual({
+      kind: "empty",
+      message: "No courses yet. Create one to get started.",
+    });
+  });
+
+  it("takes the environment from the platform", async () => {
+    fake.current.state.courses = [];
+    const c = createCoursesController(createTestDeps(undefined, { environment: "development" }));
+    c.start();
+    const s = await waitForState(c.store, (x) => x.courses.status === "ready");
+    expect(coursesViewModel(s).body).toMatchObject({ message: expect.stringContaining("db:seed") });
+  });
+
   it("hides the due badge when nothing is due, and handles empty courses", () => {
     const vm = coursesViewModel({
       courses: { status: "ready", data: [aCourse({ title: "Empty", itemCount: 0, dueCount: 0 })] },
+      environment: "production",
     });
     expect(vm.body).toMatchObject({ courses: [{ due: null, progress: { value: 0 } }] });
   });

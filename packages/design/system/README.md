@@ -20,7 +20,7 @@ A neutral (pure grey, chroma 0) palette with one strong fill. Hue appears only t
 
 - Page ground is `background`; text is `foreground`. Secondary text (descriptions, counts, hints, placeholders) is `muted-foreground`.
 - `primary` is the only solid fill: the main Button, the Progress indicator, the default Badge. Text on it is `primary-foreground`. Use one `primary` element per region.
-- Quiet surfaces use `muted` (Progress track, card footers at 50%, hover fills) or `secondary` (secondary Button and Badge). Keep `muted-foreground` text off `muted` fills at body size: 4.3:1 in light.
+- Quiet surfaces use `muted` (Progress track, card footers at 50%, hover fills) or `secondary` (secondary Button and Badge). `muted-foreground` text meets 4.5:1 on all of them, on `background` and on the verdict tints; the "wrong" tint is the tightest (4.55:1 in light), so check it before lightening the token.
 - Cards are `card`. In light, that equals `background`; a card is set apart by a 10% `foreground` ring. In dark, `card` is one step lighter.
 - Hairlines are `border`; form controls are outlined with `input`.
 - Focus is a 3px `ring` at 50%. It is under the 3:1 focus-indicator floor in light (`ring` is 2.6:1 on `background`); kept as the source has it.

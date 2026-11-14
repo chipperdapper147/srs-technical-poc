@@ -455,3 +455,89 @@ Decided by the repository owner.
 - **Fast answers as Easy: deferred.** It isn't clear that it is a good idea.
 - **Follow-up issues:** a hierarchy for the design tokens (#22), reverse and
   listening modes (#24), the mobile app (#25).
+
+## 2026-11-14: A darker `muted-foreground` for AA contrast
+
+Decided by the repository owner (#12), out of three options: a darker
+`muted-foreground`, lighter verdict tints, or `foreground` for the
+"Next review …" line.
+
+- **Light `muted-foreground` is `oklch(0.525 0 0)` (`#6a6a6a`)**, from
+  shadcn's `oklch(0.556 0 0)` (`#737373`). It is the lightest grey that
+  reaches 4.5:1 on every surface the token sits on: 5.4:1 on `background`,
+  5.0:1 on `muted`, 4.55:1 to 5.0:1 on the verdict tints. The "wrong" tint
+  is the tightest. This is the first departure from the stock neutral theme.
+- Dark already passed (5.9:1 or more everywhere) and is unchanged.
+- The browser axe scan no longer lists the feedback box as a known
+  violation, so it enforces this.
+
+## 2026-11-14: Home dashboard
+
+The owner chose the first product idea. Scope: due reviews per course and in
+total, one "Review all due" session across courses, and a 7-day forecast.
+
+- **The dashboard is `/`**; the course list moved to `/courses` (header nav
+  "Courses", next to "Home" and "Settings").
+- **Two additive endpoints.** `GET /dashboard` is the summary: due now per
+  course and in total, and the forecast. `GET /study/review` serves the
+  mixed session: due items from every course, most overdue first, each with
+  its course, language and grading. Answers still go to `POST
+  /study/answers`, which grades with the item's own course settings, as
+  before. The per-course study endpoint is unchanged.
+- **Forecast days are the learner's calendar days.** The client sends its
+  IANA time zone (`?timeZone=`, a new `Clock.timeZone()` port; UTC if
+  absent) and Postgres buckets `due_at` in it. Today counts every overdue
+  review too, so its bar is everything to do by the end of the day.
+- **"Review all due" means all of it, up to 100** (the largest limit a study
+  request accepts), where a course's review session takes 20. Revisit with
+  daily limits and pacing (product idea 5).
+- **The study screen serves both sessions.** Its controller takes
+  `courseId: null` for all courses; the view model names each item's course
+  only in a mixed session, and the answer input's `lang` follows the item.
+- **Developer hints follow the build** (#40): an `environment` port
+  (`development` under `next dev`, else `production`) reaches the view
+  models, which decide whether the empty state mentions `pnpm db:seed`.
+## 2026-11-14: Prebuilt courses, inserted once per database
+
+Decided by the repository owner in issue #41; built here.
+
+- **A prebuilt course is an ordinary shared course** (`owner_id` null,
+  read-only for learners) whose content lives in the database. Its owner
+  can edit or delete it; then it simply changes or ceases to be. Edits
+  change nothing for learners: their cards keep pointing at the edited
+  items. Deleting content deletes the learner data that points at it.
+- **Getting it there:** `apps/api/src/db/prebuilt.ts` lists the courses,
+  each with a stable key and a CSV in `db/courses/`. A course is inserted,
+  through the CSV import path users get, only while its key is missing from
+  the `prebuilt_courses` ledger, and the key is recorded in the same
+  transaction. After that it is never inserted again, whether the course
+  is edited, renamed or deleted (`course_id` becomes NULL; the row stays).
+  Nothing deletes or overwrites. A transaction-level advisory lock on the
+  key keeps two deploys of the same database from both inserting.
+- **Databases from before the ledger:** with no ledger row but a shared
+  course of exactly that title, the step records the key against that
+  course instead of inserting a second copy. That covers local databases
+  seeded by the first version of this change; production had none.
+- **A new key means a new course.** Never change a key; a renamed course
+  keeps its old key.
+- **It runs everywhere:** on Vercel, `scripts/deploy/migrate.ts` (the API's
+  `vercel-build`) runs it right after the migrations, on the same
+  `DATABASE_URL_UNPOOLED`: a short batch job needs no pooler, and it needs
+  the migrated schema. Either step failing fails the build. Locally,
+  `pnpm db:seed` runs it, and CI's e2e job seeds the same way.
+- **The Spanish sample stays local:** only `pnpm db:seed` loads it. It is
+  recorded in the ledger too (key `spanish-basics-sample`), so a local
+  database that deletes it gets it back only if its ledger row goes too.
+- **Schema:** `prebuilt_courses (key text PRIMARY KEY, course_id uuid NULL
+  REFERENCES courses ON DELETE SET NULL, inserted_at)`, a new table, so an
+  expand-only migration. Older API versions never read it.
+- **The first course:** the capitals of the 20 most populous countries,
+  ranked by the UN World Population Prospects 2024 (the latest edition;
+  estimates for 1 July 2023), with English names. Grading already ignores
+  accents (unless the learner turns them on), case and punctuation, so
+  "Brasilia" and "washington d.c." need no entry. The alternatives are
+  other names and spellings: "Washington", "Washington DC" (otherwise one
+  edit from "Washington, D.C.", a typo), "Delhi", "Ha Noi", "Teheran" and
+  "Metro Manila".
+- **Later:** a catalog with search, and who may own and publish prebuilt
+  courses (an admin role, once Auth0 is in).

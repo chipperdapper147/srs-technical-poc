@@ -1,7 +1,17 @@
 import type { ProgressVM } from "../core/fields.ts";
 import { languagePair, percent } from "../core/format.ts";
-import type { Route } from "../core/ports.ts";
+import type { Environment, Route } from "../core/ports.ts";
 import type { CoursesState } from "./controller.ts";
+
+/**
+ * "No courses yet", with the seed hint only in a development build: learners
+ * on a deployed app can't run it, and it would truncate that database.
+ */
+export function noCoursesMessage(environment: Environment): string {
+  return environment === "development"
+    ? "No courses yet. Create one or run `pnpm db:seed`."
+    : "No courses yet. Create one to get started.";
+}
 
 export interface CourseCardVM {
   id: string;
@@ -24,7 +34,7 @@ export interface CoursesVM {
     | { kind: "list"; courses: CourseCardVM[] };
 }
 
-export function coursesViewModel({ courses }: CoursesState): CoursesVM {
+export function coursesViewModel({ courses, environment }: CoursesState): CoursesVM {
   return {
     heading: "Courses",
     newCourse: { label: "New course", route: { to: "newCourse" } },
@@ -34,7 +44,7 @@ export function coursesViewModel({ courses }: CoursesState): CoursesVM {
         : courses.status === "error"
           ? { kind: "error", message: courses.message }
           : courses.data.length === 0
-            ? { kind: "empty", message: "No courses yet. Create one or run `pnpm db:seed`." }
+            ? { kind: "empty", message: noCoursesMessage(environment) }
             : {
                 kind: "list",
                 courses: courses.data.map((c) => ({

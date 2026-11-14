@@ -27,6 +27,8 @@ describe("classify", () => {
     ["db/migrations/20261109065014_init.sql", "schema"],
     ["apps/api/src/db/types.ts", "schema"],
     ["db/seed/spanish-basics.csv", "seed"],
+    ["db/courses/capitals-20-most-populous.csv", "seed"],
+    ["apps/api/src/db/prebuilt.ts", "api-domain"],
     ["db/rehearsal/seed.sql", "schema-rehearsal"],
     ["db/rehearsal/invariants/card_status_matches_state.sql", "schema-rehearsal"],
     ["db/migrations/20261201000000_contract_drop_alternatives.sql", "schema-contract"],
@@ -100,7 +102,7 @@ describe("plan", () => {
 
   it("maps a study view change to the study and grading specs, with a view test owed", () => {
     const p = plan(["apps/web/src/views/study/study-view.tsx"]);
-    assert.deepEqual(p.e2e, ["a11y", "grading", "study"]);
+    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "study"]);
     assert.deepEqual(ids(p), ["lint", "typecheck", "test:web", "build:web", "e2e"]);
     assert.deepEqual(
       p.obligations.map((o) => [o.id, o.status]),
@@ -155,7 +157,7 @@ describe("plan", () => {
 
   it("requires an e2e spec for a route change", () => {
     const p = plan(["apps/web/src/app/courses/[id]/study/page.tsx"]);
-    assert.deepEqual(p.e2e, ["a11y", "grading", "study"]);
+    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "study"]);
     assert.equal(p.obligations[0]?.id, "e2e-spec");
   });
 

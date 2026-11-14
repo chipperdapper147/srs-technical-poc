@@ -7,14 +7,19 @@ import {
   type GradingOptions,
   gradeAnswer,
   IdParamsSchema,
+  ReviewQuerySchema,
+  ReviewSessionSchema,
   ratingForVerdict,
   StudyQuerySchema,
   StudySessionSchema,
   SubmitAnswerSchema,
 } from "../shared.ts";
 import type { Scheduler } from "../srs.ts";
+import { visibleTo } from "./courses.ts";
 
 const DEFAULT_REVIEW_LIMIT = 20;
+/** "Review all due" means all of it, up to the largest session a request may ask for. */
+const DEFAULT_ALL_REVIEW_LIMIT = 100;
 
 /** Course override, else the learner's own setting. */
 async function gradingFor(db: Database, userId: string, courseId: string) {
@@ -29,7 +34,7 @@ async function gradingFor(db: Database, userId: string, courseId: string) {
         eb.fn.coalesce("courses.accentSensitive", "users.accentSensitive").as("accentSensitive"),
     ])
     .where("courses.id", "=", courseId)
-    .where((eb) => eb.or([eb("courses.ownerId", "is", null), eb("courses.ownerId", "=", userId)]))
+    .where(visibleTo(userId))
     .executeTakeFirst();
   if (!row) return undefined;
   const grading: GradingOptions = { mode: row.mode, accentSensitive: row.accentSensitive };
@@ -93,6 +98,59 @@ export const studyRoutes: FastifyPluginAsyncZod<{ db: Database; scheduler: Sched
         mode,
         grading: settings.grading,
         items: rows.map((r) => ({ ...r, isNew: mode === "learn" })),
+      };
+    },
+  );
+
+  app.get(
+    "/study/review",
+    {
+      schema: {
+        tags: ["study"],
+        description:
+          "Review across all courses: items whose card is due, most overdue first. Each item names its course and that course's grading.",
+        querystring: ReviewQuerySchema,
+        response: { 200: ReviewSessionSchema },
+      },
+    },
+    async (request) => {
+      const userId = request.user.id;
+      const rows = await db
+        .selectFrom("cards")
+        .innerJoin("items", "items.id", "cards.itemId")
+        .innerJoin("units", "units.id", "items.unitId")
+        .innerJoin("courses", "courses.id", "units.courseId")
+        .innerJoin("users", "users.id", "cards.userId")
+        .select([
+          "items.id as itemId",
+          "units.title as unitTitle",
+          "items.term",
+          "items.definition",
+          "items.alternatives",
+          "items.notes",
+          "courses.id as courseId",
+          "courses.title as courseTitle",
+          "courses.targetLang",
+          (eb) => eb.fn.coalesce("courses.gradingMode", "users.gradingMode").as("mode"),
+          (eb) =>
+            eb.fn
+              .coalesce("courses.accentSensitive", "users.accentSensitive")
+              .as("accentSensitive"),
+        ])
+        .where("cards.userId", "=", userId)
+        .where("cards.dueAt", "<=", sql<Date>`now()`)
+        .where(visibleTo(userId))
+        .orderBy("cards.dueAt")
+        .orderBy("items.id")
+        .limit(request.query.limit ?? DEFAULT_ALL_REVIEW_LIMIT)
+        .execute();
+
+      return {
+        items: rows.map(({ mode, accentSensitive, ...item }) => ({
+          ...item,
+          isNew: false,
+          grading: { mode, accentSensitive } satisfies GradingOptions,
+        })),
       };
     },
   );

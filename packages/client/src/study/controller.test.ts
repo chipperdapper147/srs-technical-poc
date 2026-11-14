@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { queryKeys } from "../api/query-keys.ts";
 import { createTestDeps } from "../testing/deps.ts";
-import { aCourse, aMe, someWords } from "../testing/fixtures.ts";
+import { aCourse, aMe, aStudyItem, someWords } from "../testing/fixtures.ts";
 import { setupFakeApi } from "../testing/server.ts";
 import { waitForState } from "../testing/wait.ts";
 import { type ActiveStudyState, createStudyController, type StudyState } from "./controller.ts";
@@ -130,6 +130,17 @@ describe("study controller", () => {
     expect(deps.queryClient.getQueryState(queryKeys.courses)?.isInvalidated).toBe(true);
   });
 
+  it("refreshes the dashboard when the session ends", async () => {
+    const { controller, deps } = await startSession("review");
+    const key = queryKeys.dashboard(deps.clock.timeZone());
+    deps.queryClient.setQueryData(key, { dueCount: 1, courses: [], forecast: [] });
+    controller.actions.setInput("hola");
+    controller.actions.submit();
+    await waitForState(controller.store, (s) => isActive(s) && s.session.feedback !== null);
+    controller.actions.next();
+    expect(deps.queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+
   it("ignores a load that finishes after the screen stopped", async () => {
     const deps = createTestDeps();
     const controller = createStudyController(deps, { courseId: course.id, mode: "learn" });
@@ -137,5 +148,79 @@ describe("study controller", () => {
     stop();
     await new Promise((r) => setTimeout(r, 50));
     expect(controller.store.get().status).toBe("loading");
+  });
+});
+
+describe("study controller, all courses", () => {
+  const danke = aStudyItem({ term: "danke", definition: "thanks", isNew: false });
+
+  /** Add a strict German course with one due word next to the Spanish one. */
+  function addGerman() {
+    const german = aCourse({ title: "German", targetLang: "de", gradingMode: "strict" });
+    fake.current.state.courses.push(german);
+    fake.current.state.items[german.id] = [danke];
+    fake.current.state.due[german.id] = [danke.itemId];
+    return german;
+  }
+
+  async function startAll() {
+    const deps = createTestDeps();
+    // The mode is ignored: all courses are only ever reviewed.
+    const controller = createStudyController(deps, { courseId: null, mode: "learn" });
+    controller.start();
+    const state = await waitForState(controller.store, (s) => s.status !== "loading");
+    return { deps, controller, state };
+  }
+
+  it("reviews due words from every course in one session", async () => {
+    addGerman();
+    const { state } = await startAll();
+    expect(state).toMatchObject({ courseId: null, mode: "review", status: "active" });
+    if (!isActive(state)) throw new Error("expected an active session");
+    expect(state.courseTitle).toBeNull();
+    expect(state.session.queue.map((s) => `${s.kind}:${s.item.term}`)).toEqual([
+      "quiz:hola",
+      "quiz:danke",
+    ]);
+    expect(state.context[danke.itemId]).toEqual({
+      courseTitle: "German",
+      lang: "de",
+      grading: { mode: "strict", accentSensitive: false },
+    });
+    expect(state.context[words[0]?.itemId ?? ""]).toMatchObject({ courseTitle: "Spanish" });
+    expect(fake.current.requests.map((r) => r.path)).toEqual(["/study/review"]);
+  });
+
+  it("has the API grade each answer with its own course's settings", async () => {
+    addGerman();
+    const { controller } = await startAll();
+    controller.actions.setInput("ola"); // lenient Spanish: a typo
+    controller.actions.submit();
+    const first = await waitForState(
+      controller.store,
+      (s) => isActive(s) && s.session.feedback !== null,
+    );
+    expect(isActive(first) && first.session.feedback?.verdict).toBe("typo");
+    controller.actions.next();
+    controller.actions.setInput("dank"); // strict German: wrong
+    controller.actions.submit();
+    const second = await waitForState(
+      controller.store,
+      (s) => isActive(s) && s.session.index === 1 && s.session.feedback !== null,
+    );
+    expect(isActive(second) && second.session.feedback?.verdict).toBe("wrong");
+    expect(
+      fake.current.requests.filter((r) => r.path === "/study/answers").map((r) => r.body),
+    ).toEqual([
+      expect.objectContaining({ itemId: words[0]?.itemId, answer: "ola" }),
+      expect.objectContaining({ itemId: danke.itemId, answer: "dank" }),
+    ]);
+  });
+
+  it("reports an empty review and a failed load", async () => {
+    fake.current.state.due = {};
+    expect((await startAll()).state.status).toBe("empty");
+    fake.current.failNext("GET", "/study/review", 500, "Database down");
+    expect((await startAll()).state).toMatchObject({ status: "error", message: "Database down" });
   });
 });
