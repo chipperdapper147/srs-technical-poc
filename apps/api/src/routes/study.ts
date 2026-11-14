@@ -1,3 +1,6 @@
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { sql } from "kysely";
+import type { Database } from "../db/index.ts";
 import {
   AnswerResultSchema,
   ErrorSchema,
@@ -8,10 +11,7 @@ import {
   StudyQuerySchema,
   StudySessionSchema,
   SubmitAnswerSchema,
-} from "@app/shared";
-import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { sql } from "kysely";
-import type { Database } from "../db/index.ts";
+} from "../shared.ts";
 import type { Scheduler } from "../srs.ts";
 
 const DEFAULT_REVIEW_LIMIT = 20;

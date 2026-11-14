@@ -305,6 +305,23 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/api/src/**", "!apps/api/src/shared.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@app/shared": "Import from src/shared.ts instead: Vercel compiles the API to .js, and the package's exports point at .ts (apps/api/src/shared.ts explains)."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

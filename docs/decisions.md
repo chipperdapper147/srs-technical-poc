@@ -395,6 +395,13 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - `apps/api/tsconfig.json` now lists every option itself instead of
   extending the base. `scripts/tsconfig-sync.test.ts` fails when it drifts
   from `tsconfig.base.json`.
+- Vercel also compiles each `.ts` file to `.js` without rewriting imports,
+  and through `@app/shared`'s `exports` (`./src/index.ts`) the compiled API
+  looked for a file it no longer ships. So the API sets
+  `rewriteRelativeImportExtensions` and reaches shared only through
+  `apps/api/src/shared.ts`, a relative re-export compiled with the API.
+  Biome forbids importing `@app/shared` elsewhere in the API; the web app
+  keeps the package import.
 
 ## 2026-11-13: The lockfile always passes the release-age floor
 
