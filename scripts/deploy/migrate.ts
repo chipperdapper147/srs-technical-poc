@@ -42,8 +42,23 @@ export function plan(
   return { run: true, url };
 }
 
+/**
+ * `--revisions-schema public`: on Neon, Atlas created its own
+ * atlas_schema_revisions schema but put the table in public, then looked
+ * for it in the schema and failed. Naming the schema makes creating and
+ * reading agree on every server.
+ */
 export function applyArgs(url: string, dir: string): string[] {
-  return ["migrate", "apply", "--url", url, "--dir", `file://${dir}`];
+  return [
+    "migrate",
+    "apply",
+    "--url",
+    url,
+    "--dir",
+    `file://${dir}`,
+    "--revisions-schema",
+    "public",
+  ];
 }
 
 async function atlasBinary(): Promise<string> {

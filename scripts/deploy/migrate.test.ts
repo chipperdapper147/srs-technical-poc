@@ -31,6 +31,8 @@ test("applies the repository's migrations directory", () => {
     "postgres://u",
     "--dir",
     "file:///repo/db/migrations",
+    "--revisions-schema",
+    "public",
   ]);
 });
 

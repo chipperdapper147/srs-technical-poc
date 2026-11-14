@@ -363,6 +363,9 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   binary, pinned to the same version as CI and the setup script (a test
   checks) and to a SHA-256 checked before it runs. Off Vercel it does
   nothing.
+- `--revisions-schema public`: on Neon, Atlas created its own
+  `atlas_schema_revisions` schema but put the table in `public`, then read
+  from the schema and failed. Naming the schema keeps both in `public`.
 - Expand/contract still holds: the old version keeps serving while the new
   one builds, so every migration must work with both (ADR 0003).
 
