@@ -42,6 +42,8 @@ export type CheckId =
   | "test:api"
   | "db:seed"
   | "build:web"
+  | "test:mobile"
+  | "bundle:mobile"
   | "e2e";
 
 export type Need = "postgres" | "atlas" | "docker" | "oasdiff";
@@ -163,6 +165,16 @@ export const CHECKS: Check[] = [
   { id: "db:seed", title: "Seed runs cleanly", command: "pnpm db:seed", needs: ["postgres"] },
   { id: "build:web", title: "Next.js production build", command: "pnpm --filter @app/web build" },
   {
+    id: "test:mobile",
+    title: "Mobile tests: views and screens with React Native Testing Library (Jest, MSW)",
+    command: "pnpm --filter @app/mobile test",
+  },
+  {
+    id: "bundle:mobile",
+    title: "Mobile JS bundle: Metro resolves the app and the workspace packages (iOS, Hermes)",
+    command: "pnpm --filter @app/mobile bundle",
+  },
+  {
     id: "design-system",
     title: "Design-system artifact builds, and every preview renders in both themes",
     command: "pnpm design:system && pnpm --filter @app/design system:check",
@@ -176,6 +188,7 @@ export type ObligationId =
   | "client-test"
   | "web-unit-test"
   | "web-view-test"
+  | "mobile-view-test"
   | "e2e-spec";
 
 export interface Obligation {
@@ -212,6 +225,11 @@ export const OBLIGATIONS: Obligation[] = [
     metBy: ["apps/web/src/**/*.test.ts"],
   },
   {
+    id: "mobile-view-test",
+    title: "A mobile view or screen test (React Native Testing Library) is added or changed",
+    metBy: ["apps/mobile/src/**/*.test.tsx"],
+  },
+  {
     id: "e2e-spec",
     title: "An e2e spec or page object is added or changed",
     metBy: ["apps/e2e/tests/**", "apps/e2e/pages/**"],
@@ -243,7 +261,7 @@ export const EVIDENCE: Evidence[] = [
   {
     id: "visual-check",
     title: "Agent visual check of the changed screens",
-    how: "Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. See 'The agent visual check'.",
+    how: "Screenshots of each changed screen (desktop and mobile) and of any new state, console errors collected. For the Expo app: a simulator or device, or its react-native-web preview (`pnpm --filter @app/mobile preview:web`) at a phone viewport. See 'The agent visual check'.",
     due: "pr",
   },
   {
@@ -281,7 +299,7 @@ export const EVIDENCE: Evidence[] = [
 /** `e2e: "mapped"` picks specs from E2E_MAP; `"all"` runs the whole suite. */
 export type E2eScope = "none" | "mapped" | "all" | "self";
 
-export type Side = "repo" | "backend" | "shared" | "client" | "frontend" | "tests";
+export type Side = "repo" | "backend" | "shared" | "client" | "frontend" | "mobile" | "tests";
 
 export interface ChangeClass {
   id: string;
@@ -318,6 +336,8 @@ export const CLASSES: ChangeClass[] = [
       "design-drift",
       "test:web",
       "build:web",
+      "test:mobile",
+      "bundle:mobile",
       "design-system",
     ],
     e2e: "all",
@@ -504,6 +524,7 @@ export const CLASSES: ChangeClass[] = [
       "test:shared",
       "test:client",
       "test:web",
+      "test:mobile",
       "test:api",
       "compat-old-client",
     ],
@@ -529,6 +550,7 @@ export const CLASSES: ChangeClass[] = [
       "test:shared",
       "test:client",
       "test:web",
+      "test:mobile",
       "test:api",
       "compat-old-client",
     ],
@@ -550,7 +572,7 @@ export const CLASSES: ChangeClass[] = [
     side: "client",
     title: "Client testing kit (fake API, fixtures)",
     paths: ["packages/client/src/testing/**"],
-    checks: ["lint", "typecheck", "test:client", "test:web"],
+    checks: ["lint", "typecheck", "test:client", "test:web", "test:mobile"],
     e2e: "none",
   },
   {
@@ -558,7 +580,7 @@ export const CLASSES: ChangeClass[] = [
     side: "client",
     title: "React binding (ClientProvider, useScreen)",
     paths: ["packages/client/src/react/**"],
-    checks: ["lint", "typecheck", "test:web", "build:web"],
+    checks: ["lint", "typecheck", "test:web", "build:web", "test:mobile", "bundle:mobile"],
     e2e: "all",
   },
   {
@@ -566,7 +588,15 @@ export const CLASSES: ChangeClass[] = [
     side: "client",
     title: "Controllers, view models, API client",
     paths: ["packages/client/**"],
-    checks: ["lint", "typecheck", "test:client", "test:web", "build:web"],
+    checks: [
+      "lint",
+      "typecheck",
+      "test:client",
+      "test:web",
+      "build:web",
+      "test:mobile",
+      "bundle:mobile",
+    ],
     e2e: "mapped",
     obligations: ["client-test"],
   },
@@ -632,6 +662,56 @@ export const CLASSES: ChangeClass[] = [
     paths: ["apps/web/**"],
     checks: ["lint", "typecheck", "test:web", "build:web"],
     e2e: "all",
+    evidence: ["visual-check"],
+  },
+
+  // Mobile (Expo, apps/mobile): the same layers as the web (ADR 0002). No
+  // device e2e yet, so routes are covered by the bundle and the screen tests.
+  {
+    id: "mobile-tests",
+    side: "mobile",
+    title: "Mobile tests only",
+    paths: [
+      "apps/mobile/src/**/*.test.ts",
+      "apps/mobile/src/**/*.test.tsx",
+      "apps/mobile/src/test/**",
+    ],
+    checks: ["lint", "typecheck", "test:mobile"],
+    e2e: "none",
+  },
+  {
+    id: "mobile-platform",
+    side: "mobile",
+    title: "Mobile platform adapters (ports, navigator, theme, links)",
+    paths: ["apps/mobile/src/platform/**"],
+    checks: ["lint", "typecheck", "test:mobile", "bundle:mobile"],
+    e2e: "none",
+  },
+  {
+    id: "mobile-route",
+    side: "mobile",
+    title: "Mobile routes and entry (app/: route in, screen out)",
+    paths: ["apps/mobile/src/app/**", "apps/mobile/index.ts"],
+    checks: ["lint", "typecheck", "test:mobile", "bundle:mobile"],
+    e2e: "none",
+  },
+  {
+    id: "mobile-view",
+    side: "mobile",
+    title: "Mobile views and screens",
+    paths: ["apps/mobile/src/views/**"],
+    checks: ["lint", "typecheck", "test:mobile", "bundle:mobile"],
+    e2e: "none",
+    obligations: ["mobile-view-test"],
+    evidence: ["visual-check"],
+  },
+  {
+    id: "mobile-config",
+    side: "mobile",
+    title: "Mobile app config (Expo, Jest, TypeScript)",
+    paths: ["apps/mobile/**"],
+    checks: ["lint", "typecheck", "test:mobile", "bundle:mobile"],
+    e2e: "none",
     evidence: ["visual-check"],
   },
 

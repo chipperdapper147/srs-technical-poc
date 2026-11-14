@@ -55,6 +55,14 @@ describe("classify", () => {
     ["apps/web/src/views/study/study-view.tsx", "web-view"],
     ["apps/web/src/components/native-select.tsx", "web-view"],
     ["apps/web/next.config.ts", "web-config"],
+    ["apps/mobile/src/views/courses/courses.test.tsx", "mobile-tests"],
+    ["apps/mobile/src/test/render.tsx", "mobile-tests"],
+    ["apps/mobile/src/platform/providers.tsx", "mobile-platform"],
+    ["apps/mobile/src/app/router.tsx", "mobile-route"],
+    ["apps/mobile/index.ts", "mobile-route"],
+    ["apps/mobile/src/views/courses/courses-view.tsx", "mobile-view"],
+    ["apps/mobile/app.json", "mobile-config"],
+    ["apps/mobile/package.json", "dependencies"],
     ["apps/e2e/tests/study.spec.ts", "e2e-specs"],
     ["apps/e2e/pages/study-page.ts", "e2e-support"],
     ["packages/design/tokens.json", "design-tokens"],
@@ -112,6 +120,8 @@ describe("plan", () => {
       "test:client",
       "test:web",
       "build:web",
+      "test:mobile",
+      "bundle:mobile",
       "e2e",
     ]);
     assert.deepEqual(missing.e2e, ["a11y", "courses", "grading"]);
@@ -121,6 +131,26 @@ describe("plan", () => {
       "packages/client/src/settings/settings.test.ts",
     ]);
     assert.equal(met.obligations[0]?.status, "met");
+  });
+
+  it("requires a mobile view test for a mobile view, without the web's checks", () => {
+    const p = plan(["apps/mobile/src/views/access/access-view.tsx"]);
+    assert.deepEqual(ids(p), ["lint", "typecheck", "test:mobile", "bundle:mobile"]);
+    assert.equal(p.e2e, null);
+    assert.deepEqual(
+      p.obligations.map((o) => [o.id, o.status]),
+      [["mobile-view-test", "missing"]],
+    );
+    const met = plan([
+      "apps/mobile/src/views/access/access-view.tsx",
+      "apps/mobile/src/views/access/access.test.tsx",
+    ]);
+    assert.equal(met.obligations[0]?.status, "met");
+  });
+
+  it("runs the mobile app's checks for a client change, as it consumes the client", () => {
+    const p = ids(plan(["packages/client/src/courses/view-model.ts"]));
+    assert.ok(p.includes("test:mobile") && p.includes("bundle:mobile"));
   });
 
   it("requires an e2e spec for a route change", () => {
