@@ -405,6 +405,11 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 - Vercel takes `src/app.*` as the entry point before `src/server.*`, so
   the app builder is `src/build-app.ts` and `src/server.ts`, which starts
   the server, is the only candidate (`scripts/deploy/entrypoint.test.ts`).
+- Vercel's function loader can't `require()` ES modules (Node 24 can), and
+  Swagger UI's `@fastify/static` does. On Vercel the API skips Swagger UI
+  and serves `/docs/json` itself; locally `/docs` is unchanged.
+  `test/vercel-runtime.test.ts` builds the app with
+  `--no-experimental-require-module` to catch such dependencies first.
 
 ## 2026-11-13: The lockfile always passes the release-age floor
 

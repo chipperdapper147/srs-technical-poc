@@ -6,7 +6,6 @@
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
@@ -25,7 +24,8 @@ import { createScheduler, type Scheduler } from "./srs.ts";
 
 export interface AppOptions {
   db: Database;
-  env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL"> & Partial<Pick<Env, "API_ACCESS_KEY">>;
+  env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL"> &
+    Partial<Pick<Env, "API_ACCESS_KEY" | "VERCEL_ENV">>;
   /** Defaults to the learning steps in `learning-steps.ts`; tests pass their own. */
   scheduler?: Scheduler;
 }
@@ -41,7 +41,16 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
     openapi: { info: { title: "SRS API", version: "0.0.0" } },
     transform: jsonSchemaTransform,
   });
-  await app.register(swaggerUi, { routePrefix: "/docs" });
+  // Swagger UI (the browsable /docs page) only off Vercel. It needs
+  // @fastify/static, which require()s an ES module; Vercel's function loader
+  // doesn't support that and the API crashed on load. So it is imported only
+  // when used, and on Vercel /docs/json is served directly.
+  if (env.VERCEL_ENV) {
+    app.get("/docs/json", { schema: { hide: true } }, async () => app.swagger());
+  } else {
+    const { default: swaggerUi } = await import("@fastify/swagger-ui");
+    await app.register(swaggerUi, { routePrefix: "/docs" });
+  }
 
   app.get("/health", { schema: { hide: true } }, async () => {
     await db.selectNoFrom((eb) => eb.lit(1).as("ok")).execute();
