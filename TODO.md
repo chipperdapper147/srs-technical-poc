@@ -53,9 +53,11 @@ step starts with something only the repo owner can do.
   with our build-free TypeScript (`.ts` run directly, `@app/shared` as source),
   the entry point (`server.ts` calls `listen()`), and a smaller connection pool
   on Neon's pooled URL.
-- [ ] **Migrations from CI against Neon**, with the direct
-  (`DATABASE_URL_UNPOOLED`) URL as a GitHub environment secret. Cloud agent
-  sessions can't reach Neon over TCP, so this runs only in CI.
+- [x] **Migrations against Neon** run in the API's Vercel build
+  (`scripts/deploy/migrate.ts`, decisions log 2026-11-14), before the new
+  version goes live: production on Neon's production branch, each preview
+  on its own branch. Still open: `lock_timeout` and `statement_timeout` on
+  that connection (section 5).
 - [ ] **A Neon branch per preview deploy**, so stage 4 runs against a copy of
   production. This also replaces the generated rehearsal data (ADR 0003).
 
