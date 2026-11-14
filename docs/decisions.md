@@ -350,6 +350,26 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   release younger than a week. Installs from the lockfile are unaffected. An
   urgent security fix can go in `minimumReleaseAgeExclude`, with the reason.
 
+## 2026-11-13: The lockfile always passes the release-age floor
+
+- **Why:** pnpm checks the floor again whenever it re-resolves, including
+  against packages already locked. One locked release under 7 days old
+  blocks every `pnpm add` or upgrade, by anyone, until it ages out. It
+  happened once: the floor arrived after a lockfile resolved at latest, and
+  pinning `playwright-core` waited two days on 23 such entries.
+- pnpm never locks a too-young release by itself, but a lockfile can still
+  get one: the floor overridden on the command line, a hand edit, a bot or
+  pnpm version that ignores it, or an exclude removed before its release
+  aged.
+- **Rule:** a change to `pnpm-lock.yaml` or `pnpm-workspace.yaml` must leave
+  every locked package at least `minimumReleaseAge` old, excludes aside.
+  The `release-age` verify check (`scripts/deps/release-age.ts`) enforces
+  it, with the date each offender passes. Releases only get older, so a
+  lockfile that passes when it changes can't trip the floor later.
+- Unchanged lockfiles are skipped, so the check costs nothing on other
+  changes and the leftover entries didn't block unrelated PRs while they
+  aged out.
+
 ## 2026-11-11: Squash merges, Auth0, learning steps
 
 Decided by the repository owner.
