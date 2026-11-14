@@ -11,6 +11,7 @@ import {
 } from "fastify-type-provider-zod";
 import type { Database } from "./db/index.ts";
 import type { Env } from "./env.ts";
+import accessKey from "./plugins/access-key.ts";
 import auth from "./plugins/auth.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { meRoutes } from "./routes/me.ts";
@@ -19,7 +20,7 @@ import { createScheduler, type Scheduler } from "./srs.ts";
 
 export interface AppOptions {
   db: Database;
-  env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL">;
+  env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL"> & Partial<Pick<Env, "API_ACCESS_KEY">>;
   /** Defaults to the learning steps in `learning-steps.ts`; tests pass their own. */
   scheduler?: Scheduler;
 }
@@ -42,6 +43,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
     return { ok: true };
   });
 
+  await app.register(accessKey, { key: env.API_ACCESS_KEY });
   await app.register(auth, { db, mode: env.AUTH_MODE });
   await app.register(meRoutes, { db });
   await app.register(courseRoutes, { db });

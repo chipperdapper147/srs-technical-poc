@@ -173,7 +173,9 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 ## 7. Product
 
 - [ ] **Auth0 integration:** replace the dev stub in
-  `apps/api/src/plugins/auth.ts` and the web client. Auth0 is required, not
+  `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
+  access key (`plugins/access-key.ts`, the client's `AccessGate` and the web
+  access screen; decisions log, 2026-11-14). Auth0 is required, not
   to be replaced by Neon Auth or similar (decided 2026-11-11). This unblocks
   the Auth0 mock, real integration and the environment secrets.
 - [ ] **Reverse and listening modes** (issue #24).

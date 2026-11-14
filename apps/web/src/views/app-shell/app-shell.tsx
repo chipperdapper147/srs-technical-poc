@@ -1,6 +1,7 @@
 import { shellViewModel } from "@app/client";
 import type { ReactNode } from "react";
 import { RouteLink } from "@/platform/route-link";
+import { AccessScreen } from "@/views/access/access-screen";
 
 /** Header and page frame. Static, so it reads its view model directly. */
 export function AppShell({ children }: { children: ReactNode }) {
@@ -23,7 +24,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-3xl px-4 py-8">
+        <AccessScreen>{children}</AccessScreen>
+      </main>
     </>
   );
 }
