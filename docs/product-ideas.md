@@ -19,12 +19,13 @@ These are tracked elsewhere and are listed here only for completeness.
 - **Auth0 login.** Required for real accounts (`TODO.md`, section 7).
 - **Reverse and listening modes.** First to be thought through: issue #24.
 - **Mobile app (Expo)** on the shared client: issue #25.
+- **Home dashboard.** Reviews due across all courses, one "Review all due"
+  session, and a 7-day forecast (chosen and built 2026-11-14,
+  `docs/decisions.md`).
 
 ## Ideas
 
-1. **Home dashboard.** How many reviews are due across all courses, one
-   "review everything due" action, and a forecast for the next days. Today
-   each course has to be opened on its own.
+1. ~~**Home dashboard.**~~ Chosen; see above.
 2. **Editing words.** Edit or delete items, manage alternatives and notes,
    and search within a course. Today the only way in is CSV import.
 3. **Leeches.** Words a learner keeps failing get flagged, with options to

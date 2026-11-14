@@ -30,7 +30,7 @@ export function StudyView({ vm, actions }: { vm: StudyVM; actions: StudyActions 
           <h1 className="sr-only">{vm.heading}</h1>
           <div className="flex items-center gap-4">
             <RouteLink to={vm.back} className="text-sm text-muted-foreground">
-              ← {vm.courseTitle}
+              ← {vm.backLabel}
             </RouteLink>
             <Progress value={vm.progress} aria-label={vm.progressLabel} className="flex-1" />
           </div>
@@ -84,6 +84,11 @@ function Step({ step, lang, actions }: { step: StudyStepVM; lang: string; action
       return (
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
+            {step.courseTitle && (
+              <Badge variant="secondary" data-testid="study-course">
+                {step.courseTitle}
+              </Badge>
+            )}
             <span className="text-xs text-muted-foreground">{step.unitTitle}</span>
           </CardHeader>
           <CardContent className="space-y-5">

@@ -166,3 +166,81 @@ export const AnswerResultSchema = z.object({
   nextDue: z.iso.datetime(),
 });
 export type AnswerResult = z.infer<typeof AnswerResultSchema>;
+
+/**
+ * Review across every course the learner can see: due items, most overdue
+ * first. Each item carries its course, so one session can mix courses.
+ * Answers go to POST /study/answers as usual, graded with each item's own
+ * course settings.
+ */
+export const ReviewQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export const ReviewItemSchema = StudyItemSchema.extend({
+  courseId: z.uuid(),
+  courseTitle: z.string(),
+  /** BCP 47 tag of the language typed for this item. */
+  targetLang: z.string(),
+  /** The item's course grading: the course override, else the learner's setting. */
+  grading: GradingOptionsSchema,
+});
+export type ReviewItem = z.infer<typeof ReviewItemSchema>;
+
+export const ReviewSessionSchema = z.object({
+  items: z.array(ReviewItemSchema),
+});
+export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
+
+// ---- Dashboard -----------------------------------------------------------
+
+/** True for an IANA time zone name the runtime knows, e.g. "Europe/Madrid". */
+function isTimeZone(name: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Days in the dashboard's forecast, today included. */
+export const FORECAST_DAYS = 7;
+
+export const DashboardQuerySchema = z.object({
+  /** IANA time zone the forecast's days are counted in. */
+  timeZone: z
+    .string()
+    .max(64)
+    .refine(isTimeZone, "Expected an IANA time zone, e.g. 'Europe/Madrid'")
+    .default("UTC"),
+});
+export type DashboardQuery = z.input<typeof DashboardQuerySchema>;
+
+export const DashboardCourseSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  sourceLang: z.string(),
+  targetLang: z.string(),
+  /** Reviews due now. */
+  dueCount: z.number().int(),
+});
+export type DashboardCourse = z.infer<typeof DashboardCourseSchema>;
+
+export const ForecastDaySchema = z.object({
+  /** Calendar day in the requested time zone, YYYY-MM-DD. */
+  date: z.iso.date(),
+  /** Reviews falling due that day. Today also counts every overdue review. */
+  dueCount: z.number().int(),
+});
+export type ForecastDay = z.infer<typeof ForecastDaySchema>;
+
+export const DashboardSchema = z.object({
+  /** Reviews due now, across all courses. */
+  dueCount: z.number().int(),
+  /** Every course the learner can see, in the course list's order. */
+  courses: z.array(DashboardCourseSchema),
+  /** Today, then the following days: FORECAST_DAYS in all. */
+  forecast: z.array(ForecastDaySchema),
+});
+export type Dashboard = z.infer<typeof DashboardSchema>;

@@ -30,6 +30,8 @@ export type StudyStepVM =
     }
   | {
       kind: "quiz";
+      /** The item's course, named only when the session mixes courses. */
+      courseTitle: string | null;
       unitTitle: string;
       prompt: string;
       input: string;
@@ -56,16 +58,17 @@ export type StudyVM =
   | { kind: "empty"; message: string; backLabel: string; back: Route }
   | {
       kind: "session";
-      /** The screen's level-one heading, for assistive tech: it names the course being studied. */
+      /** The screen's level-one heading, for assistive tech: it names what is being studied. */
       heading: string;
-      courseTitle: string;
+      /** Text of the back link: the course, or "Home" for a review of all courses. */
+      backLabel: string;
       back: Route;
       /** 0–100. */
       progress: number;
       progressLabel: string;
       /** Changes whenever the step does (the e2e page objects wait on it). */
       stepIndex: number;
-      /** BCP 47 tag of the language being typed. */
+      /** BCP 47 tag of the language being typed in the current step. */
       lang: string;
       step: StudyStepVM;
     };
@@ -82,7 +85,9 @@ export function studyViewModel(
   state: StudyState,
   formatDateTime: (iso: string) => string = defaultFormat,
 ): StudyVM {
-  const back: Route = { to: "course", courseId: state.courseId };
+  const back: Route =
+    state.courseId === null ? { to: "home" } : { to: "course", courseId: state.courseId };
+  const backLabel = state.courseId === null ? "Back to home" : "Back to course";
   switch (state.status) {
     case "loading":
       return { kind: "loading" };
@@ -93,21 +98,23 @@ export function studyViewModel(
         kind: "empty",
         message:
           state.mode === "learn" ? "No new words left in this course." : "Nothing due right now.",
-        backLabel: "Back to course",
+        backLabel,
         back,
       };
     case "active": {
       const { session } = state;
       const step = currentStep(session);
+      const context = state.context[(step ?? session.queue[0])?.item.itemId ?? ""];
+      const mixed = state.courseTitle === null;
       return {
         kind: "session",
-        heading: `Study: ${state.course.title}`,
-        courseTitle: state.course.title,
+        heading: mixed ? "Review: all courses" : `Study: ${state.courseTitle}`,
+        backLabel: state.courseTitle ?? "Home",
         back,
         progress: progress(session) * 100,
         progressLabel: "Session progress",
         stepIndex: session.index,
-        lang: state.course.targetLang,
+        lang: context?.lang ?? "und",
         step: !step
           ? {
               kind: "summary",
@@ -117,7 +124,7 @@ export function studyViewModel(
                 { label: "Almost (typo)", verdict: "typo", count: session.tally.typo },
                 { label: "Wrong", verdict: "wrong", count: session.tally.wrong },
               ],
-              backLabel: "Back to course",
+              backLabel,
               back,
             }
           : step.kind === "present"
@@ -138,6 +145,7 @@ export function studyViewModel(
               }
             : {
                 kind: "quiz",
+                courseTitle: mixed ? (context?.courseTitle ?? null) : null,
                 unitTitle: step.item.unitTitle,
                 prompt: step.item.definition,
                 input: state.input,

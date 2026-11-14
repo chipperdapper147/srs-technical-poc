@@ -1,12 +1,14 @@
 /**
- * Study screen: loads the course and a session snapshot, then drives the
- * session state machine (session.ts) through the learner's input. The API
- * grades quiz answers; the copy step of a new word is checked locally.
+ * Study screen: loads a session snapshot (one course's, or a review of what
+ * is due across every course), then drives the session state machine
+ * (session.ts) through the learner's input. The API grades quiz answers,
+ * each with its own course's settings; the copy step of a new word is
+ * checked locally.
  */
 import {
-  type CourseDetail,
   type GradingOptions,
   gradeAnswer,
+  type StudyItem,
   type StudyMode,
   StudyModeSchema,
 } from "@app/shared";
@@ -24,14 +26,24 @@ import {
 } from "./session.ts";
 
 export interface StudyParams {
-  courseId: string;
-  /** Raw `?mode=` value; anything but "review" means learn. */
+  /** The course to study, or null to review what is due across all courses. */
+  courseId: string | null;
+  /** Raw `?mode=` value; anything but "review" means learn. All courses are always reviewed. */
   mode: string | null;
 }
 
 interface Base {
-  courseId: string;
+  courseId: string | null;
   mode: StudyMode;
+}
+
+/** What the session knows about an item's course. */
+export interface ItemContext {
+  courseTitle: string;
+  /** BCP 47 tag of the language being typed. */
+  lang: string;
+  /** For the local copy check; the API grades quiz answers with the same settings. */
+  grading: GradingOptions;
 }
 
 export type StudyState =
@@ -40,8 +52,10 @@ export type StudyState =
   | (Base & { status: "empty" })
   | (Base & {
       status: "active";
-      course: CourseDetail;
-      grading: GradingOptions;
+      /** The course being studied, or null when the session mixes courses. */
+      courseTitle: string | null;
+      /** Per item id. */
+      context: Record<string, ItemContext>;
       session: SessionState;
       /** What the learner has typed for the current step. */
       input: string;
@@ -63,12 +77,19 @@ export interface StudyActions {
   next(): void;
 }
 
+interface Loaded {
+  courseTitle: string | null;
+  items: StudyItem[];
+  context: Record<string, ItemContext>;
+}
+
 export function createStudyController(
   { api, queryClient, clock }: ClientDeps,
   params: StudyParams,
 ): Controller<StudyState, StudyActions> {
-  const mode = StudyModeSchema.catch("learn").parse(params.mode);
-  const base = { courseId: params.courseId, mode };
+  const { courseId } = params;
+  const mode = courseId === null ? "review" : StudyModeSchema.catch("learn").parse(params.mode);
+  const base = { courseId, mode };
   const store = createStore<StudyState>({ ...base, status: "loading" });
   let active = false;
   /** Bumped by each start(); a load from an earlier run is ignored. */
@@ -93,36 +114,69 @@ export function createStudyController(
         stepStartedAt: clock.now(),
       };
     });
-    // Learned and due counts changed; the course list and detail refetch.
-    if (finishedNow) void queryClient.invalidateQueries({ queryKey: queryKeys.courses });
+    // Learned and due counts changed; the course list, detail and dashboard refetch.
+    if (finishedNow) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.courses });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardAll });
+    }
+  }
+
+  /** A session is a snapshot: fetched once, never cached or refetched under the learner. */
+  const snapshot = { staleTime: 0, gcTime: 0 } as const;
+
+  async function loadCourse(id: string): Promise<Loaded> {
+    const [course, session] = await Promise.all([
+      queryClient.fetchQuery({ queryKey: queryKeys.course(id), queryFn: () => api.course(id) }),
+      queryClient.fetchQuery({
+        queryKey: queryKeys.study(id, mode),
+        queryFn: () => api.study(id, mode),
+        ...snapshot,
+      }),
+    ]);
+    const ctx: ItemContext = {
+      courseTitle: course.title,
+      lang: course.targetLang,
+      grading: session.grading,
+    };
+    return {
+      courseTitle: course.title,
+      items: session.items,
+      context: Object.fromEntries(session.items.map((i) => [i.itemId, ctx])),
+    };
+  }
+
+  async function loadAll(): Promise<Loaded> {
+    const session = await queryClient.fetchQuery({
+      queryKey: queryKeys.reviewAll,
+      queryFn: () => api.reviewAll(),
+      ...snapshot,
+    });
+    return {
+      courseTitle: null,
+      items: session.items,
+      context: Object.fromEntries(
+        session.items.map((i) => [
+          i.itemId,
+          { courseTitle: i.courseTitle, lang: i.targetLang, grading: i.grading },
+        ]),
+      ),
+    };
   }
 
   async function load(mine: number) {
     try {
-      const [course, session] = await Promise.all([
-        queryClient.fetchQuery({
-          queryKey: queryKeys.course(base.courseId),
-          queryFn: () => api.course(base.courseId),
-        }),
-        // A session is a snapshot: fetched once, never cached or refetched under the learner.
-        queryClient.fetchQuery({
-          queryKey: queryKeys.study(base.courseId, mode),
-          queryFn: () => api.study(base.courseId, mode),
-          staleTime: 0,
-          gcTime: 0,
-        }),
-      ]);
+      const loaded = courseId === null ? await loadAll() : await loadCourse(courseId);
       if (!active || mine !== run) return;
-      if (session.items.length === 0) {
+      if (loaded.items.length === 0) {
         store.set({ ...base, status: "empty" });
         return;
       }
       store.set({
         ...base,
         status: "active",
-        course,
-        grading: session.grading,
-        session: initSession(mode, session.items),
+        courseTitle: loaded.courseTitle,
+        context: loaded.context,
+        session: initSession(mode, loaded.items),
         input: "",
         copyMiss: false,
         submitting: false,
@@ -163,10 +217,11 @@ export function createStudyController(
       const step = currentStep(s.session);
       if (!step) return;
       if (step.kind === "present") {
+        const grading = s.context[step.item.itemId]?.grading;
         const { verdict } = gradeAnswer(
           s.input,
           [step.item.term, ...step.item.alternatives],
-          s.grading,
+          grading ?? { mode: "lenient", accentSensitive: false },
         );
         if (verdict === "wrong") update((x) => ({ ...x, copyMiss: true }));
         else dispatch({ type: "presented" });
