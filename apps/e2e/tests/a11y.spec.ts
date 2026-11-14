@@ -1,4 +1,5 @@
 import { a11yViolations } from "../support/a11y.ts";
+import { makeAllCardsDue } from "../support/db.ts";
 import { expect, SAMPLE_COURSE, test } from "../support/fixtures.ts";
 import { termFor, typoFor, WORDS_CSV } from "../support/words.ts";
 
@@ -17,14 +18,19 @@ for (const viewport of [
     // functional specs still run on Firefox nightly. TODO.md tracks re-enabling.
     test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox (PR #10)");
 
-    test("courses, course, new course and settings", async ({
+    test("home, courses, course, new course and settings", async ({
       api,
+      dashboardPage,
       coursesPage,
       coursePage,
       newCoursePage,
       settingsPage,
       page,
     }) => {
+      await dashboardPage.goto();
+      await expect(dashboardPage.forecastDays.first()).toBeVisible();
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
       await coursesPage.goto();
       await expect(coursesPage.heading).toBeVisible();
       expect.soft(await a11yViolations(page)).toEqual([]);
@@ -73,6 +79,24 @@ for (const viewport of [
 
       await studyPage.goto(courseId, "review");
       await expect(studyPage.emptyState).toBeVisible();
+      expect.soft(await a11yViolations(page)).toEqual([]);
+    });
+
+    test("home with reviews due, and a review of all courses", async ({
+      api,
+      learner,
+      dashboardPage,
+      studyPage,
+      page,
+    }) => {
+      await api.learnAll(await api.createCourse({ csv: WORDS_CSV }));
+      await makeAllCardsDue(learner);
+      await dashboardPage.goto();
+      await expect(dashboardPage.reviewAllLink).toHaveAttribute("aria-disabled", "false");
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
+      await studyPage.gotoReviewAll();
+      await expect(studyPage.courseBadge).toBeVisible();
       expect.soft(await a11yViolations(page)).toEqual([]);
     });
   });

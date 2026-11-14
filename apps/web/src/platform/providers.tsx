@@ -46,7 +46,12 @@ export function Providers({ children }: { children: ReactNode }) {
       access,
       queryClient: createQueryClient(),
       navigator: { navigate: (route) => routerRef.current.push(hrefFor(route)) },
-      clock: { now: () => performance.now() },
+      clock: {
+        now: () => performance.now(),
+        timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      // `next dev` builds development; `next build` (every deploy) builds production.
+      environment: process.env.NODE_ENV === "development" ? "development" : "production",
     };
   });
   // Until hydration the server HTML has no event handlers (a form would submit

@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { open } from "./navigation.ts";
 
-/** `/`: list of courses. */
+/** `/courses`: list of courses (header nav "Courses"). */
 export class CoursesPage {
   readonly heading: Locator;
   readonly newCourseLink: Locator;
@@ -15,7 +15,7 @@ export class CoursesPage {
   }
 
   async goto() {
-    await open(this.page, "/");
+    await open(this.page, "/courses");
     await this.heading.waitFor();
   }
 

@@ -8,8 +8,9 @@ export interface ShellVM {
 
 export function shellViewModel(): ShellVM {
   return {
-    brand: { label: "SRS", route: { to: "courses" } },
+    brand: { label: "SRS", route: { to: "home" } },
     nav: [
+      { label: "Home", route: { to: "home" } },
       { label: "Courses", route: { to: "courses" } },
       { label: "Settings", route: { to: "settings" } },
     ],

@@ -6,7 +6,7 @@ export type Verdict = "exact" | "typo" | "wrong";
 export type Word = { term: string; definition: string };
 
 /**
- * `/courses/:id/study?mode=learn|review`.
+ * `/courses/:id/study?mode=learn|review`, and `/review` (all courses).
  * A step is either "present" (new word shown, type it to copy) or "quiz"
  * (prompt shown, type the answer, get feedback, continue).
  */
@@ -16,6 +16,9 @@ export class StudyPage {
   readonly copyInput: Locator;
   readonly copyMiss: Locator;
   readonly prompt: Locator;
+  /** The current item's course; shown only in a review of all courses. */
+  readonly courseBadge: Locator;
+  readonly backToHomeLink: Locator;
   readonly answerInput: Locator;
   readonly feedback: Locator;
   readonly continueButton: Locator;
@@ -33,6 +36,8 @@ export class StudyPage {
     this.copyInput = page.getByPlaceholder("Type it to continue");
     this.copyMiss = page.getByText("Type the word as shown above.");
     this.prompt = page.getByTestId("study-prompt");
+    this.courseBadge = page.getByTestId("study-course");
+    this.backToHomeLink = page.getByRole("link", { name: "Back to home" });
     this.answerInput = page.getByPlaceholder("Type the answer");
     this.feedback = page.getByRole("status");
     this.continueButton = page.getByRole("button", { name: "Continue" });
@@ -42,6 +47,10 @@ export class StudyPage {
 
   async goto(courseId: string, mode: "learn" | "review") {
     await open(this.page, `/courses/${courseId}/study?mode=${mode}`);
+  }
+
+  async gotoReviewAll() {
+    await open(this.page, "/review");
   }
 
   private async stepIndex(): Promise<number> {

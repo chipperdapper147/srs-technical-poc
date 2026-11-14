@@ -471,6 +471,32 @@ Decided by the repository owner (#12), out of three options: a darker
 - The browser axe scan no longer lists the feedback box as a known
   violation, so it enforces this.
 
+## 2026-11-14: Home dashboard
+
+The owner chose the first product idea. Scope: due reviews per course and in
+total, one "Review all due" session across courses, and a 7-day forecast.
+
+- **The dashboard is `/`**; the course list moved to `/courses` (header nav
+  "Courses", next to "Home" and "Settings").
+- **Two additive endpoints.** `GET /dashboard` is the summary: due now per
+  course and in total, and the forecast. `GET /study/review` serves the
+  mixed session: due items from every course, most overdue first, each with
+  its course, language and grading. Answers still go to `POST
+  /study/answers`, which grades with the item's own course settings, as
+  before. The per-course study endpoint is unchanged.
+- **Forecast days are the learner's calendar days.** The client sends its
+  IANA time zone (`?timeZone=`, a new `Clock.timeZone()` port; UTC if
+  absent) and Postgres buckets `due_at` in it. Today counts every overdue
+  review too, so its bar is everything to do by the end of the day.
+- **"Review all due" means all of it, up to 100** (the largest limit a study
+  request accepts), where a course's review session takes 20. Revisit with
+  daily limits and pacing (product idea 5).
+- **The study screen serves both sessions.** Its controller takes
+  `courseId: null` for all courses; the view model names each item's course
+  only in a mixed session, and the answer input's `lang` follows the item.
+- **Developer hints follow the build** (#40): an `environment` port
+  (`development` under `next dev`, else `production`) reaches the view
+  models, which decide whether the empty state mentions `pnpm db:seed`.
 ## 2026-11-14: Prebuilt courses, inserted once per database
 
 Decided by the repository owner in issue #41; built here.
