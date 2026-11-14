@@ -12,10 +12,21 @@ test("the seeded sample course is listed and read-only", async ({ coursesPage, c
   await expect(coursePage.csvTextarea).toHaveCount(0);
 });
 
-test("header navigation reaches settings and back", async ({ coursesPage, shell, page }) => {
-  await coursesPage.goto();
+test("header navigation reaches courses, settings and home", async ({
+  dashboardPage,
+  coursesPage,
+  shell,
+  page,
+}) => {
+  await dashboardPage.goto();
+  await shell.coursesLink.click();
+  await expect(page).toHaveURL(/\/courses$/);
+  await expect(coursesPage.heading).toBeVisible();
   await shell.settingsLink.click();
   await expect(page).toHaveURL(/\/settings$/);
+  await shell.homeLink.click();
+  await expect(dashboardPage.heading).toBeVisible();
   await shell.coursesLink.click();
-  await expect(coursesPage.heading).toBeVisible();
+  await shell.brandLink.click();
+  await expect(dashboardPage.heading).toBeVisible();
 });

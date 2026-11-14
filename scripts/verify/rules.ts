@@ -677,8 +677,19 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "packages/client/src/study/**",
       "apps/web/src/views/study/**",
       "apps/web/src/app/courses/[[]id[]]/study/**",
+      "apps/web/src/app/review/**",
     ],
-    specs: ["study", "grading", "a11y"],
+    // The dashboard spec runs a review of all courses through the study screen.
+    specs: ["study", "grading", "dashboard", "a11y"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/dashboard.ts",
+      "packages/client/src/dashboard/**",
+      "apps/web/src/views/dashboard/**",
+      "apps/web/src/app/page.tsx",
+    ],
+    specs: ["dashboard", "courses", "a11y"],
   },
   {
     paths: [
@@ -691,7 +702,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
     ],
-    specs: ["course-authoring", "courses", "grading", "a11y"],
+    specs: ["course-authoring", "courses", "dashboard", "grading", "a11y"],
   },
   {
     paths: [
@@ -710,8 +721,8 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "packages/client/src/shell/**",
       "apps/web/src/views/courses/**",
       "apps/web/src/views/app-shell/**",
-      "apps/web/src/app/page.tsx",
+      "apps/web/src/app/courses/page.tsx",
     ],
-    specs: ["courses", "a11y"],
+    specs: ["courses", "dashboard", "a11y"],
   },
 ];

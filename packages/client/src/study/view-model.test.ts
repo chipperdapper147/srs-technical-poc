@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { aCourse, anAnswerResult, aStudyItem } from "../testing/fixtures.ts";
+import { anAnswerResult, aStudyItem } from "../testing/fixtures.ts";
 import type { ActiveStudyState, StudyState } from "./controller.ts";
 import { initSession, sessionReducer } from "./session.ts";
 import { studyViewModel } from "./view-model.ts";
 
-const base = { courseId: "c1", mode: "learn" as const };
+const base = { courseId: "c1" as string | null, mode: "learn" as const };
+const lenient = { mode: "lenient", accentSensitive: false } as const;
 const fmt = (iso: string) => `<${iso}>`;
 
 function active(overrides: Partial<ActiveStudyState> = {}): ActiveStudyState {
@@ -17,8 +18,8 @@ function active(overrides: Partial<ActiveStudyState> = {}): ActiveStudyState {
   return {
     ...base,
     status: "active",
-    course: aCourse({ title: "Spanish", targetLang: "es" }),
-    grading: { mode: "lenient", accentSensitive: false },
+    courseTitle: "Spanish",
+    context: { [item.itemId]: { courseTitle: "Spanish", lang: "es", grading: lenient } },
     session: initSession("learn", [item]),
     input: "",
     copyMiss: false,
@@ -57,6 +58,12 @@ describe("studyViewModel", () => {
   });
 
   it("presents a new word with its alternatives and notes", () => {
+    expect(vm(active())).toMatchObject({
+      heading: "Study: Spanish",
+      backLabel: "Spanish",
+      back: { to: "course", courseId: "c1" },
+      lang: "es",
+    });
     expect(step(active())).toMatchObject({
       kind: "present",
       badge: "New word",
@@ -77,6 +84,7 @@ describe("studyViewModel", () => {
     const s = { ...quiz, session: sessionReducer(quiz.session, { type: "presented" }) };
     expect(step({ ...s, input: "  " })).toMatchObject({
       kind: "quiz",
+      courseTitle: null,
       prompt: "library",
       canCheck: false,
     });
@@ -141,6 +149,46 @@ describe("studyViewModel", () => {
       ],
       backLabel: "Back to course",
       back: { to: "course", courseId: "c1" },
+    });
+  });
+
+  it("reviews across courses: names each item's course, types in its language, goes back home", () => {
+    const hola = aStudyItem({ term: "hola", definition: "hello", isNew: false });
+    const danke = aStudyItem({ term: "danke", definition: "thanks", isNew: false });
+    const mixed: ActiveStudyState = {
+      ...active(),
+      courseId: null,
+      mode: "review",
+      courseTitle: null,
+      context: {
+        [hola.itemId]: { courseTitle: "Spanish", lang: "es", grading: lenient },
+        [danke.itemId]: { courseTitle: "German", lang: "de", grading: lenient },
+      },
+      session: initSession("review", [hola, danke]),
+    };
+    expect(vm(mixed)).toMatchObject({
+      kind: "session",
+      heading: "Review: all courses",
+      backLabel: "Home",
+      back: { to: "home" },
+      lang: "es",
+      step: { kind: "quiz", courseTitle: "Spanish", prompt: "hello" },
+    });
+    const second = { ...mixed, session: { ...mixed.session, index: 1 } };
+    expect(vm(second)).toMatchObject({
+      lang: "de",
+      step: { courseTitle: "German", prompt: "thanks" },
+    });
+    expect(step({ ...mixed, session: { ...mixed.session, index: 2 } })).toMatchObject({
+      kind: "summary",
+      backLabel: "Back to home",
+      back: { to: "home" },
+    });
+    expect(vm({ courseId: null, mode: "review", status: "empty" })).toEqual({
+      kind: "empty",
+      message: "Nothing due right now.",
+      backLabel: "Back to home",
+      back: { to: "home" },
     });
   });
 });

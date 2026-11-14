@@ -1,5 +1,5 @@
 /** The study screen against the fake API: Testing Library + MSW. */
-import { aCourse, setupFakeApi, someWords } from "@app/client/testing";
+import { aCourse, aStudyItem, setupFakeApi, someWords } from "@app/client/testing";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -45,6 +45,33 @@ describe("StudyScreen", () => {
   it("shows the empty state when there is nothing to review", async () => {
     renderScreen(<StudyScreen courseId={course.id} mode="review" />);
     expect(await screen.findByText("Nothing due right now.")).toBeTruthy();
+  });
+
+  it("reviews due words from several courses in one session", async () => {
+    const user = userEvent.setup();
+    const german = aCourse({ title: "German", targetLang: "de" });
+    const danke = aStudyItem({ term: "danke", definition: "thanks", isNew: false });
+    fake.current.state.courses.push(german);
+    fake.current.state.items[german.id] = [danke];
+    fake.current.state.due = { [course.id]: [words[0]?.itemId ?? ""], [german.id]: [danke.itemId] };
+    renderScreen(<StudyScreen courseId={null} mode="review" />);
+
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveProperty(
+      "textContent",
+      "Review: all courses",
+    );
+    for (const [course, prompt, answer] of [
+      ["Spanish", "hello", "hola"],
+      ["German", "thanks", "danke"],
+    ]) {
+      expect((await screen.findByTestId("study-prompt")).textContent).toBe(prompt);
+      expect(screen.getByTestId("study-course").textContent).toBe(course);
+      await user.type(screen.getByRole("textbox"), `${answer}{Enter}`);
+      expect((await screen.findByRole("status")).dataset.verdict).toBe("exact");
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+    }
+    await screen.findByTestId("session-summary");
+    expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe("/");
   });
 
   it("shows API errors", async () => {

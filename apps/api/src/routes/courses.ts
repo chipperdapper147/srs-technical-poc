@@ -16,10 +16,11 @@ import {
 } from "../shared.ts";
 
 /** Courses a user can see: shared (no owner) or their own. */
-const visibleTo = (userId: string) => (eb: ExpressionBuilder<DB, "courses">) =>
+export const visibleTo = (userId: string) => (eb: ExpressionBuilder<DB, "courses">) =>
   eb.or([eb("courses.ownerId", "is", null), eb("courses.ownerId", "=", userId)]);
 
-function summaries(db: Database, userId: string) {
+/** One row per visible course with its counts; the course list, detail and dashboard share it. */
+export function summaries(db: Database, userId: string) {
   return db
     .selectFrom("courses")
     .leftJoin("units", "units.courseId", "courses.id")
@@ -50,7 +51,7 @@ function summaries(db: Database, userId: string) {
     .orderBy("courses.createdAt");
 }
 
-const toSummary = (row: {
+export const toSummary = (row: {
   id: string;
   title: string;
   description: string;

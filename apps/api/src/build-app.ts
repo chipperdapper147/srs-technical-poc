@@ -18,6 +18,7 @@ import type { Env } from "./env.ts";
 import accessKey from "./plugins/access-key.ts";
 import auth from "./plugins/auth.ts";
 import { courseRoutes } from "./routes/courses.ts";
+import { dashboardRoutes } from "./routes/dashboard.ts";
 import { meRoutes } from "./routes/me.ts";
 import { studyRoutes } from "./routes/study.ts";
 import { createScheduler, type Scheduler } from "./srs.ts";
@@ -61,6 +62,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   await app.register(auth, { db, mode: env.AUTH_MODE });
   await app.register(meRoutes, { db });
   await app.register(courseRoutes, { db });
+  await app.register(dashboardRoutes, { db });
   await app.register(studyRoutes, { db, scheduler: scheduler ?? (await createScheduler()) });
 
   return app;

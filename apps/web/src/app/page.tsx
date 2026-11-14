@@ -1,5 +1,5 @@
-import { CoursesScreen } from "@/views/courses/courses-screen";
+import { DashboardScreen } from "@/views/dashboard/dashboard-screen";
 
-export default function CoursesPage() {
-  return <CoursesScreen />;
+export default function HomePage() {
+  return <DashboardScreen />;
 }

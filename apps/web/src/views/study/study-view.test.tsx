@@ -6,10 +6,10 @@ import { expectNoA11yViolations } from "@/test/a11y";
 import { StudyView } from "./study-view";
 
 const actions = (): StudyActions => ({ setInput: vi.fn(), submit: vi.fn(), next: vi.fn() });
-const session = (step: StudyStepVM): StudyVM => ({
+const session = (step: StudyStepVM): Extract<StudyVM, { kind: "session" }> => ({
   kind: "session",
   heading: "Study: Spanish",
-  courseTitle: "Spanish",
+  backLabel: "Spanish",
   back: { to: "course", courseId: "c1" },
   progress: 40,
   progressLabel: "Session progress",
@@ -37,6 +37,7 @@ const h1 = () => {
 };
 const quiz = (over: Partial<Extract<StudyStepVM, { kind: "quiz" }>> = {}): StudyStepVM => ({
   kind: "quiz",
+  courseTitle: null,
   unitTitle: "Basics",
   prompt: "library",
   input: "biblioteka",
@@ -133,6 +134,33 @@ describe("StudyView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(a.submit).toHaveBeenCalledOnce();
     await expectNoA11yViolations(container);
+  });
+
+  it("names the course in a review of all courses, and links back home", async () => {
+    const { container } = render(
+      <StudyView
+        vm={{
+          ...session(quiz({ courseTitle: "German", prompt: "thanks", input: "" })),
+          heading: "Review: all courses",
+          backLabel: "Home",
+          back: { to: "home" },
+          lang: "de",
+        }}
+        actions={actions()}
+      />,
+    );
+    expect(h1()).toBe("Review: all courses");
+    expect(screen.getByTestId("study-course").textContent).toBe("German");
+    expect(screen.getByRole("link", { name: "← Home" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("textbox", { name: "Type the answer" }).getAttribute("lang")).toBe(
+      "de",
+    );
+    await expectNoA11yViolations(container);
+  });
+
+  it("names no course when studying one", () => {
+    render(<StudyView vm={session(quiz())} actions={actions()} />);
+    expect(screen.queryByTestId("study-course")).toBeNull();
   });
 
   it("shows a grading error", () => {
