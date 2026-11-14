@@ -14,3 +14,12 @@ test("apps/api/tsconfig.json keeps every option of tsconfig.base.json", () => {
     assert.deepEqual(api.compilerOptions[option], value, option);
   }
 });
+
+// Vercel compiles the API's .ts files to .js; without this the output still
+// imports ./x.ts and every request fails with ERR_MODULE_NOT_FOUND.
+test("apps/api/tsconfig.json rewrites .ts imports when compiled", () => {
+  assert.equal(
+    read("apps/api/tsconfig.json").compilerOptions.rewriteRelativeImportExtensions,
+    true,
+  );
+});
