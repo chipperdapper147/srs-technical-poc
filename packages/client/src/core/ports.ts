@@ -5,6 +5,7 @@
 import type { StudyMode } from "@app/shared";
 import type { QueryClient } from "@tanstack/query-core";
 import type { ApiClient } from "../api/client.ts";
+import type { AccessGate } from "./access.ts";
 
 /** A destination, independent of how a platform spells it (URL, screen name). */
 export type Route =
@@ -28,4 +29,5 @@ export interface ClientDeps {
   queryClient: QueryClient;
   navigator: Navigator;
   clock: Clock;
+  access: AccessGate;
 }

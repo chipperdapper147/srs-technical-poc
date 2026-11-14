@@ -22,6 +22,7 @@ import {
   type UpdateMe,
 } from "@app/shared";
 import type { z } from "zod";
+import type { AccessGate } from "../core/access.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -47,20 +48,31 @@ export interface ApiClientOptions {
   baseUrl: string;
   /** Defaults to the global fetch (browser, React Native, Node). */
   fetch?: typeof fetch;
+  /** Sends the access key and hears about 401s (see core/access.ts). */
+  access?: Pick<AccessGate, "header" | "unauthorized">;
 }
 
-export function createApiClient({ baseUrl, fetch: doFetch = fetch }: ApiClientOptions): ApiClient {
+export function createApiClient({
+  baseUrl,
+  fetch: doFetch = fetch,
+  access,
+}: ApiClientOptions): ApiClient {
   async function request<S extends z.ZodType>(
     schema: S,
     path: string,
     init?: { method?: string; body?: unknown },
   ): Promise<z.infer<S>> {
+    const headers: Record<string, string> = {};
+    if (init?.body !== undefined) headers["content-type"] = "application/json";
+    const authorization = access?.header();
+    if (authorization) headers.authorization = authorization;
     const res = await doFetch(`${baseUrl}${path}`, {
       method: init?.method ?? "GET",
-      headers: init?.body === undefined ? undefined : { "content-type": "application/json" },
+      headers,
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
     });
     const data: unknown = await res.json().catch(() => null);
+    if (res.status === 401) access?.unauthorized();
     if (!res.ok) {
       const message =
         data && typeof data === "object" && "message" in data

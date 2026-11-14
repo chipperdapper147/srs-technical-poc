@@ -350,6 +350,24 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   release younger than a week. Installs from the lockfile are unaffected. An
   urgent security fix can go in `minimumReleaseAgeExclude`, with the reason.
 
+## 2026-11-14: A shared access key until Auth0
+
+- **Why:** the API is about to be public on Vercel, and auth is still the
+  dev stub: whoever sends `x-dev-user: <anyone>` acts as that user, and each
+  new name creates a user. A deploy would be open to anyone who finds it.
+- **The key:** when `API_ACCESS_KEY` is set (Vercel, Sensitive), every
+  request must send `Authorization: Bearer <key>`, compared in constant time;
+  otherwise 401 before the auth stub runs, so no user is created. `/health`,
+  `/docs` and CORS preflights stay open. The API refuses to start on any
+  Vercel deploy (`VERCEL_ENV` set) without a key, so it can't go out open.
+  Unset locally and in tests, where nothing changes.
+- **Not in the web build:** a key compiled into the web app would be
+  readable by every visitor. The web app asks for the key on the first 401,
+  keeps it in localStorage, and offers "Forget access key". The gate is a
+  client port (`AccessGate`, `KeyStorage`), so the Expo app reuses it.
+- **Limits:** everyone with the key can still act as any user. Fine while the
+  owner is the only holder. Removed when Auth0 lands (TODO, section 7).
+
 ## 2026-11-13: The lockfile always passes the release-age floor
 
 - **Why:** pnpm checks the floor again whenever it re-resolves, including

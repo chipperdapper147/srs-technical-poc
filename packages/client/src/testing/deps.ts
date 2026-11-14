@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/query-core";
 import { createApiClient } from "../api/client.ts";
+import { createAccessGate, memoryKeyStorage } from "../core/access.ts";
 import type { ClientDeps, Route } from "../core/ports.ts";
 import { createQueryClient } from "../core/query-client.ts";
 import { FAKE_API_URL } from "./fake-api.ts";
@@ -12,12 +13,20 @@ export interface TestDeps extends ClientDeps {
   tick(ms: number): void;
 }
 
-/** Real API client and query client, a recording navigator, a manual clock. */
-export function createTestDeps(baseUrl = FAKE_API_URL): TestDeps {
+/**
+ * Real API client and query client, a recording navigator, a manual clock,
+ * and an access gate holding `accessKey` (none by default).
+ */
+export function createTestDeps(
+  baseUrl = FAKE_API_URL,
+  { accessKey = null }: { accessKey?: string | null } = {},
+): TestDeps {
   let now = 0;
   const routes: Route[] = [];
+  const access = createAccessGate(memoryKeyStorage(accessKey));
   return {
-    api: createApiClient({ baseUrl }),
+    api: createApiClient({ baseUrl, access }),
+    access,
     queryClient: createQueryClient({ defaultOptions: { queries: { retry: false } } }),
     navigator: { navigate: (route) => routes.push(route) },
     clock: { now: () => now },

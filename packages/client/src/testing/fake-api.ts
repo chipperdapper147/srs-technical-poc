@@ -38,6 +38,8 @@ export interface FakeApiSeed {
   items?: Record<string, StudyItem[]>;
   /** Item ids due for review, per course id. */
   due?: Record<string, string[]>;
+  /** Require `Authorization: Bearer <accessKey>` on every request, as the API does with API_ACCESS_KEY. */
+  accessKey?: string;
 }
 
 export interface RecordedRequest {
@@ -90,6 +92,9 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
     const { pathname } = new URL(request.url);
     const text = request.method === "GET" ? "" : await request.clone().text();
     requests.push({ method: request.method, path: pathname, body: text ? JSON.parse(text) : null });
+    if (seed.accessKey && request.headers.get("authorization") !== `Bearer ${seed.accessKey}`) {
+      return HttpResponse.json({ message: "Access key required" }, { status: 401 });
+    }
     const i = failures.findIndex((f) => f.method === request.method && f.path === pathname);
     if (i === -1) return undefined;
     const [failure] = failures.splice(i, 1);
