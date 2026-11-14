@@ -367,6 +367,15 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
   client port (`AccessGate`, `KeyStorage`), so the Expo app reuses it.
 - **Limits:** everyone with the key can still act as any user. Fine while the
   owner is the only holder. Removed when Auth0 lands (TODO, section 7).
+## 2026-11-14: The API's tsconfig stands alone
+
+- Vercel builds the API from its root directory, `apps/api`, and typechecks
+  it without the repository's `tsconfig.base.json`. Without `strict`, Kysely
+  makes every column required on insert, and the first deploy failed on
+  `plugins/auth.ts`.
+- `apps/api/tsconfig.json` now lists every option itself instead of
+  extending the base. `scripts/tsconfig-sync.test.ts` fails when it drifts
+  from `tsconfig.base.json`.
 
 ## 2026-11-13: The lockfile always passes the release-age floor
 
