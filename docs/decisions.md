@@ -455,3 +455,18 @@ Decided by the repository owner.
 - **Fast answers as Easy: deferred.** It isn't clear that it is a good idea.
 - **Follow-up issues:** a hierarchy for the design tokens (#22), reverse and
   listening modes (#24), the mobile app (#25).
+
+## 2026-11-14: A darker `muted-foreground` for AA contrast
+
+Decided by the repository owner (#12), out of three options: a darker
+`muted-foreground`, lighter verdict tints, or `foreground` for the
+"Next review …" line.
+
+- **Light `muted-foreground` is `oklch(0.525 0 0)` (`#6a6a6a`)**, from
+  shadcn's `oklch(0.556 0 0)` (`#737373`). It is the lightest grey that
+  reaches 4.5:1 on every surface the token sits on: 5.4:1 on `background`,
+  5.0:1 on `muted`, 4.55:1 to 5.0:1 on the verdict tints. The "wrong" tint
+  is the tightest. This is the first departure from the stock neutral theme.
+- Dark already passed (5.9:1 or more everywhere) and is unchanged.
+- The browser axe scan no longer lists the feedback box as a known
+  violation, so it enforces this.

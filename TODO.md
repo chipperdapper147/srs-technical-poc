@@ -164,11 +164,8 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
   change `packages/design/tokens.json`, and republish the artifact. The
   palette and fonts are the owner's choice; the token hierarchy they go
   into is issue #22.
-- [ ] **Contrast gaps** flagged in the token notes: `muted-foreground` on
-  `muted` (4.3:1, light) and the focus `ring` (2.6:1, light). The browser
-  axe scan also finds `muted-foreground` on the verdict tints in the study
-  feedback box ("Next review …", 3.98 to 4.39:1). It is listed as known in
-  `apps/e2e/support/a11y.ts`; remove that entry with the fix.
+- [ ] **Contrast gap** flagged in the token notes: the focus `ring` (2.6:1
+  on `background`, light), under the 3:1 floor for focus indicators.
 - [ ] **Dark theme is unreachable**: defined in tokens, but nothing sets
   `.dark`. Follow the OS setting, or add a toggle in Settings.
 

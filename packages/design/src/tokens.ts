@@ -18,7 +18,7 @@ export const colors = {
     secondary: "#f5f5f5",
     "secondary-foreground": "#171717",
     muted: "#f5f5f5",
-    "muted-foreground": "#737373",
+    "muted-foreground": "#6a6a6a",
     accent: "#f5f5f5",
     "accent-foreground": "#171717",
     destructive: "#e7000b",

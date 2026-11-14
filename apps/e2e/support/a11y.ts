@@ -13,15 +13,7 @@ const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-prac
  * Violations already tracked in TODO.md, by rule and node selector. Each one
  * waits on a decision there; remove its entry with the fix. Anything else fails.
  */
-const KNOWN: { rule: string; target: string; todo: string }[] = [
-  {
-    // "Next review …" in the study feedback box: muted-foreground on the
-    // verdict tints is 3.98 to 4.39:1, under 4.5:1.
-    rule: "color-contrast",
-    target: ".p-3 > .text-xs",
-    todo: "Contrast gaps",
-  },
-];
+const KNOWN: { rule: string; target: string; todo: string }[] = [];
 
 /** One line per violating node: `rule: help (selector)`. Empty means none. */
 export async function a11yViolations(page: Page): Promise<string[]> {
