@@ -461,7 +461,7 @@ export const CLASSES: ChangeClass[] = [
     id: "api-route",
     side: "backend",
     title: "API routes, plugins and app wiring",
-    paths: ["apps/api/src/routes/**", "apps/api/src/plugins/**", "apps/api/src/app.ts"],
+    paths: ["apps/api/src/routes/**", "apps/api/src/plugins/**", "apps/api/src/build-app.ts"],
     checks: [
       "lint",
       "typecheck",

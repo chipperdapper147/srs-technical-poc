@@ -1,4 +1,4 @@
-import { buildApp } from "./app.ts";
+import { buildApp } from "./build-app.ts";
 import { createDb } from "./db/index.ts";
 import { loadEnv } from "./env.ts";
 

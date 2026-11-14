@@ -1,3 +1,8 @@
+/**
+ * Builds the Fastify app. Not named app.ts on purpose: Vercel takes
+ * src/app.* as the entry point before src/server.*, and this module has
+ * no default export. src/server.ts starts the server (decisions log).
+ */
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import swagger from "@fastify/swagger";
