@@ -2,6 +2,8 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { open } from "./navigation.ts";
 
 export type Verdict = "exact" | "typo" | "wrong";
+/** A word as the present step shows it. */
+export type Word = { term: string; definition: string };
 
 /**
  * `/courses/:id/study?mode=learn|review`.
@@ -61,7 +63,7 @@ export class StudyPage {
   }
 
   /** Present step: read the new word, then type it to move on. */
-  async copyWord(): Promise<{ term: string; definition: string }> {
+  async copyWord(): Promise<Word> {
     const term = (await this.term.textContent()) ?? "";
     const definition = (await this.definition.textContent()) ?? "";
     await this.copyInput.fill(term);
@@ -91,12 +93,15 @@ export class StudyPage {
   }
 
   /**
-   * Drive a whole session. `respond` gets each quiz prompt (the definition)
-   * and the attempt number for that prompt, and returns the text to type.
+   * Drive a whole session. `respond` gets each quiz prompt (the definition),
+   * the attempt number for that prompt and the words presented so far, and
+   * returns the text to type.
    * Returns the words presented (learn mode) and every verdict in order.
    */
-  async completeSession(respond: (prompt: string, attempt: number) => string) {
-    const presented: { term: string; definition: string }[] = [];
+  async completeSession(
+    respond: (prompt: string, attempt: number, presented: readonly Word[]) => string,
+  ) {
+    const presented: Word[] = [];
     const verdicts: { prompt: string; verdict: Verdict }[] = [];
     const attempts = new Map<string, number>();
     for (let guard = 0; guard < 200; guard++) {
@@ -109,7 +114,7 @@ export class StudyPage {
       const prompt = (await this.prompt.textContent()) ?? "";
       const attempt = (attempts.get(prompt) ?? 0) + 1;
       attempts.set(prompt, attempt);
-      verdicts.push({ prompt, verdict: await this.answer(respond(prompt, attempt)) });
+      verdicts.push({ prompt, verdict: await this.answer(respond(prompt, attempt, presented)) });
       await this.continue();
     }
     throw new Error("Study session did not finish within 200 steps");

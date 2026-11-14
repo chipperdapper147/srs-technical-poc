@@ -31,7 +31,8 @@ apps/e2e         Playwright tests: pages/ (page objects), tests/ (specs), suppor
 packages/shared  Zod contracts + grading (imported as TS source)
 db/schema.sql    Desired schema (edit this)
 db/migrations    Generated, committed migrations (never edit)
-db/seed          Sample course CSV
+db/seed          Sample course CSV (local databases only)
+db/courses       Prebuilt course CSVs (every environment; apps/api/src/db/prebuilt.ts)
 db/rehearsal     Production-shaped data generator and invariants for the migration rehearsal
 scripts/verify/  `pnpm verify`: change classes and verification rules (rules.ts), runner
 scripts/         setup-agent-env.sh (cloud session setup), db-check.sh (CI schema guard),
@@ -51,7 +52,7 @@ and [oasdiff](https://github.com/oasdiff/oasdiff) v1.34.1 for the
 ```sh
 cp .env.example .env
 pnpm install
-pnpm db:setup        # start Postgres 18, apply migrations, seed the sample course
+pnpm db:setup        # start Postgres 18, apply migrations, seed the courses
 pnpm dev             # API on :4000 (docs at /docs), web on :3000
 ```
 
@@ -79,7 +80,7 @@ holds the key); without a key it skips that step.
 | `pnpm db:lint`                                 | Lint new migrations: Squawk and the expand/contract policy (ADR 0003)                 |
 | `pnpm db:rehearse`                             | Apply new migrations to production-shaped data, timed, then check invariants          |
 | `pnpm db:hash`                                 | Re-hash `atlas.sum` after editing a new, unapplied migration                          |
-| `pnpm db:seed`                                 | Load the sample course (idempotent)                                                   |
+| `pnpm db:seed`                                 | Load the prebuilt courses and the sample course, where missing (idempotent)           |
 | `pnpm api:openapi`                             | Regenerate the committed OpenAPI snapshot `apps/api/openapi.json`                     |
 | `pnpm design:build`                            | Regenerate token files from `packages/design/tokens.json` (web CSS, native TS)        |
 | `pnpm design:system`                           | Build the design-system artifact's files into `packages/design/.system/`              |

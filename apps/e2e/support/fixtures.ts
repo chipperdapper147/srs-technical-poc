@@ -15,6 +15,8 @@ import { closeDb } from "./db.ts";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 export const SAMPLE_COURSE = "Spanish basics (sample)";
+/** A prebuilt course: every environment gets it (apps/api/src/db/prebuilt.ts). */
+export const CAPITALS_COURSE = "Capitals of the 20 most populous countries";
 
 /** Thin API client for arranging test state faster than through the UI. */
 export class Api {

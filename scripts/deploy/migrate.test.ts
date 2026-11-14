@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { ATLAS_VERSION, applyArgs, plan, sha256 } from "./migrate.ts";
+import { ATLAS_VERSION, applyArgs, plan, runSteps, sha256, steps } from "./migrate.ts";
 
 test("skips outside Vercel", () => {
   assert.deepEqual(plan({ DATABASE_URL_UNPOOLED: "postgres://x" }), {
@@ -34,6 +34,55 @@ test("applies the repository's migrations directory", () => {
     "--revisions-schema",
     "public",
   ]);
+});
+
+test("loads the prebuilt courses after the migrations, on the same direct URL", () => {
+  const list = steps("postgres://direct", "/tmp/atlas", "/repo");
+  assert.deepEqual(
+    list.map((s) => s.name),
+    ["migrations", "prebuilt courses"],
+  );
+  const [migrations, prebuilt] = list;
+  assert.equal(migrations?.file, "/tmp/atlas");
+  assert.deepEqual(migrations?.args, applyArgs("postgres://direct", "/repo/db/migrations"));
+  assert.equal(prebuilt?.file, process.execPath);
+  assert.deepEqual(prebuilt?.args, ["/repo/apps/api/src/db/prebuilt.ts"]);
+  assert.deepEqual(prebuilt?.env, { DATABASE_URL: "postgres://direct" });
+});
+
+test("the prebuilt-courses step points at a script that exists", () => {
+  for (const step of steps("postgres://x", "/tmp/atlas").slice(1)) {
+    for (const arg of step.args) assert.ok(existsSync(arg), `${arg} is missing`);
+  }
+});
+
+test("runs every step in order", () => {
+  const ran: string[] = [];
+  runSteps(steps("postgres://x", "/tmp/atlas"), (s) => ran.push(s.name));
+  assert.deepEqual(ran, ["migrations", "prebuilt courses"]);
+});
+
+test("a failed migration skips the prebuilt courses and fails the build", () => {
+  const ran: string[] = [];
+  assert.throws(
+    () =>
+      runSteps(steps("postgres://x", "/tmp/atlas"), (s) => {
+        ran.push(s.name);
+        if (s.name === "migrations") throw new Error("atlas exited with 1");
+      }),
+    /atlas exited with 1/,
+  );
+  assert.deepEqual(ran, ["migrations"]);
+});
+
+test("a failed prebuilt-courses step fails the build", () => {
+  assert.throws(
+    () =>
+      runSteps(steps("postgres://x", "/tmp/atlas"), (s) => {
+        if (s.name === "prebuilt courses") throw new Error("node exited with 1");
+      }),
+    /node exited with 1/,
+  );
 });
 
 test("pins the same Atlas version as the setup script and CI", () => {

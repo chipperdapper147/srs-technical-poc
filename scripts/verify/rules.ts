@@ -435,8 +435,8 @@ export const CLASSES: ChangeClass[] = [
   {
     id: "seed",
     side: "backend",
-    title: "Seed data",
-    paths: ["db/seed/**", "apps/api/src/db/seed.ts"],
+    title: "Seed data and prebuilt course content",
+    paths: ["db/seed/**", "db/courses/**", "apps/api/src/db/seed.ts"],
     checks: ["lint", "typecheck", "db:seed"],
     e2e: "mapped",
   },
@@ -705,13 +705,15 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
   {
     paths: [
       "db/seed/**",
+      "db/courses/**",
       "apps/api/src/db/seed.ts",
+      "apps/api/src/db/prebuilt.ts",
       "packages/client/src/courses/**",
       "packages/client/src/shell/**",
       "apps/web/src/views/courses/**",
       "apps/web/src/views/app-shell/**",
       "apps/web/src/app/page.tsx",
     ],
-    specs: ["courses", "a11y"],
+    specs: ["courses", "prebuilt-courses", "a11y"],
   },
 ];

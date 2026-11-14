@@ -57,7 +57,8 @@ step starts with something only the repo owner can do.
   (`scripts/deploy/migrate.ts`, decisions log 2026-11-14), before the new
   version goes live: production on Neon's production branch, each preview
   on its own branch. Still open: `lock_timeout` and `statement_timeout` on
-  that connection (section 5).
+  that connection (section 5). The same build then inserts missing
+  prebuilt courses (decisions log, "Prebuilt courses").
 - [ ] **A Neon branch per preview deploy**, so stage 4 runs against a copy of
   production. This also replaces the generated rehearsal data (ADR 0003).
 
@@ -171,6 +172,14 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 
 ## 7. Product
 
+- [ ] **Prebuilt courses, later parts** (issue #41): a catalog with search,
+  and who may own and publish prebuilt courses (an admin role, once Auth0
+  is in). The empty-state hint is #40.
+- [ ] **A stable key for prebuilt courses.** The deploy step finds a
+  prebuilt course by its title among shared courses, so renaming or
+  deleting one in the database makes the next deploy insert it again.
+  Harmless while nobody does either; settle it before the first rename or
+  delete (decisions log, "Prebuilt courses").
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
   access key (`plugins/access-key.ts`, the client's `AccessGate` and the web

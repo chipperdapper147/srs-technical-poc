@@ -470,3 +470,38 @@ Decided by the repository owner (#12), out of three options: a darker
 - Dark already passed (5.9:1 or more everywhere) and is unchanged.
 - The browser axe scan no longer lists the feedback box as a known
   violation, so it enforces this.
+
+## 2026-11-14: Prebuilt courses, inserted where missing on every deploy
+
+Decided by the repository owner in issue #41; built here.
+
+- **A prebuilt course is an ordinary shared course** (`owner_id` null,
+  read-only for learners) whose content lives in the database. Edits there
+  change nothing for learners: their cards keep pointing at the edited
+  items. Deleting content deletes the learner data that points at it.
+- **Getting it there:** `apps/api/src/db/prebuilt.ts` lists the courses,
+  each a CSV in `db/courses/`, and inserts a course only when no shared
+  course with its title exists, through the CSV import path users get. It
+  never deletes or overwrites, so later edits in the database stick. A
+  transaction-level advisory lock on the title keeps two deploys of the
+  same database from both inserting.
+- **It runs everywhere:** on Vercel, `scripts/deploy/migrate.ts` (the API's
+  `vercel-build`) runs it right after the migrations, on the same
+  `DATABASE_URL_UNPOOLED`: a short batch job needs no pooler, and it needs
+  the migrated schema. Either step failing fails the build. Locally,
+  `pnpm db:seed` runs it, and CI's e2e job seeds the same way.
+- **The Spanish sample stays local:** only `pnpm db:seed` loads it.
+- **The first course:** the capitals of the 20 most populous countries,
+  ranked by the UN World Population Prospects 2024 (the latest edition;
+  estimates for 1 July 2023), with English names. Grading already ignores
+  accents (unless the learner turns them on), case and punctuation, so
+  "Brasilia" and "washington d.c." need no entry. The alternatives are
+  other names and spellings: "Washington", "Washington DC" (otherwise one
+  edit from "Washington, D.C.", a typo), "Delhi", "Ha Noi", "Teheran" and
+  "Metro Manila".
+- **Known limit:** the title is the key, so renaming or deleting a
+  prebuilt course in the database makes the next deploy insert it again.
+  A stable key (a column, or a table recording what was inserted) would fix
+  it; it is in TODO.md until a rename or delete is wanted.
+- **Later:** a catalog with search, and who may own and publish prebuilt
+  courses (an admin role, once Auth0 is in).
