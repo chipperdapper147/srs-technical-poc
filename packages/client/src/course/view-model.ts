@@ -45,6 +45,8 @@ export type CourseVM =
       unitsTitle: string;
       unitsEmpty: string | null;
       units: { id: string; label: string; count: string; progress: ProgressVM }[];
+      /** The word list: search, and editing on the learner's own course. */
+      words: { label: string; route: Route };
       /** Null for a shared (read-only) course. */
       editing: { grading: CourseGradingVM; import: CourseImportVM } | null;
       readOnlyNotice: string | null;
@@ -83,6 +85,10 @@ export function courseViewModel(state: CourseState): CourseVM {
       count: `${u.learnedCount} / ${u.itemCount}`,
       progress: { value: percent(u.learnedCount, u.itemCount), label: `${u.title} progress` },
     })),
+    words: {
+      label: c.editable ? "Search and edit words" : "Search words",
+      route: { to: "words", courseId: c.id },
+    },
     editing: c.editable
       ? {
           grading: {
