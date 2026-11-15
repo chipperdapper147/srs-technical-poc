@@ -34,8 +34,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.background },
   header: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: space(6),
+    columnGap: space(4),
+    rowGap: space(2),
     paddingHorizontal: space(4),
     paddingVertical: space(3),
     borderBottomWidth: hairline,
