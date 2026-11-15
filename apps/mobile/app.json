@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "SRS",
+    "slug": "srs",
+    "scheme": "srs",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android", "web"],
+    "web": { "output": "single" },
+    "ios": { "bundleIdentifier": "dev.srs.mobile" },
+    "android": { "package": "dev.srs.mobile" }
+  }
+}
