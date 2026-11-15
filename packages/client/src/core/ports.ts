@@ -13,6 +13,8 @@ export type Route =
   | { to: "courses" }
   | { to: "newCourse" }
   | { to: "course"; courseId: string }
+  /** A course's word list: search, and editing for its owner. */
+  | { to: "words"; courseId: string }
   | { to: "study"; courseId: string; mode: StudyMode }
   /** One review session across every course. */
   | { to: "reviewAll" }

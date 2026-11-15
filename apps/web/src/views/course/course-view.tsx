@@ -49,6 +49,9 @@ export function CourseView({ vm, actions }: { vm: CourseVM; actions: CourseActio
               <Progress value={unit.progress.value} aria-label={unit.progress.label} />
             </div>
           ))}
+          <RouteLink to={vm.words.route} className={cn(buttonVariants({ variant: "outline" }))}>
+            {vm.words.label}
+          </RouteLink>
         </CardContent>
       </Card>
 

@@ -541,3 +541,46 @@ Decided by the repository owner in issue #41; built here.
   "Metro Manila".
 - **Later:** a catalog with search, and who may own and publish prebuilt
   courses (an admin role, once Auth0 is in).
+
+## 2026-11-15: Editing words
+
+The owner chose product idea 2 (#51): a course's owner adds, edits and
+deletes its words in the app, and anyone who can see a course can search
+it. Reordering items and adding or renaming units stay out of scope.
+
+- **Four additive endpoints.** `GET /courses/:id/items?q=` lists a course's
+  words in course order (unit, then position), `POST
+  /courses/:id/units/:unitId/items` appends one at the end of its unit
+  (max position + 1, with the unit row locked so two adds can't take the
+  same position), `PATCH /items/:id` changes only the named fields, and
+  `DELETE /items/:id` answers 204. Term and definition are trimmed and
+  must not be empty; alternatives are a list of non-empty strings.
+- **Only the owner may change a course, and everyone else gets 404**:
+  shared and prebuilt courses (`owner_id` null) as well as other learners'
+  courses, so an edit endpoint never tells a non-owner what exists. The
+  older course endpoints keep their 403 for shared courses; aligning them
+  is a possible follow-up.
+- **Deleting a word deletes every learner's card and review history for
+  it** through the existing `ON DELETE CASCADE`, as decided on #41. The web
+  app asks for confirmation first and says so.
+- **Search uses grading's normaliser.** `itemMatchesSearch` in
+  `@app/shared` (`search.ts`) compares with `normalizeAnswer(text, false)`:
+  case, accents, punctuation and extra spaces ignored, matching a
+  substring of the term, definition or any alternative (not notes). The
+  API's `?q=` filters with it after loading the course's items, and the
+  client filters the loaded list with it as you type, so both agree and
+  typing needs no request per keystroke. Courses are small; filter in SQL
+  if they stop being.
+- **A screen of its own: `/courses/:id/words`** (`words` controller and
+  view model in `@app/client`, route `{ to: "words" }`), linked from the
+  course page as "Search and edit words" (owner) or "Search words". The
+  word list is its own query under the course key (`["courses", id,
+  "items"]`), so invalidating the course also refreshes it; a change
+  invalidates every course query and the dashboard.
+- **One form at a time**, either adding to a unit or editing a word in
+  place. Alternatives are typed one per line. A new word can only go into
+  an existing unit, so an empty course still starts with a CSV import.
+- **CORS now allows DELETE.**
+- **The confirm button uses the primary variant**, not shadcn's
+  `destructive`: its red text on the red tint is 4.0:1 at button size,
+  below AA. Worth a look in the redesign (#48).

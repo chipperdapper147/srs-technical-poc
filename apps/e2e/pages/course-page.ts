@@ -6,6 +6,8 @@ export class CoursePage {
   readonly title: Locator;
   readonly learnLink: Locator;
   readonly reviewLink: Locator;
+  /** "Search and edit words" on your own course, "Search words" on a shared one. */
+  readonly wordsLink: Locator;
   readonly readOnlyNotice: Locator;
   readonly gradingSelect: Locator;
   readonly accentsSelect: Locator;
@@ -21,6 +23,7 @@ export class CoursePage {
     this.title = page.getByRole("heading", { level: 1 });
     this.learnLink = page.getByRole("link", { name: /Learn new words/ });
     this.reviewLink = page.getByRole("link", { name: /Review \(/ });
+    this.wordsLink = page.getByRole("link", { name: /^Search (and edit )?words$/ });
     this.readOnlyNotice = page.getByText("This is a shared course");
     this.gradingSelect = page.getByLabel("Answer grading");
     this.accentsSelect = page.getByLabel("Accents");

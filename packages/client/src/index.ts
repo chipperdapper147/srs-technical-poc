@@ -24,3 +24,5 @@ export * from "./shell/view-model.ts";
 export * from "./study/controller.ts";
 export * from "./study/session.ts";
 export * from "./study/view-model.ts";
+export * from "./words/controller.ts";
+export * from "./words/view-model.ts";

@@ -45,6 +45,7 @@ describe("course", () => {
       review: { label: "Review (0 due)", disabled: true },
       unitsEmpty: null,
       units: [{ label: "1. Basics", count: "1 / 3" }],
+      words: { label: "Search and edit words", route: { to: "words", courseId: mine.id } },
       readOnlyNotice: null,
     });
     expect(vm.editing?.grading.mode.value).toBe("inherit");
@@ -59,6 +60,7 @@ describe("course", () => {
     const { c } = await open(shared.id);
     expect(ready(c.store.get())).toMatchObject({
       editing: null,
+      words: { label: "Search words", route: { to: "words", courseId: shared.id } },
       readOnlyNotice: expect.stringContaining("This is a shared course"),
       unitsEmpty: "No words yet. Import a CSV below.",
     });

@@ -702,7 +702,17 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
     ],
-    specs: ["course-authoring", "courses", "dashboard", "grading", "a11y"],
+    specs: ["course-authoring", "courses", "dashboard", "grading", "a11y", "editing-words"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/items.ts",
+      "packages/shared/src/search.ts",
+      "packages/client/src/words/**",
+      "apps/web/src/views/words/**",
+      "apps/web/src/app/courses/[[]id[]]/words/**",
+    ],
+    specs: ["editing-words", "a11y"],
   },
   {
     paths: [

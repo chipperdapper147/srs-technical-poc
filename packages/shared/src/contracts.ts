@@ -123,6 +123,58 @@ export const ImportResultSchema = z.object({
 });
 export type ImportResult = z.infer<typeof ImportResultSchema>;
 
+// ---- Items (editing words) -----------------------------------------------
+
+/** A word in a course as its owner edits it. */
+export const CourseItemSchema = z.object({
+  id: z.uuid(),
+  unitId: z.uuid(),
+  /** Order within the unit, from 1. */
+  position: z.number().int(),
+  /** Target-language answer the learner types. */
+  term: z.string(),
+  /** Source-language prompt. */
+  definition: z.string(),
+  /** Other accepted answers. */
+  alternatives: z.array(z.string()),
+  notes: z.string(),
+});
+export type CourseItem = z.infer<typeof CourseItemSchema>;
+
+export const CourseItemsSchema = z.object({
+  /** In course order: by unit, then by position. */
+  items: z.array(CourseItemSchema),
+});
+export type CourseItems = z.infer<typeof CourseItemsSchema>;
+
+export const ItemSearchQuerySchema = z.object({
+  /**
+   * Matches term, definition or an alternative, ignoring case, accents and
+   * punctuation (`itemMatchesSearch`). Empty or absent lists every item.
+   */
+  q: z.string().max(200).optional(),
+});
+
+export const UnitParamsSchema = z.object({ id: z.uuid(), unitId: z.uuid() });
+
+const ItemFieldsSchema = z.object({
+  term: z.string().trim().min(1).max(500),
+  definition: z.string().trim().min(1).max(500),
+  alternatives: z.array(z.string().trim().min(1).max(500)).max(50),
+  notes: z.string().trim().max(2000),
+});
+
+/** A new item goes at the end of its unit. */
+export const CreateItemSchema = ItemFieldsSchema.extend({
+  alternatives: ItemFieldsSchema.shape.alternatives.default([]),
+  notes: ItemFieldsSchema.shape.notes.default(""),
+});
+export type CreateItem = z.input<typeof CreateItemSchema>;
+
+/** Only the named fields change (built without defaults, like UpdateCourseSchema). */
+export const UpdateItemSchema = ItemFieldsSchema.partial();
+export type UpdateItem = z.input<typeof UpdateItemSchema>;
+
 // ---- Study ---------------------------------------------------------------
 
 export const StudyQuerySchema = z.object({

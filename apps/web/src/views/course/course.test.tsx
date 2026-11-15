@@ -25,6 +25,9 @@ describe("CourseScreen", () => {
       "true",
     );
     expect(screen.getByText("1. Basics")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Search and edit words" }).getAttribute("href")).toBe(
+      `/courses/${mine.id}/words`,
+    );
     await expectNoA11yViolations(container);
   });
 

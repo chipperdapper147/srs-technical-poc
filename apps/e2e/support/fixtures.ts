@@ -12,6 +12,7 @@ import { DashboardPage } from "../pages/dashboard-page.ts";
 import { NewCoursePage } from "../pages/new-course-page.ts";
 import { SettingsPage } from "../pages/settings-page.ts";
 import { StudyPage } from "../pages/study-page.ts";
+import { WordsPage } from "../pages/words-page.ts";
 import { closeDb } from "./db.ts";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -91,6 +92,7 @@ interface Fixtures {
   newCoursePage: NewCoursePage;
   studyPage: StudyPage;
   settingsPage: SettingsPage;
+  wordsPage: WordsPage;
 }
 
 export const test = base.extend<Fixtures, { dbCleanup: void }>({
@@ -111,6 +113,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),
   studyPage: async ({ page }, use) => use(new StudyPage(page)),
   settingsPage: async ({ page }, use) => use(new SettingsPage(page)),
+  wordsPage: async ({ page }, use) => use(new WordsPage(page)),
   dbCleanup: [
     async ({}, use) => {
       await use();
