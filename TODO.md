@@ -183,9 +183,10 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
 
 ## 7. Product
 
-- [ ] **Prebuilt courses, later parts** (issue #41): a catalog with search,
-  and who may own and publish prebuilt courses (an admin role, once Auth0
-  is in). The empty-state hint is #40.
+- [ ] **Prebuilt courses, later parts** (issue #41): who may own and
+  publish prebuilt courses (an admin role, once Auth0 is in), and
+  publishing your own courses to the catalog (#53 built the catalog and
+  copying). The empty-state hint is #40.
 - [ ] **Auth0 integration:** replace the dev stub in
   `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
   access key (`plugins/access-key.ts`, the client's `AccessGate` and the web
