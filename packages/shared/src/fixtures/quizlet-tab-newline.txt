@@ -1,0 +1,4 @@
+hola	hello
+adiós	goodbye
+gracias	thank you, thanks
+por favor	please
