@@ -12,4 +12,7 @@ export const queryKeys = {
   /** Invalidate with the prefix `["dashboard"]` (every time zone). */
   dashboard: (timeZone: string) => ["dashboard", timeZone] as const,
   dashboardAll: ["dashboard"] as const,
+  /** Per time zone and course (null: every course); invalidate with `statsAll`. */
+  stats: (timeZone: string, courseId: string | null) => ["stats", timeZone, courseId] as const,
+  statsAll: ["stats"] as const,
 };

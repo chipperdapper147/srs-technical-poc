@@ -13,6 +13,7 @@ export function shellViewModel(): ShellVM {
       { label: "Home", route: { to: "home" } },
       { label: "Courses", route: { to: "courses" } },
       { label: "Catalog", route: { to: "catalog" } },
+      { label: "Stats", route: { to: "stats" } },
       { label: "Settings", route: { to: "settings" } },
     ],
   };

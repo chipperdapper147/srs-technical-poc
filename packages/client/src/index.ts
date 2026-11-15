@@ -25,6 +25,8 @@ export * from "./new-course/view-model.ts";
 export * from "./settings/controller.ts";
 export * from "./settings/view-model.ts";
 export * from "./shell/view-model.ts";
+export * from "./stats/controller.ts";
+export * from "./stats/view-model.ts";
 export * from "./study/controller.ts";
 export * from "./study/session.ts";
 export * from "./study/view-model.ts";

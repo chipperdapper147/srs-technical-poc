@@ -21,6 +21,7 @@ import { catalogRoutes } from "./routes/catalog.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { dashboardRoutes } from "./routes/dashboard.ts";
 import { meRoutes } from "./routes/me.ts";
+import { statsRoutes } from "./routes/stats.ts";
 import { studyRoutes } from "./routes/study.ts";
 import { createScheduler, type Scheduler } from "./srs.ts";
 
@@ -65,6 +66,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   await app.register(courseRoutes, { db });
   await app.register(catalogRoutes, { db });
   await app.register(dashboardRoutes, { db });
+  await app.register(statsRoutes, { db });
   await app.register(studyRoutes, { db, scheduler: scheduler ?? (await createScheduler()) });
 
   return app;

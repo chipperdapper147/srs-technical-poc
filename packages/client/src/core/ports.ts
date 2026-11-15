@@ -20,7 +20,9 @@ export type Route =
   | { to: "study"; courseId: string; mode: StudyMode }
   /** One review session across every course. */
   | { to: "reviewAll" }
-  | { to: "settings" };
+  | { to: "settings" }
+  /** Progress stats, for every course or the one picked on the screen. */
+  | { to: "stats" };
 
 export interface Navigator {
   navigate(route: Route): void;
