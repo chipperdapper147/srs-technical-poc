@@ -123,6 +123,44 @@ export const ImportResultSchema = z.object({
 });
 export type ImportResult = z.infer<typeof ImportResultSchema>;
 
+// ---- Row import ----------------------------------------------------------
+
+/** Longest term, definition or alternative an import accepts (answers are capped at 500 too). */
+export const ITEM_TEXT_MAX = 500;
+/** Most words one row import accepts. */
+export const IMPORT_ROWS_MAX = 5000;
+
+/** Postgres text can't hold NUL. */
+const noNul = (s: string) => !s.includes("\u0000");
+const itemText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(ITEM_TEXT_MAX)
+  .refine(noNul, "Text must not contain NUL characters");
+
+/** One word, already parsed (by the client, with the parsers in `import-formats.ts`). */
+export const ImportRowSchema = z.object({
+  /** Target-language answer the learner types. */
+  term: itemText,
+  /** Source-language prompt. */
+  definition: itemText,
+  alternatives: z.array(itemText).max(20).default([]),
+  notes: z.string().max(2000).refine(noNul, "Text must not contain NUL characters").default(""),
+});
+export type ImportRow = z.input<typeof ImportRowSchema>;
+
+/**
+ * Words for one unit, parsed by the client from a pasted list, a Quizlet or
+ * an Anki export. The words join the unit with this title, or a new unit at
+ * the end of the course, in order; as with the CSV import.
+ */
+export const ImportRowsSchema = z.object({
+  unit: z.string().trim().min(1).max(200).refine(noNul, "Text must not contain NUL characters"),
+  rows: z.array(ImportRowSchema).min(1).max(IMPORT_ROWS_MAX),
+});
+export type ImportRows = z.input<typeof ImportRowsSchema>;
+
 // ---- Study ---------------------------------------------------------------
 
 export const StudyQuerySchema = z.object({

@@ -14,6 +14,7 @@ import {
   DashboardSchema,
   type ImportResult,
   ImportResultSchema,
+  type ImportRows,
   type Me,
   MeSchema,
   type ReviewSession,
@@ -44,6 +45,8 @@ export interface ApiClient {
   createCourse(body: CreateCourse): Promise<CourseDetail>;
   updateCourse(id: string, body: UpdateCourse): Promise<CourseDetail>;
   importCsv(id: string, csv: string): Promise<ImportResult>;
+  /** Words already parsed on the client (paste, Quizlet, Anki), into one unit. */
+  importRows(id: string, body: ImportRows): Promise<ImportResult>;
   study(id: string, mode: StudyMode): Promise<StudySession>;
   /** Due items across every course, for one mixed review session. */
   reviewAll(): Promise<ReviewSession>;
@@ -101,6 +104,8 @@ export function createApiClient({
       request(CourseDetailSchema, `/courses/${id}`, { method: "PATCH", body }),
     importCsv: (id, csv) =>
       request(ImportResultSchema, `/courses/${id}/import`, { method: "POST", body: { csv } }),
+    importRows: (id, body) =>
+      request(ImportResultSchema, `/courses/${id}/import/rows`, { method: "POST", body }),
     study: (id, mode) => request(StudySessionSchema, `/courses/${id}/study?mode=${mode}`),
     reviewAll: () => request(ReviewSessionSchema, "/study/review"),
     dashboard: (timeZone) =>
