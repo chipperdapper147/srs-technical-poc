@@ -681,7 +681,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
     ],
     // The dashboard spec runs a review of all courses through the study screen;
     // the stats spec counts answers given there.
-    specs: ["study", "grading", "dashboard", "stats", "a11y"],
+    specs: ["study", "study-aids", "grading", "dashboard", "stats", "a11y"],
   },
   {
     paths: [

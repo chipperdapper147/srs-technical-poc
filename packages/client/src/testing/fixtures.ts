@@ -96,6 +96,8 @@ export const anAnswerResult = (overrides: Partial<AnswerResult> = {}): AnswerRes
     term: "hola",
     rating: 3,
     nextDue: "2026-11-14T09:00:00.000Z",
+    reviewId: nextId(),
+    overridden: false,
     ...overrides,
   });
 

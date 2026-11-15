@@ -244,6 +244,12 @@ export const SubmitAnswerSchema = z.object({
   itemId: z.uuid(),
   answer: z.string().max(500),
   durationMs: z.number().int().min(0).max(3_600_000).optional(),
+  /**
+   * Hints used before answering: each reveals one more letter of the term.
+   * Any hint caps the rating at Hard, and revealing the whole term makes it
+   * Again; the API applies the cap. Absent means none.
+   */
+  hints: z.number().int().min(0).max(500).optional(),
 });
 export type SubmitAnswer = z.infer<typeof SubmitAnswerSchema>;
 
@@ -254,8 +260,25 @@ export const AnswerResultSchema = z.object({
   term: z.string(),
   rating: z.number().int().min(1).max(4),
   nextDue: z.iso.datetime(),
+  /**
+   * The review log entry this answer made: the id to override or undo it
+   * with. The API always sends it; optional so a client keeps working
+   * against an API from before study aids (a rollback), only without them.
+   */
+  reviewId: z.uuid().optional(),
+  /** True once the learner overrode the verdict ("I was right"); `verdict` stays the grader's. */
+  overridden: z.boolean().optional(),
 });
 export type AnswerResult = z.infer<typeof AnswerResultSchema>;
+
+/** How long after an answer the learner may override or undo it. Only the latest answer qualifies. */
+export const ANSWER_WINDOW_MINUTES = 10;
+
+export const UndoResultSchema = z.object({
+  /** The item whose card is back to its state before the undone answer. */
+  itemId: z.uuid(),
+});
+export type UndoResult = z.infer<typeof UndoResultSchema>;
 
 /**
  * Review across every course the learner can see: due items, most overdue
@@ -390,7 +413,8 @@ export const StatsSchema = z.object({
   /**
    * Answers in the last `days` calendar days (RETENTION_DAYS, today
    * included) to words already past the learning steps (FSRS state Review
-   * when answered), and how many of them were correct (exact or typo).
+   * when answered), and how many of them were correct (exact or typo, or
+   * overridden as "I was right").
    */
   retention: z.object({
     days: z.number().int(),

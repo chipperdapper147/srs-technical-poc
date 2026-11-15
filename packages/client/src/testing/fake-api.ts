@@ -14,6 +14,8 @@
  * `courseStats` per course id (no reviews when a course has none seeded).
  */
 import {
+  type AnswerResult,
+  AnswerResultSchema,
   type CourseDetail,
   CourseDetailSchema,
   type CourseItem,
@@ -31,14 +33,16 @@ import {
   itemMatchesSearch,
   type Me,
   MeSchema,
+  maxHints,
   ReviewSessionSchema,
-  ratingForVerdict,
+  ratingForAnswer,
   type Stats,
   StatsQuerySchema,
   StatsSchema,
   type StudyItem,
   StudyModeSchema,
   SubmitAnswerSchema,
+  UndoResultSchema,
   UpdateCourseSchema,
   UpdateItemSchema,
   UpdateMeSchema,
@@ -119,6 +123,21 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
   };
   const requests: RecordedRequest[] = [];
   const failures: { method: string; path: string; status: number; message: string }[] = [];
+  /** Every review id handed out, and the latest answer: the only one override and undo accept. */
+  const reviewIds = new Set<string>();
+  let latest: {
+    reviewId: string;
+    courseId: string;
+    item: StudyItem;
+    wasNew: boolean;
+    result: AnswerResult;
+    hints: number;
+  } | null = null;
+  /** 404 for an id never handed out, 409 for one that is no longer the latest answer. */
+  const notLatest = (reviewId: string) =>
+    reviewIds.has(reviewId)
+      ? error(409, "Only your latest answer can be changed.")
+      : error(404, "Answer not found");
 
   const url = (path: string) => `${baseUrl}${path}`;
   const findCourse = (id: string) => state.courses.find((c) => c.id === id);
@@ -446,18 +465,63 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
       );
       const item = course && state.items[course.id]?.find((i) => i.itemId === body.itemId);
       if (!course || !item) return error(404, "Item not found");
-      const result = gradeAnswer(body.answer, [item.term, ...item.alternatives], grading(course));
+      const graded = gradeAnswer(body.answer, [item.term, ...item.alternatives], grading(course));
+      const hints = Math.min(body.hints ?? 0, maxHints(item.term));
+      const wasNew = item.isNew;
       if (item.isNew) {
         item.isNew = false;
         setCourse({ ...course, learnedCount: course.learnedCount + 1 });
       }
-      return HttpResponse.json({
-        verdict: result.verdict,
-        matched: result.matched,
+      const result = AnswerResultSchema.parse({
+        verdict: graded.verdict,
+        matched: graded.matched,
         term: item.term,
-        rating: ratingForVerdict(result.verdict),
+        rating: ratingForAnswer(graded.verdict, hints, item.term),
         nextDue: NEXT_DUE,
+        reviewId: nextId(),
+        overridden: false,
       });
+      reviewIds.add(result.reviewId ?? "");
+      latest = {
+        reviewId: result.reviewId ?? "",
+        courseId: course.id,
+        item,
+        wasNew,
+        result,
+        hints,
+      };
+      return HttpResponse.json(result);
+    }),
+
+    http.post(url("/study/answers/:id/override"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const reviewId = String(params.id);
+      if (latest?.reviewId !== reviewId) return notLatest(reviewId);
+      const rating = ratingForAnswer("exact", latest.hints, latest.item.term);
+      if (latest.result.verdict === "exact" || latest.result.overridden) {
+        return error(409, "Only a wrong or misspelt answer can be overridden.");
+      }
+      if (rating <= latest.result.rating) {
+        return error(409, "With those hints, overriding wouldn't change the rating.");
+      }
+      latest.result = { ...latest.result, rating, overridden: true };
+      return HttpResponse.json(latest.result);
+    }),
+
+    http.post(url("/study/answers/:id/undo"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const reviewId = String(params.id);
+      if (latest?.reviewId !== reviewId) return notLatest(reviewId);
+      const { courseId, item, wasNew } = latest;
+      const course = findCourse(courseId);
+      if (wasNew && course) {
+        item.isNew = true;
+        setCourse({ ...course, learnedCount: course.learnedCount - 1 });
+      }
+      latest = null;
+      return HttpResponse.json(UndoResultSchema.parse({ itemId: item.itemId }));
     }),
   ];
 

@@ -94,7 +94,7 @@ describe("plan", () => {
 
   it("maps a study view change to the study and grading specs, with a view test owed", () => {
     const p = plan(["apps/web/src/views/study/study-view.tsx"]);
-    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "stats", "study"]);
+    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "stats", "study", "study-aids"]);
     assert.deepEqual(ids(p), ["lint", "typecheck", "test:web", "build:web", "e2e"]);
     assert.deepEqual(
       p.obligations.map((o) => [o.id, o.status]),
@@ -127,7 +127,7 @@ describe("plan", () => {
 
   it("requires an e2e spec for a route change", () => {
     const p = plan(["apps/web/src/app/courses/[id]/study/page.tsx"]);
-    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "stats", "study"]);
+    assert.deepEqual(p.e2e, ["a11y", "dashboard", "grading", "stats", "study", "study-aids"]);
     assert.equal(p.obligations[0]?.id, "e2e-spec");
   });
 

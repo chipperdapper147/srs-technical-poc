@@ -4,14 +4,21 @@
  * (session.ts) through the learner's input. The API grades quiz answers,
  * each with its own course's settings; the copy step of a new word is
  * checked locally.
+ *
+ * Study aids, all decided by the API: a hint reveals one more letter of the
+ * word (the answer request says how many were used, and the API caps the
+ * rating); "I was right" overrides a wrong or typo verdict while it shows;
+ * undo takes back the latest answer, from anywhere in the session.
  */
 import {
   type GradingOptions,
   gradeAnswer,
+  maxHints,
   type StudyItem,
   type StudyMode,
   StudyModeSchema,
 } from "@app/shared";
+import { ApiError } from "../api/client.ts";
 import { queryKeys } from "../api/query-keys.ts";
 import { type Controller, errorMessage } from "../core/controller.ts";
 import type { ClientDeps } from "../core/ports.ts";
@@ -65,6 +72,14 @@ export type StudyState =
       answerError: string | null;
       /** Clock time the current step began, for answer timing. */
       stepStartedAt: number;
+      /** Letters of the current word revealed by hints. */
+      hints: number;
+      /** Counts every fresh start of a step, so a view can remount it (undo restarts one in place). */
+      attempt: number;
+      /** An override or undo is in flight; the session waits for it. */
+      aidPending: "override" | "undo" | null;
+      /** Why the last override or undo failed. */
+      aidError: string | null;
     });
 
 export type ActiveStudyState = Extract<StudyState, { status: "active" }>;
@@ -75,6 +90,12 @@ export interface StudyActions {
   submit(): void;
   /** Continue after feedback. */
   next(): void;
+  /** Reveal one more letter of the word being quizzed. */
+  hint(): void;
+  /** "I was right": count the answer being shown as correct. */
+  override(): void;
+  /** Take back the latest answer and go back to it. */
+  undo(): void;
 }
 
 interface Loaded {
@@ -98,12 +119,24 @@ export function createStudyController(
   const update = (fn: (s: ActiveStudyState) => StudyState) =>
     store.set((s) => (s.status === "active" ? fn(s) : s));
 
-  /** Apply a state-machine action; a step change resets the input and timer. */
+  /** Learned and due counts changed; the course list, detail, dashboard and stats refetch. */
+  function invalidateProgress() {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.courses });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardAll });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.statsAll });
+  }
+
+  /**
+   * Apply a state-machine action. A step that starts afresh (the next one,
+   * or one undo went back to) resets the input, hints and timer.
+   */
   function dispatch(action: SessionAction) {
     let finishedNow = false;
     update((s) => {
       const session = sessionReducer(s.session, action);
-      if (session.index === s.session.index) return { ...s, session };
+      const fresh =
+        session.index !== s.session.index || (s.session.feedback !== null && !session.feedback);
+      if (!fresh) return { ...s, session };
       finishedNow = isFinished(session);
       return {
         ...s,
@@ -111,15 +144,13 @@ export function createStudyController(
         input: "",
         copyMiss: false,
         answerError: null,
+        aidError: null,
+        hints: 0,
+        attempt: s.attempt + 1,
         stepStartedAt: clock.now(),
       };
     });
-    // Learned and due counts changed; the course list, detail, dashboard and stats refetch.
-    if (finishedNow) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.courses });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardAll });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.statsAll });
-    }
+    if (finishedNow) invalidateProgress();
   }
 
   /** A session is a snapshot: fetched once, never cached or refetched under the learner. */
@@ -183,6 +214,10 @@ export function createStudyController(
         submitting: false,
         answerError: null,
         stepStartedAt: clock.now(),
+        hints: 0,
+        attempt: 0,
+        aidPending: null,
+        aidError: null,
       });
     } catch (error) {
       if (active && mine === run) {
@@ -200,6 +235,7 @@ export function createStudyController(
         itemId: step.item.itemId,
         answer: s.input,
         durationMs: Math.max(0, Math.round(clock.now() - s.stepStartedAt)),
+        hints: s.hints,
       });
       if (!active) return;
       update((x) => ({ ...x, submitting: false }));
@@ -209,12 +245,38 @@ export function createStudyController(
     }
   }
 
+  /** Run an override or undo; a 409 (too late, or not the latest) means it is no longer offered. */
+  async function aid(
+    kind: "override" | "undo",
+    reviewId: string,
+    request: () => Promise<SessionAction>,
+  ) {
+    update((x) => ({ ...x, aidPending: kind, aidError: null }));
+    try {
+      const action = await request();
+      if (!active) return;
+      update((x) => ({ ...x, aidPending: null }));
+      dispatch(action);
+      if (action.type === "undone") invalidateProgress();
+    } catch (error) {
+      if (!active) return;
+      const gone = error instanceof ApiError && error.status === 409;
+      update((x) => ({
+        ...x,
+        aidPending: null,
+        aidError: errorMessage(error),
+        session:
+          gone && x.session.last?.reviewId === reviewId ? { ...x.session, last: null } : x.session,
+      }));
+    }
+  }
+
   const actions: StudyActions = {
     setInput: (text) => update((s) => ({ ...s, input: text, copyMiss: false })),
 
     submit() {
       const s = store.get();
-      if (s.status !== "active") return;
+      if (s.status !== "active" || s.aidPending) return;
       const step = currentStep(s.session);
       if (!step) return;
       if (step.kind === "present") {
@@ -232,7 +294,41 @@ export function createStudyController(
       else void checkAnswer(s);
     },
 
-    next: () => dispatch({ type: "next" }),
+    next() {
+      const s = store.get();
+      if (s.status === "active" && !s.aidPending) dispatch({ type: "next" });
+    },
+
+    hint() {
+      const s = store.get();
+      if (s.status !== "active" || s.session.feedback || s.submitting) return;
+      const step = currentStep(s.session);
+      if (step?.kind !== "quiz") return;
+      const hints = Math.min(s.hints + 1, maxHints(step.item.term));
+      update((x) => ({ ...x, hints }));
+    },
+
+    override() {
+      const s = store.get();
+      if (s.status !== "active" || s.aidPending) return;
+      const { feedback, last } = s.session;
+      const reviewId = feedback?.reviewId;
+      if (!feedback || feedback.overridden || !reviewId || last?.reviewId !== reviewId) return;
+      void aid("override", reviewId, async () => ({
+        type: "overridden",
+        result: await api.overrideAnswer(reviewId),
+      }));
+    },
+
+    undo() {
+      const s = store.get();
+      if (s.status !== "active" || s.aidPending || !s.session.last) return;
+      const { reviewId } = s.session.last;
+      void aid("undo", reviewId, async () => {
+        await api.undoAnswer(reviewId);
+        return { type: "undone" };
+      });
+    },
   };
 
   return {

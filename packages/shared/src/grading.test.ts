@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { editDistance, gradeAnswer, normalizeAnswer, ratingForVerdict } from "./grading.ts";
+import {
+  editDistance,
+  gradeAnswer,
+  hintText,
+  maxHints,
+  normalizeAnswer,
+  ratingForAnswer,
+  ratingForVerdict,
+} from "./grading.ts";
 
 describe("normalizeAnswer", () => {
   it("folds case, punctuation and whitespace", () => {
@@ -81,3 +89,33 @@ describe("ratingForVerdict", () => {
     ]).toEqual([3, 2, 1]);
   });
 });
+
+describe("hints", () => {
+  it("count the term's letters, not its spaces", () => {
+    expect(maxHints("la biblioteca")).toBe(12);
+    expect(maxHints("  sol ")).toBe(3);
+    expect(maxHints(normalizeDecomposed("canción"))).toBe(7);
+  });
+
+  it("reveal the term one letter at a time, spaces included", () => {
+    expect(hintText("la biblioteca", 0)).toBe("");
+    expect(hintText("la biblioteca", 1)).toBe("l");
+    expect(hintText("la biblioteca", 2)).toBe("la");
+    expect(hintText("la biblioteca", 3)).toBe("la b");
+    expect(hintText("la biblioteca", 12)).toBe("la biblioteca");
+    expect(hintText("la biblioteca", 99)).toBe("la biblioteca");
+  });
+
+  it("cap the rating at Hard, and at Again once the whole term is shown", () => {
+    expect(ratingForAnswer("exact", 0, "hola")).toBe(3);
+    expect(ratingForAnswer("exact", 1, "hola")).toBe(2);
+    expect(ratingForAnswer("typo", 2, "hola")).toBe(2);
+    expect(ratingForAnswer("wrong", 1, "hola")).toBe(1);
+    expect(ratingForAnswer("exact", 4, "hola")).toBe(1);
+    expect(ratingForAnswer("exact", 9, "hola")).toBe(1);
+  });
+});
+
+function normalizeDecomposed(s: string) {
+  return s.normalize("NFD");
+}

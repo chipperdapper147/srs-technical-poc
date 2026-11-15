@@ -98,9 +98,11 @@ CREATE TABLE cards (
 );
 CREATE INDEX cards_user_id_due_at_idx ON cards (user_id, due_at);
 
--- Append-only history of every graded answer. `revlog` is the raw ts-fsrs
--- review log (pre-review card snapshot + rating), kept verbatim so FSRS
--- parameters can be re-fitted per learner later.
+-- History of every graded answer. An undone answer is deleted (the card is
+-- restored to its state before it); an override updates its row in place
+-- (overridden_at). `revlog` is the raw ts-fsrs review log (pre-review card
+-- snapshot + rating), kept verbatim so FSRS parameters can be re-fitted per
+-- learner later.
 CREATE TABLE review_logs (
   id uuid PRIMARY KEY DEFAULT uuidv7(),
   user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -112,6 +114,13 @@ CREATE TABLE review_logs (
   duration_ms integer NULL,
   revlog jsonb NOT NULL,
   reviewed_at timestamptz NOT NULL DEFAULT now(),
+  -- Letters of the term the learner revealed with hints before answering.
+  -- Any hint caps the rating at Hard; revealing every letter makes it Again.
+  hints smallint NOT NULL DEFAULT 0,
+  -- Set when the learner overrode a wrong or typo verdict ("I was right").
+  -- `verdict` stays the grader's; `rating` and `revlog` are then the
+  -- recomputed review (Good, capped by hints) from the card before the answer.
+  overridden_at timestamptz NULL,
   CONSTRAINT review_logs_rating_check CHECK (rating BETWEEN 1 AND 4),
   CONSTRAINT review_logs_verdict_check CHECK (verdict IN ('exact', 'typo', 'wrong'))
 );
