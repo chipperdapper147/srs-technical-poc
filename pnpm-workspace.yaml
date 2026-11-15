@@ -5,5 +5,5 @@ packages:
 # Supply-chain floor: never resolve a release less than 7 days old (minutes).
 # Most malicious or broken releases are found and pulled within days. Applies
 # when dependencies are added or upgraded; installs from the lockfile are
-# unaffected. The nightly canary uses 14 days.
+# unaffected. The nightly canary uses the same 7 days.
 minimumReleaseAge: 10080
