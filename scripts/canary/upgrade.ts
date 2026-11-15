@@ -25,10 +25,23 @@ function compare(a: string, b: string): number {
   return 0;
 }
 
-/** The newest stable version published at or before `cutoff`, or null. */
-export function newestMature(time: Record<string, string>, cutoff: Date): string | null {
+/** A packument's `versions`: only what can still be installed, with any deprecation. */
+export type Versions = Record<string, { deprecated?: string }>;
+
+/**
+ * The newest stable version published at or before `cutoff`, or null.
+ * `time` also lists unpublished versions (test-renderer 28.0.0), so only
+ * versions still in `versions` count, and deprecated ones are skipped
+ * (react-native 1000.0.0, "accidentally published").
+ */
+export function newestMature(
+  time: Record<string, string>,
+  versions: Versions,
+  cutoff: Date,
+): string | null {
   const mature = Object.entries(time)
     .filter(([v, t]) => STABLE.test(v) && new Date(t) <= cutoff)
+    .filter(([v]) => v in versions && !versions[v]?.deprecated)
     .map(([v]) => v)
     .sort(compare);
   return mature.at(-1) ?? null;
@@ -67,8 +80,11 @@ async function main() {
     [...names].map(async (name) => {
       const res = await fetch(`https://registry.npmjs.org/${name.replace("/", "%2f")}`);
       if (!res.ok) throw new Error(`${name}: registry answered ${res.status}`);
-      const { time } = (await res.json()) as { time: Record<string, string> };
-      const v = newestMature(time, cutoff);
+      const { time, versions } = (await res.json()) as {
+        time: Record<string, string>;
+        versions: Versions;
+      };
+      const v = newestMature(time, versions, cutoff);
       if (v) targets.set(name, v);
     }),
   );

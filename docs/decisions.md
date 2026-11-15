@@ -832,3 +832,20 @@ decides all three; `apps/api/src/srs.ts` stays the only place that schedules.
 - **Not built:** the optional "Add my answer as an alternative" after an
   override. The item endpoints from "Editing words" make it a small client
   change for courses the learner owns.
+
+## 2026-11-15: playwright-core is pinned next to @playwright/test
+
+- **Why:** the nightly canary moves every exact pin to its newest release at
+  least 14 days old. It moved `@playwright/test` back to an older mature
+  release while the lockfile kept the newer `playwright-core` it had pinned,
+  and that failed the canary's floor. `apps/e2e` now pins `playwright-core`
+  directly, so the canary moves both; `scripts/deps/playwright-pin.test.ts`
+  keeps the two pins equal.
+- **The canary skips unpublished and deprecated versions.** npm's `time`
+  still lists unpublished versions (`test-renderer` 28.0.0) and the
+  accidentally published `react-native` 1000.0.0 is only deprecated, so
+  `scripts/canary/upgrade.ts` now takes versions from `versions` and skips
+  deprecated ones.
+- **Not solved by this:** transitive packages locked between 7 and 14 days
+  old (since #49, several in the Expo tree, such as `@expo/log-box` and
+  `metro-*`) still fail the canary's 14-day floor. Pinning can't reach them.
