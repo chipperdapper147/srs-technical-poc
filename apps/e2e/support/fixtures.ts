@@ -11,6 +11,7 @@ import { CoursesPage } from "../pages/courses-page.ts";
 import { DashboardPage } from "../pages/dashboard-page.ts";
 import { NewCoursePage } from "../pages/new-course-page.ts";
 import { SettingsPage } from "../pages/settings-page.ts";
+import { StatsPage } from "../pages/stats-page.ts";
 import { StudyPage } from "../pages/study-page.ts";
 import { closeDb } from "./db.ts";
 
@@ -91,6 +92,7 @@ interface Fixtures {
   newCoursePage: NewCoursePage;
   studyPage: StudyPage;
   settingsPage: SettingsPage;
+  statsPage: StatsPage;
 }
 
 export const test = base.extend<Fixtures, { dbCleanup: void }>({
@@ -111,6 +113,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),
   studyPage: async ({ page }, use) => use(new StudyPage(page)),
   settingsPage: async ({ page }, use) => use(new SettingsPage(page)),
+  statsPage: async ({ page }, use) => use(new StatsPage(page)),
   dbCleanup: [
     async ({}, use) => {
       await use();

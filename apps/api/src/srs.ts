@@ -4,7 +4,13 @@
  */
 
 import type { Selectable } from "kysely";
-import { ConvertStepUnitToMinutes, DefaultScheduler, type Grade, type StepUnit } from "ts-fsrs";
+import {
+  ConvertStepUnitToMinutes,
+  DefaultScheduler,
+  type Grade,
+  State,
+  type StepUnit,
+} from "ts-fsrs";
 import type { Cards } from "./db/types.ts";
 import { LEARNING_STEPS, type LearningSteps } from "./learning-steps.ts";
 
@@ -14,6 +20,13 @@ export type CardRow = Omit<Selectable<Cards>, "createdAt">;
 export type Scheduler = Awaited<ReturnType<typeof createScheduler>>;
 
 const MINUTES_PER_DAY = 24 * 60;
+
+/**
+ * `cards.state` and a review log's `revlog->>'state'` (the card before the
+ * answer) for a word past its learning steps, and for one never answered.
+ */
+export const REVIEW_STATE: number = State.Review;
+export const NEW_STATE: number = State.New;
 
 export async function createScheduler(steps: LearningSteps = LEARNING_STEPS) {
   const fsrs = await createFsrs(steps);

@@ -18,5 +18,7 @@ export function hrefFor(route: Route): NextRoute {
       return "/review";
     case "settings":
       return "/settings";
+    case "stats":
+      return "/stats";
   }
 }

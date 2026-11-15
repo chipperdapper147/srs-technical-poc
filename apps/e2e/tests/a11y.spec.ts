@@ -18,13 +18,14 @@ for (const viewport of [
     // functional specs still run on Firefox nightly. TODO.md tracks re-enabling.
     test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox (PR #10)");
 
-    test("home, courses, course, new course and settings", async ({
+    test("home, courses, course, new course, settings and stats", async ({
       api,
       dashboardPage,
       coursesPage,
       coursePage,
       newCoursePage,
       settingsPage,
+      statsPage,
       page,
     }) => {
       await dashboardPage.goto();
@@ -49,6 +50,15 @@ for (const viewport of [
 
       await settingsPage.goto();
       await expect(settingsPage.gradingSelect).toBeVisible();
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
+      await statsPage.goto();
+      await expect(statsPage.emptyState).toBeVisible();
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
+      await api.learnAll(await api.createCourse({ csv: WORDS_CSV }));
+      await statsPage.goto();
+      await expect(statsPage.heatmapDays.last()).toHaveText(/: 3 reviews$/);
       expect.soft(await a11yViolations(page)).toEqual([]);
     });
 

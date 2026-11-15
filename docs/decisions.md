@@ -541,3 +541,41 @@ Decided by the repository owner in issue #41; built here.
   "Metro Manila".
 - **Later:** a catalog with search, and who may own and publish prebuilt
   courses (an admin role, once Auth0 is in).
+
+## 2026-11-15: Progress stats
+
+Issue #52 (product idea 4): how a learner is doing, overall and per course.
+Built as a `/stats` screen, linked as "Stats" in the header.
+
+- **One additive, read-only endpoint:** `GET /stats?timeZone=&courseId=`.
+  Postgres computes every number from `review_logs` and `cards`
+  (`apps/api/src/routes/stats.ts`); nothing loads the logs into memory. No
+  schema change: `review_logs (user_id, reviewed_at)` serves the per-learner
+  scans and `review_logs (item_id)` the per-word counts.
+- **Days are the learner's calendar days**, through `Clock.timeZone()` as
+  for the dashboard's forecast. The calendar helpers the two share moved to
+  `apps/api/src/calendar.ts`.
+- **Retention** is the share of correct answers (exact or typo) over the
+  last 30 calendar days, today included, counting only answers to words
+  that were in FSRS state Review when answered (the log's `revlog` keeps
+  that pre-answer state). Learning and relearning answers don't count. The
+  sample size is shown with it; with none, it reads "No data".
+- **Streaks** are runs of consecutive days with at least one answer, over
+  all history. The current streak is the run ending today, or yesterday
+  while nothing is answered yet today, so it doesn't drop to zero at
+  midnight; a missed whole day ends it.
+- **Hardest words** are only words with at least one lapse or wrong
+  answer (otherwise a learner with a clean record would see a list of easy
+  words), at most 10: most lapses, then the highest share of wrong answers,
+  then the most answers, then alphabetical. Wrong answers during the
+  learning steps count toward the share.
+- **Words learned** counts cards past New (answered at least once), the
+  course list's "learned" count. **Reviews done** counts every graded
+  answer, learn mode included.
+- **Heatmap:** the last 84 days (12 weeks), drawn with plain elements and
+  tokens, no chart library: columns are weeks from Monday, and five steps
+  of `primary` opacity (none, then quarters of the busiest day). Each day is
+  a list item that says its date and count in words.
+- **The course filter** is screen state in the controller, not in the URL;
+  its options come from the course list query. Revisit if stats links need
+  to be shared or bookmarked.
