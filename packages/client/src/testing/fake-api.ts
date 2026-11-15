@@ -8,8 +8,12 @@
  * second implementation: scheduling is a fixed date, and CSV parsing is naive
  * (no quoted fields). The dashboard's forecast is whatever the seed says
  * (zeros from FORECAST_START by default), and its due counts are the courses'.
+ * The catalog is the seeded courses that aren't editable (the shared ones).
  */
 import {
+  CATALOG_LIMIT,
+  CatalogQuerySchema,
+  CatalogSchema,
   type CourseDetail,
   CourseDetailSchema,
   CourseSummarySchema,
@@ -86,7 +90,11 @@ export interface FakeApi {
 
 const error = (status: number, message: string) =>
   HttpResponse.json(
-    { statusCode: status, error: status === 404 ? "Not Found" : "Bad Request", message },
+    {
+      statusCode: status,
+      error: status === 404 ? "Not Found" : status === 403 ? "Forbidden" : "Bad Request",
+      message,
+    },
     { status },
   );
 
@@ -167,6 +175,60 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
       });
       state.courses.push(course);
       return HttpResponse.json(course, { status: 201 });
+    }),
+
+    http.get(url("/catalog"), async ({ request }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const query = CatalogQuerySchema.safeParse(
+        Object.fromEntries(new URL(request.url).searchParams),
+      );
+      if (!query.success) return error(400, query.error.issues[0]?.message ?? "Invalid query");
+      const { q, targetLang } = query.data;
+      const shared = state.courses.filter((c) => !c.editable);
+      const courses = shared
+        .filter(
+          (c) =>
+            !q ||
+            c.title.toLowerCase().includes(q.toLowerCase()) ||
+            c.description.toLowerCase().includes(q.toLowerCase()),
+        )
+        .filter((c) => !targetLang || c.targetLang.toLowerCase() === targetLang.toLowerCase())
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .slice(0, CATALOG_LIMIT)
+        .map(({ id, title, description, sourceLang, targetLang, itemCount }) => ({
+          id,
+          title,
+          description,
+          sourceLang,
+          targetLang,
+          itemCount,
+        }));
+      const targetLangs = [...new Set(shared.map((c) => c.targetLang))].sort();
+      return HttpResponse.json(CatalogSchema.parse({ courses, targetLangs }));
+    }),
+
+    http.post(url("/courses/:id/copy"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const source = findCourse(String(params.id));
+      if (!source) return error(404, "Course not found");
+      if (source.editable) return error(403, "Only shared courses can be copied");
+      const copy = CourseDetailSchema.parse({
+        ...structuredClone(source),
+        id: nextId(),
+        editable: true,
+        learnedCount: 0,
+        dueCount: 0,
+        units: source.units.map((u) => ({ ...u, id: nextId(), learnedCount: 0 })),
+      });
+      state.courses.push(copy);
+      state.items[copy.id] = (state.items[source.id] ?? []).map((i) => ({
+        ...structuredClone(i),
+        itemId: nextId(),
+        isNew: true,
+      }));
+      return HttpResponse.json(copy, { status: 201 });
     }),
 
     http.get(url("/courses/:id"), async ({ request, params }) => {

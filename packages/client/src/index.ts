@@ -2,6 +2,8 @@ export * from "./access/controller.ts";
 export * from "./access/view-model.ts";
 export * from "./api/client.ts";
 export * from "./api/query-keys.ts";
+export * from "./catalog/controller.ts";
+export * from "./catalog/view-model.ts";
 export * from "./core/access.ts";
 export * from "./core/controller.ts";
 export * from "./core/fields.ts";

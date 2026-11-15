@@ -5,6 +5,7 @@ export class AppShell {
   readonly brandLink: Locator;
   readonly homeLink: Locator;
   readonly coursesLink: Locator;
+  readonly catalogLink: Locator;
   readonly settingsLink: Locator;
 
   readonly page: Page;
@@ -15,6 +16,7 @@ export class AppShell {
     this.brandLink = nav.getByRole("link", { name: "SRS" });
     this.homeLink = nav.getByRole("link", { name: "Home" });
     this.coursesLink = nav.getByRole("link", { name: "Courses" });
+    this.catalogLink = nav.getByRole("link", { name: "Catalog" });
     this.settingsLink = nav.getByRole("link", { name: "Settings" });
   }
 }

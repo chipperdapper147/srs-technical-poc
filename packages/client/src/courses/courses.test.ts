@@ -26,6 +26,7 @@ describe("courses", () => {
     const s = await waitForState(c.store, (x) => x.courses.status === "ready");
     const vm = coursesViewModel(s);
     expect(vm.newCourse).toEqual({ label: "New course", route: { to: "newCourse" } });
+    expect(vm.catalog).toEqual({ label: "Browse the catalog", route: { to: "catalog" } });
     expect(vm.body).toMatchObject({
       kind: "list",
       courses: [

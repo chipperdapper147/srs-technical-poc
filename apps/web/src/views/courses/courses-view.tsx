@@ -19,9 +19,14 @@ export function CoursesView({ vm }: { vm: CoursesVM }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{vm.heading}</h1>
-        <RouteLink to={vm.newCourse.route} className={buttonVariants({ variant: "outline" })}>
-          {vm.newCourse.label}
-        </RouteLink>
+        <div className="flex flex-wrap justify-end gap-2">
+          <RouteLink to={vm.catalog.route} className={buttonVariants({ variant: "ghost" })}>
+            {vm.catalog.label}
+          </RouteLink>
+          <RouteLink to={vm.newCourse.route} className={buttonVariants({ variant: "outline" })}>
+            {vm.newCourse.label}
+          </RouteLink>
+        </div>
       </div>
 
       {body.kind === "loading" && <Loading />}

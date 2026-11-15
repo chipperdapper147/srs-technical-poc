@@ -4,6 +4,8 @@ export const queryKeys = {
   me: ["me"] as const,
   courses: ["courses"] as const,
   course: (id: string) => ["courses", id] as const,
+  /** Not under "courses": the catalog lists shared courses, which copying doesn't change. */
+  catalog: (q: string, targetLang: string) => ["catalog", { q, targetLang }] as const,
   // Not under "courses": invalidating course data must not refetch a session in progress.
   study: (id: string, mode: StudyMode) => ["study", id, mode] as const,
   reviewAll: ["study", "all", "review"] as const,

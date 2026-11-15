@@ -12,6 +12,7 @@ const fake = setupFakeApi(() => ({
 const header = {
   heading: "Courses",
   newCourse: { label: "New course", route: { to: "newCourse" as const } },
+  catalog: { label: "Browse the catalog", route: { to: "catalog" as const } },
 };
 
 describe("CoursesView", () => {
@@ -20,6 +21,9 @@ describe("CoursesView", () => {
     expect(screen.getByRole("heading", { name: "Courses" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "New course" }).getAttribute("href")).toBe(
       "/courses/new",
+    );
+    expect(screen.getByRole("link", { name: "Browse the catalog" }).getAttribute("href")).toBe(
+      "/catalog",
     );
     rerender(<CoursesView vm={{ ...header, body: { kind: "error", message: "Database down" } }} />);
     expect(screen.getByText("Database down")).toBeTruthy();

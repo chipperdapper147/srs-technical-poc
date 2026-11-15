@@ -6,6 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { type APIRequestContext, test as base, expect } from "@playwright/test";
 import { AppShell } from "../pages/app-shell.ts";
+import { CatalogPage } from "../pages/catalog-page.ts";
 import { CoursePage } from "../pages/course-page.ts";
 import { CoursesPage } from "../pages/courses-page.ts";
 import { DashboardPage } from "../pages/dashboard-page.ts";
@@ -76,6 +77,16 @@ export class Api {
     return session.items.length;
   }
 
+  /** A shared course's id, found in the catalog by title. */
+  async catalogCourseId(title: string): Promise<string> {
+    const { courses } = await this.json<{ courses: { id: string; title: string }[] }>(
+      await this.request.get(`/catalog?q=${encodeURIComponent(title)}`),
+    );
+    const course = courses.find((c) => c.title === title);
+    if (!course) throw new Error(`Shared course "${title}" not found. Did you run pnpm db:seed?`);
+    return course.id;
+  }
+
   async updateMe(body: Record<string, unknown>) {
     return this.json(await this.request.patch("/me", { data: body }));
   }
@@ -89,6 +100,7 @@ interface Fixtures {
   dashboardPage: DashboardPage;
   coursesPage: CoursesPage;
   coursePage: CoursePage;
+  catalogPage: CatalogPage;
   importPage: ImportPage;
   newCoursePage: NewCoursePage;
   studyPage: StudyPage;
@@ -110,6 +122,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
   dashboardPage: async ({ page }, use) => use(new DashboardPage(page)),
   coursesPage: async ({ page }, use) => use(new CoursesPage(page)),
   coursePage: async ({ page }, use) => use(new CoursePage(page)),
+  catalogPage: async ({ page }, use) => use(new CatalogPage(page)),
   importPage: async ({ page }, use) => use(new ImportPage(page)),
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),
   studyPage: async ({ page }, use) => use(new StudyPage(page)),

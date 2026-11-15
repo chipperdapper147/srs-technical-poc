@@ -11,6 +11,8 @@ import type { AccessGate } from "./access.ts";
 export type Route =
   | { to: "home" }
   | { to: "courses" }
+  /** Shared courses to browse and copy. */
+  | { to: "catalog" }
   | { to: "newCourse" }
   | { to: "course"; courseId: string }
   /** Paste words or bring a Quizlet or Anki export into a course. */
