@@ -1,8 +1,8 @@
 /**
  * The nightly canary's upgrade: set every exact dependency in the workspace's
  * package.json files to its newest stable release published at least
- * `--min-age-days` ago (default 14). That can be older than the current pin,
- * when the pin itself is younger than the floor. Then `pnpm install` with the
+ * `--min-age-days` ago (default 7, the repo's floor). That can be older than
+ * the current pin, when the pin itself is younger than the floor. Then `pnpm install` with the
  * same minimumReleaseAge resolves the rest: a mature release only pins
  * dependencies at least as old, so the floor holds all the way down.
  *
@@ -10,7 +10,7 @@
  * package's `latest` tag and fails (ERR_PNPM_NO_MATURE_MATCHING_VERSION)
  * when that release is too young, instead of falling back to an older one.
  *
- *   node scripts/canary/upgrade.ts [--min-age-days 14]
+ *   node scripts/canary/upgrade.ts [--min-age-days 7]
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,7 +57,7 @@ function manifests(root: string): string[] {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { "min-age-days": { type: "string", default: "14" } } });
+  const { values } = parseArgs({ options: { "min-age-days": { type: "string", default: "7" } } });
   const days = Number(values["min-age-days"]);
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const files = manifests(process.cwd()).filter((f) => {

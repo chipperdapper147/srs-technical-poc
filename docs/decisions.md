@@ -849,3 +849,24 @@ decides all three; `apps/api/src/srs.ts` stays the only place that schedules.
 - **Not solved by this:** transitive packages locked between 7 and 14 days
   old (since #49, several in the Expo tree, such as `@expo/log-box` and
   `metro-*`) still fail the canary's 14-day floor. Pinning can't reach them.
+
+## 2026-11-15: The canary uses the repo's 7-day floor, not 14 days
+
+Decided by the repository owner.
+
+- **Why:** the canary's 14-day floor was stricter than the lockfile's 7.
+  The lockfile holds transitive packages between 7 and 14 days old (since
+  #49, several in the Expo tree, such as `@expo/log-box` and `metro-*`),
+  and pnpm re-checks them against the floor, so the canary failed before
+  testing anything. Pinning can't reach transitive packages; resolving
+  without the lockfile fails on optional peers; `pnpm update --depth
+  Infinity` fails the same way.
+- **Now:** `scripts/canary/upgrade.ts` defaults to 7 days and the setup
+  action installs with `--config.minimum-release-age=10080`, the value in
+  `pnpm-workspace.yaml`. Every package the lockfile holds already passes the
+  `release-age` check at 7 days, so the canary's install can't fail on them.
+- The 2026-11-11 nightly entry's reasons for a floor still hold: a just-published
+  tarball can 404, and most bad releases are pulled within days. A week
+  covers both, as it does for the rest of the repo.
+- Supersedes "skips releases under 14 days old" in the canary entry, and
+  the "Not solved by this" bullet of the playwright-core entry.
