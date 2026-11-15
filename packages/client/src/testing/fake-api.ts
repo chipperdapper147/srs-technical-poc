@@ -6,14 +6,20 @@
  * It keeps state (a created course shows up in the list, an answered word
  * counts as learned) and grades with the shared grader. It is a fake, not a
  * second implementation: scheduling is a fixed date, and CSV parsing is naive
- * (no quoted fields). The dashboard's forecast is whatever the seed says
+ * (no quoted fields). Items are stored as study items; their unit is the
+ * course's unit with the same title and their position their order in it.
+ * Only `editable` courses accept edits, as only owned ones do. The dashboard's forecast is whatever the seed says
  * (zeros from FORECAST_START by default), and its due counts are the courses'.
+ * Stats are whatever the seed says too: `stats` for every course, and
+ * `courseStats` per course id (no reviews when a course has none seeded).
  */
 import {
   type CourseDetail,
   CourseDetailSchema,
+  type CourseItem,
   CourseSummarySchema,
   CreateCourseSchema,
+  CreateItemSchema,
   DashboardQuerySchema,
   DashboardSchema,
   FORECAST_DAYS,
@@ -21,18 +27,24 @@ import {
   type GradingMode,
   gradeAnswer,
   ImportCsvSchema,
+  ImportRowsSchema,
+  itemMatchesSearch,
   type Me,
   MeSchema,
   ReviewSessionSchema,
   ratingForVerdict,
+  type Stats,
+  StatsQuerySchema,
+  StatsSchema,
   type StudyItem,
   StudyModeSchema,
   SubmitAnswerSchema,
   UpdateCourseSchema,
+  UpdateItemSchema,
   UpdateMeSchema,
 } from "@app/shared";
 import { type HttpHandler, HttpResponse, http } from "msw";
-import { aMe, aUnit, nextId } from "./fixtures.ts";
+import { aMe, aStats, aUnit, nextId } from "./fixtures.ts";
 
 export const FAKE_API_URL = "http://api.test";
 export const NEXT_DUE = "2026-11-14T09:00:00.000Z";
@@ -57,6 +69,10 @@ export interface FakeApiSeed {
   due?: Record<string, string[]>;
   /** The dashboard's forecast. */
   forecast?: ForecastDay[];
+  /** Stats for every course; no reviews by default. */
+  stats?: Stats;
+  /** Stats per course id; a course without an entry has no reviews. */
+  courseStats?: Record<string, Stats>;
   /** Require `Authorization: Bearer <accessKey>` on every request, as the API does with API_ACCESS_KEY. */
   accessKey?: string;
 }
@@ -77,6 +93,8 @@ export interface FakeApi {
     items: Record<string, StudyItem[]>;
     due: Record<string, string[]>;
     forecast: ForecastDay[];
+    stats: Stats;
+    courseStats: Record<string, Stats>;
   };
   requests: RecordedRequest[];
   /** Make the next request matching method and path fail with this status and message. */
@@ -96,6 +114,8 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
     items: structuredClone(seed.items ?? {}),
     due: structuredClone(seed.due ?? {}),
     forecast: structuredClone(seed.forecast ?? aForecast()),
+    stats: structuredClone(seed.stats ?? aStats()),
+    courseStats: structuredClone(seed.courseStats ?? {}),
   };
   const requests: RecordedRequest[] = [];
   const failures: { method: string; path: string; status: number; message: string }[] = [];
@@ -105,6 +125,45 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
   const setCourse = (course: CourseDetail) => {
     state.courses = state.courses.map((c) => (c.id === course.id ? course : c));
   };
+  /** The fake's items as the API lists them, in course order. */
+  const courseItems = (course: CourseDetail): CourseItem[] =>
+    [...course.units]
+      .sort((a, b) => a.position - b.position)
+      .flatMap((unit) =>
+        (state.items[course.id] ?? [])
+          .filter((i) => i.unitTitle === unit.title)
+          .map((i, index) => ({
+            id: i.itemId,
+            unitId: unit.id,
+            position: index + 1,
+            term: i.term,
+            definition: i.definition,
+            alternatives: i.alternatives,
+            notes: i.notes,
+          })),
+      );
+  /** An item in an editable course, with that course. */
+  const findOwnedItem = (itemId: string) => {
+    for (const course of state.courses) {
+      const item = state.items[course.id]?.find((i) => i.itemId === itemId);
+      if (item && course.editable) return { course, item };
+    }
+    return undefined;
+  };
+  /** Adjust a course's and a unit's counts by `by` items. */
+  const count = (course: CourseDetail, unitTitle: string, by: number, learned: number) =>
+    setCourse({
+      ...course,
+      itemCount: course.itemCount + by,
+      learnedCount: course.learnedCount + learned,
+      units: course.units.map((u) =>
+        u.title === unitTitle
+          ? { ...u, itemCount: u.itemCount + by, learnedCount: u.learnedCount + learned }
+          : u,
+      ),
+    });
+  const asCourseItem = (itemId: string) =>
+    state.courses.flatMap(courseItems).find((i) => i.id === itemId);
   const grading = (course: CourseDetail) => ({
     mode: (course.gradingMode ?? state.me.gradingMode) as GradingMode,
     accentSensitive: course.accentSensitive ?? state.me.accentSensitive,
@@ -230,6 +289,83 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
       return HttpResponse.json({ unitsCreated, itemsCreated });
     }),
 
+    http.post(url("/courses/:id/import/rows"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const course = findCourse(String(params.id));
+      if (!course) return error(404, "Course not found");
+      if (!course.editable) return error(403, "Shared courses are read-only");
+      const body = ImportRowsSchema.safeParse(await request.json());
+      if (!body.success) return error(400, body.error.issues[0]?.message ?? "Invalid rows");
+      const { unit: unitTitle, rows } = body.data;
+      const units = course.units.map((u) => ({ ...u }));
+      let unit = units.find((u) => u.title === unitTitle);
+      if (!unit) {
+        unit = aUnit({ title: unitTitle, position: units.length + 1 });
+        units.push(unit);
+      }
+      unit.itemCount += rows.length;
+      state.items[course.id] = [
+        ...(state.items[course.id] ?? []),
+        ...rows.map((r) => ({ itemId: nextId(), unitTitle, ...r, isNew: true })),
+      ];
+      setCourse({ ...course, units, itemCount: course.itemCount + rows.length });
+      return HttpResponse.json({
+        unitsCreated: units.length - course.units.length,
+        itemsCreated: rows.length,
+      });
+    }),
+
+    http.get(url("/courses/:id/items"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const course = findCourse(String(params.id));
+      if (!course) return error(404, "Course not found");
+      const q = new URL(request.url).searchParams.get("q") ?? "";
+      return HttpResponse.json({
+        items: courseItems(course).filter((i) => itemMatchesSearch(i, q)),
+      });
+    }),
+
+    http.post(url("/courses/:id/units/:unitId/items"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const course = findCourse(String(params.id));
+      const unit = course?.units.find((u) => u.id === params.unitId);
+      if (!course?.editable || !unit) return error(404, "Unit not found");
+      const body = CreateItemSchema.safeParse(await request.json());
+      if (!body.success) return error(400, body.error.issues[0]?.message ?? "Invalid item");
+      const itemId = nextId();
+      state.items[course.id] = [
+        ...(state.items[course.id] ?? []),
+        { itemId, unitTitle: unit.title, isNew: true, ...body.data },
+      ];
+      count(course, unit.title, 1, 0);
+      return HttpResponse.json(asCourseItem(itemId), { status: 201 });
+    }),
+
+    http.patch(url("/items/:id"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const found = findOwnedItem(String(params.id));
+      if (!found) return error(404, "Item not found");
+      const body = UpdateItemSchema.safeParse(await request.json());
+      if (!body.success) return error(400, body.error.issues[0]?.message ?? "Invalid item");
+      Object.assign(found.item, body.data);
+      return HttpResponse.json(asCourseItem(found.item.itemId));
+    }),
+
+    http.delete(url("/items/:id"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const found = findOwnedItem(String(params.id));
+      if (!found) return error(404, "Item not found");
+      const { course, item } = found;
+      state.items[course.id] = (state.items[course.id] ?? []).filter((i) => i !== item);
+      count(course, item.unitTitle, -1, item.isNew ? 0 : -1);
+      return new HttpResponse(null, { status: 204 });
+    }),
+
     http.get(url("/courses/:id/study"), async ({ request, params }) => {
       const failed = await record(request);
       if (failed) return failed;
@@ -285,6 +421,20 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
           forecast: state.forecast,
         }),
       );
+    }),
+
+    http.get(url("/stats"), async ({ request }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const query = StatsQuerySchema.safeParse(
+        Object.fromEntries(new URL(request.url).searchParams),
+      );
+      if (!query.success) return error(400, query.error.issues[0]?.message ?? "Invalid query");
+      const { courseId } = query.data;
+      if (courseId === undefined) return HttpResponse.json(StatsSchema.parse(state.stats));
+      if (!findCourse(courseId)) return error(404, "Course not found");
+      const stats = state.courseStats[courseId] ?? aStats({ today: state.stats.today });
+      return HttpResponse.json(StatsSchema.parse({ ...stats, courseId }));
     }),
 
     http.post(url("/study/answers"), async ({ request }) => {

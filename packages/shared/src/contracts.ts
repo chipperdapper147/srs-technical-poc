@@ -123,6 +123,96 @@ export const ImportResultSchema = z.object({
 });
 export type ImportResult = z.infer<typeof ImportResultSchema>;
 
+// ---- Row import ----------------------------------------------------------
+
+/** Longest term, definition or alternative an import accepts (answers are capped at 500 too). */
+export const ITEM_TEXT_MAX = 500;
+/** Most words one row import accepts. */
+export const IMPORT_ROWS_MAX = 5000;
+
+/** Postgres text can't hold NUL. */
+const noNul = (s: string) => !s.includes("\u0000");
+const itemText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(ITEM_TEXT_MAX)
+  .refine(noNul, "Text must not contain NUL characters");
+
+/** One word, already parsed (by the client, with the parsers in `import-formats.ts`). */
+export const ImportRowSchema = z.object({
+  /** Target-language answer the learner types. */
+  term: itemText,
+  /** Source-language prompt. */
+  definition: itemText,
+  alternatives: z.array(itemText).max(20).default([]),
+  notes: z.string().max(2000).refine(noNul, "Text must not contain NUL characters").default(""),
+});
+export type ImportRow = z.input<typeof ImportRowSchema>;
+
+/**
+ * Words for one unit, parsed by the client from a pasted list, a Quizlet or
+ * an Anki export. The words join the unit with this title, or a new unit at
+ * the end of the course, in order; as with the CSV import.
+ */
+export const ImportRowsSchema = z.object({
+  unit: z.string().trim().min(1).max(200).refine(noNul, "Text must not contain NUL characters"),
+  rows: z.array(ImportRowSchema).min(1).max(IMPORT_ROWS_MAX),
+});
+export type ImportRows = z.input<typeof ImportRowsSchema>;
+// ---- Items (editing words) -----------------------------------------------
+
+/** A word in a course as its owner edits it. */
+export const CourseItemSchema = z.object({
+  id: z.uuid(),
+  unitId: z.uuid(),
+  /** Order within the unit, from 1. */
+  position: z.number().int(),
+  /** Target-language answer the learner types. */
+  term: z.string(),
+  /** Source-language prompt. */
+  definition: z.string(),
+  /** Other accepted answers. */
+  alternatives: z.array(z.string()),
+  notes: z.string(),
+});
+export type CourseItem = z.infer<typeof CourseItemSchema>;
+
+export const CourseItemsSchema = z.object({
+  /** In course order: by unit, then by position. */
+  items: z.array(CourseItemSchema),
+});
+export type CourseItems = z.infer<typeof CourseItemsSchema>;
+
+export const ItemSearchQuerySchema = z.object({
+  /**
+   * Matches term, definition or an alternative, ignoring case, accents and
+   * punctuation (`itemMatchesSearch`). Empty or absent lists every item.
+   */
+  q: z.string().max(200).optional(),
+});
+
+export const UnitParamsSchema = z.object({ id: z.uuid(), unitId: z.uuid() });
+
+/** The same text rules as a row import (`itemText`). */
+const ItemFieldsSchema = z.object({
+  term: itemText,
+  definition: itemText,
+  alternatives: z.array(itemText).max(50),
+  notes: z.string().trim().max(2000).refine(noNul, "Text must not contain NUL characters"),
+});
+
+/** A new item goes at the end of its unit. */
+export const CreateItemSchema = ItemFieldsSchema.extend({
+  alternatives: ItemFieldsSchema.shape.alternatives.default([]),
+  notes: ItemFieldsSchema.shape.notes.default(""),
+});
+export type CreateItem = z.input<typeof CreateItemSchema>;
+
+/** Only the named fields change (built without defaults, like UpdateCourseSchema). */
+export const UpdateItemSchema = ItemFieldsSchema.partial();
+export type UpdateItem = z.input<typeof UpdateItemSchema>;
+
 // ---- Study ---------------------------------------------------------------
 
 export const StudyQuerySchema = z.object({
@@ -207,13 +297,16 @@ function isTimeZone(name: string): boolean {
 /** Days in the dashboard's forecast, today included. */
 export const FORECAST_DAYS = 7;
 
+/** An IANA time zone query parameter; UTC when absent. */
+const timeZoneParam = z
+  .string()
+  .max(64)
+  .refine(isTimeZone, "Expected an IANA time zone, e.g. 'Europe/Madrid'")
+  .default("UTC");
+
 export const DashboardQuerySchema = z.object({
   /** IANA time zone the forecast's days are counted in. */
-  timeZone: z
-    .string()
-    .max(64)
-    .refine(isTimeZone, "Expected an IANA time zone, e.g. 'Europe/Madrid'")
-    .default("UTC"),
+  timeZone: timeZoneParam,
 });
 export type DashboardQuery = z.input<typeof DashboardQuerySchema>;
 
@@ -244,3 +337,79 @@ export const DashboardSchema = z.object({
   forecast: z.array(ForecastDaySchema),
 });
 export type Dashboard = z.infer<typeof DashboardSchema>;
+
+// ---- Stats ---------------------------------------------------------------
+
+/** Calendar days retention is measured over, today included. */
+export const RETENTION_DAYS = 30;
+/** Calendar days in the review heatmap, today included: 12 weeks. */
+export const HEATMAP_DAYS = 84;
+/** How many of the hardest words the stats list. */
+export const HARDEST_WORDS_LIMIT = 10;
+
+export const StatsQuerySchema = z.object({
+  /** IANA time zone the days (heatmap, streak, retention window) are counted in. */
+  timeZone: timeZoneParam,
+  /** One course's numbers; every course when absent. */
+  courseId: z.uuid().optional(),
+});
+export type StatsQuery = z.input<typeof StatsQuerySchema>;
+
+export const HeatmapDaySchema = z.object({
+  /** Calendar day in the requested time zone, YYYY-MM-DD. */
+  date: z.iso.date(),
+  reviewCount: z.number().int(),
+});
+export type HeatmapDay = z.infer<typeof HeatmapDaySchema>;
+
+export const HardWordSchema = z.object({
+  itemId: z.uuid(),
+  term: z.string(),
+  definition: z.string(),
+  courseId: z.uuid(),
+  courseTitle: z.string(),
+  /** Times the word was forgotten after it had been learned (FSRS lapses). */
+  lapses: z.number().int(),
+  /** Every graded answer to the word, and how many of them were wrong. */
+  reviewCount: z.number().int(),
+  wrongCount: z.number().int(),
+});
+export type HardWord = z.infer<typeof HardWordSchema>;
+
+export const StatsSchema = z.object({
+  /** The course these numbers are for; null for every course. */
+  courseId: z.uuid().nullable(),
+  /** Today in the requested time zone, YYYY-MM-DD. */
+  today: z.iso.date(),
+  totals: z.object({
+    /** Words past New: answered at least once. */
+    wordsLearned: z.number().int(),
+    /** Every graded answer, ever. */
+    reviewCount: z.number().int(),
+  }),
+  /**
+   * Answers in the last `days` calendar days (RETENTION_DAYS, today
+   * included) to words already past the learning steps (FSRS state Review
+   * when answered), and how many of them were correct (exact or typo).
+   */
+  retention: z.object({
+    days: z.number().int(),
+    reviewCount: z.number().int(),
+    correctCount: z.number().int(),
+  }),
+  /** Reviews per day: HEATMAP_DAYS days, oldest first, ending today. */
+  heatmap: z.array(HeatmapDaySchema),
+  /** Runs of consecutive calendar days with at least one review. */
+  streak: z.object({
+    /** The run ending today, or yesterday while nothing is reviewed yet today; else 0. */
+    current: z.number().int(),
+    longest: z.number().int(),
+    reviewedToday: z.boolean(),
+  }),
+  /**
+   * Up to HARDEST_WORDS_LIMIT words with at least one lapse or wrong
+   * answer: most lapses first, then the highest share of wrong answers.
+   */
+  hardestWords: z.array(HardWordSchema),
+});
+export type Stats = z.infer<typeof StatsSchema>;

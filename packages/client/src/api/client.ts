@@ -7,25 +7,34 @@ import {
   AnswerResultSchema,
   type CourseDetail,
   CourseDetailSchema,
+  type CourseItem,
+  CourseItemSchema,
+  type CourseItems,
+  CourseItemsSchema,
   type CourseSummary,
   CourseSummarySchema,
   type CreateCourse,
+  type CreateItem,
   type Dashboard,
   DashboardSchema,
   type ImportResult,
   ImportResultSchema,
+  type ImportRows,
   type Me,
   MeSchema,
   type ReviewSession,
   ReviewSessionSchema,
+  type Stats,
+  StatsSchema,
   type StudyMode,
   type StudySession,
   StudySessionSchema,
   type SubmitAnswer,
   type UpdateCourse,
+  type UpdateItem,
   type UpdateMe,
 } from "@app/shared";
-import type { z } from "zod";
+import { z } from "zod";
 import type { AccessGate } from "../core/access.ts";
 
 export class ApiError extends Error {
@@ -44,12 +53,22 @@ export interface ApiClient {
   createCourse(body: CreateCourse): Promise<CourseDetail>;
   updateCourse(id: string, body: UpdateCourse): Promise<CourseDetail>;
   importCsv(id: string, csv: string): Promise<ImportResult>;
+  /** Words already parsed on the client (paste, Quizlet, Anki), into one unit. */
+  importRows(id: string, body: ImportRows): Promise<ImportResult>;
   study(id: string, mode: StudyMode): Promise<StudySession>;
   /** Due items across every course, for one mixed review session. */
   reviewAll(): Promise<ReviewSession>;
   /** Home screen summary; `timeZone` sets the forecast's calendar days. */
   dashboard(timeZone: string): Promise<Dashboard>;
+  /** Progress stats for every course, or `courseId`; days counted in `timeZone`. */
+  stats(query: { timeZone: string; courseId: string | null }): Promise<Stats>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
+  /** A course's words in course order; `q` narrows them (see `itemMatchesSearch`). */
+  courseItems(courseId: string, q?: string): Promise<CourseItems>;
+  createItem(courseId: string, unitId: string, body: CreateItem): Promise<CourseItem>;
+  updateItem(itemId: string, body: UpdateItem): Promise<CourseItem>;
+  /** Deletes the word with every learner's cards and review history for it. */
+  deleteItem(itemId: string): Promise<void>;
 }
 
 export interface ApiClientOptions {
@@ -101,10 +120,33 @@ export function createApiClient({
       request(CourseDetailSchema, `/courses/${id}`, { method: "PATCH", body }),
     importCsv: (id, csv) =>
       request(ImportResultSchema, `/courses/${id}/import`, { method: "POST", body: { csv } }),
+    importRows: (id, body) =>
+      request(ImportResultSchema, `/courses/${id}/import/rows`, { method: "POST", body }),
     study: (id, mode) => request(StudySessionSchema, `/courses/${id}/study?mode=${mode}`),
     reviewAll: () => request(ReviewSessionSchema, "/study/review"),
     dashboard: (timeZone) =>
       request(DashboardSchema, `/dashboard?timeZone=${encodeURIComponent(timeZone)}`),
+    stats: ({ timeZone, courseId }) => {
+      const params = new URLSearchParams({ timeZone });
+      if (courseId !== null) params.set("courseId", courseId);
+      return request(StatsSchema, `/stats?${params}`);
+    },
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
+    courseItems: (courseId, q) =>
+      request(
+        CourseItemsSchema,
+        `/courses/${courseId}/items${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      ),
+    createItem: (courseId, unitId, body) =>
+      request(CourseItemSchema, `/courses/${courseId}/units/${unitId}/items`, {
+        method: "POST",
+        body,
+      }),
+    updateItem: (itemId, body) =>
+      request(CourseItemSchema, `/items/${itemId}`, { method: "PATCH", body }),
+    // 204, no body: the response parses as null.
+    deleteItem: async (itemId) => {
+      await request(z.null(), `/items/${itemId}`, { method: "DELETE" });
+    },
   };
 }

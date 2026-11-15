@@ -1,0 +1,10 @@
+#separator:tab
+#html:true
+#tags column:3
+el perro	the dog	spanish animals
+el gato	<b>the cat</b>	spanish animals
+<div>la casa</div>	the house&nbsp;(home)	spanish
+el pan [sound:pan.mp3]	bread<br>loaf	
+"la ""tienda"""	"the shop,
+the store"	spanish
+

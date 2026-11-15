@@ -7,8 +7,16 @@ import {
   AnswerResultSchema,
   type CourseDetail,
   CourseDetailSchema,
+  type HardWord,
+  HardWordSchema,
+  HEATMAP_DAYS,
+  type HeatmapDay,
+  HeatmapDaySchema,
   type Me,
   MeSchema,
+  RETENTION_DAYS,
+  type Stats,
+  StatsSchema,
   type StudyItem,
   StudyItemSchema,
   type StudySession,
@@ -99,3 +107,48 @@ export function someWords(): StudyItem[] {
     aStudyItem({ term: "la canción", definition: "song", alternatives: ["canción"] }),
   ];
 }
+
+/** Today in the default stats fixture: a Sunday, so its heatmap starts on a Monday. */
+export const STATS_TODAY = "2026-11-15";
+
+/**
+ * HEATMAP_DAYS days ending `today`, oldest first. `recent` are the reviews
+ * of the last days, today last; earlier days have none.
+ */
+export function aHeatmap(recent: number[] = [], today = STATS_TODAY): HeatmapDay[] {
+  return Array.from({ length: HEATMAP_DAYS }, (_, i) => {
+    const daysAgo = HEATMAP_DAYS - 1 - i;
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - daysAgo);
+    return HeatmapDaySchema.parse({
+      date: d.toISOString().slice(0, 10),
+      reviewCount: recent[recent.length - 1 - daysAgo] ?? 0,
+    });
+  });
+}
+
+/** Stats with no reviews at all, unless overridden. */
+export const aStats = (overrides: Partial<Stats> = {}): Stats =>
+  StatsSchema.parse({
+    courseId: null,
+    today: STATS_TODAY,
+    totals: { wordsLearned: 0, reviewCount: 0 },
+    retention: { days: RETENTION_DAYS, reviewCount: 0, correctCount: 0 },
+    heatmap: aHeatmap(),
+    streak: { current: 0, longest: 0, reviewedToday: false },
+    hardestWords: [],
+    ...overrides,
+  });
+
+export const aHardWord = (overrides: Partial<HardWord> = {}): HardWord =>
+  HardWordSchema.parse({
+    itemId: nextId(),
+    term: "la biblioteca",
+    definition: "library",
+    courseId: nextId(),
+    courseTitle: "Test Spanish",
+    lapses: 1,
+    reviewCount: 4,
+    wrongCount: 2,
+    ...overrides,
+  });

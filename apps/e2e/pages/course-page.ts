@@ -6,6 +6,8 @@ export class CoursePage {
   readonly title: Locator;
   readonly learnLink: Locator;
   readonly reviewLink: Locator;
+  /** "Search and edit words" on your own course, "Search words" on a shared one. */
+  readonly wordsLink: Locator;
   readonly readOnlyNotice: Locator;
   readonly gradingSelect: Locator;
   readonly accentsSelect: Locator;
@@ -13,6 +15,8 @@ export class CoursePage {
   readonly importButton: Locator;
   readonly importResult: Locator;
   readonly importError: Locator;
+  /** To the faster import: paste a list, or a Quizlet or Anki export. */
+  readonly pasteLink: Locator;
 
   readonly page: Page;
 
@@ -21,6 +25,7 @@ export class CoursePage {
     this.title = page.getByRole("heading", { level: 1 });
     this.learnLink = page.getByRole("link", { name: /Learn new words/ });
     this.reviewLink = page.getByRole("link", { name: /Review \(/ });
+    this.wordsLink = page.getByRole("link", { name: /^Search (and edit )?words$/ });
     this.readOnlyNotice = page.getByText("This is a shared course");
     this.gradingSelect = page.getByLabel("Answer grading");
     this.accentsSelect = page.getByLabel("Accents");
@@ -28,6 +33,7 @@ export class CoursePage {
     this.importButton = page.getByRole("button", { name: "Import", exact: true });
     this.importResult = page.getByText(/^Imported \d+ words/);
     this.importError = page.locator('[data-slot="alert"]');
+    this.pasteLink = page.getByRole("link", { name: /^Paste a word list/ });
   }
 
   async goto(courseId: string) {

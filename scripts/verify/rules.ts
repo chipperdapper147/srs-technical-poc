@@ -759,8 +759,20 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/[[]id[]]/study/**",
       "apps/web/src/app/review/**",
     ],
-    // The dashboard spec runs a review of all courses through the study screen.
-    specs: ["study", "grading", "dashboard", "a11y"],
+    // The dashboard spec runs a review of all courses through the study screen;
+    // the stats spec counts answers given there.
+    specs: ["study", "grading", "dashboard", "stats", "a11y"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/stats.ts",
+      "apps/api/src/calendar.ts",
+      "packages/client/src/stats/**",
+      "apps/web/src/views/stats/**",
+      "apps/web/src/app/stats/**",
+    ],
+    // calendar.ts also counts the dashboard's forecast days.
+    specs: ["stats", "dashboard", "a11y"],
   },
   {
     paths: [
@@ -782,7 +794,35 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
     ],
-    specs: ["course-authoring", "courses", "dashboard", "grading", "a11y"],
+    specs: [
+      "course-authoring",
+      "import",
+      "courses",
+      "dashboard",
+      "grading",
+      "a11y",
+      "editing-words",
+    ],
+  },
+  {
+    paths: [
+      "packages/shared/src/import-formats.ts",
+      "packages/shared/src/fixtures/**",
+      "packages/client/src/import/**",
+      "apps/web/src/views/import/**",
+      "apps/web/src/app/courses/[[]id[]]/import/**",
+    ],
+    specs: ["import", "a11y"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/items.ts",
+      "packages/shared/src/search.ts",
+      "packages/client/src/words/**",
+      "apps/web/src/views/words/**",
+      "apps/web/src/app/courses/[[]id[]]/words/**",
+    ],
+    specs: ["editing-words", "a11y"],
   },
   {
     paths: [
@@ -805,6 +845,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/views/app-shell/**",
       "apps/web/src/app/courses/page.tsx",
     ],
-    specs: ["courses", "dashboard", "prebuilt-courses", "a11y"],
+    // The stats spec reaches its screen through the shell's nav link.
+    specs: ["courses", "dashboard", "prebuilt-courses", "stats", "a11y"],
   },
 ];

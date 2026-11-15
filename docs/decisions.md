@@ -606,3 +606,135 @@ which supersedes the scope in #25.
   device e2e (Maestro or Detox), push notifications, offline study, Auth0,
   and platform-neutral access-screen copy ("this browser remembers it" is
   the shared view model's text).
+
+## 2026-11-15: Faster import: pasted lists, Quizlet and Anki exports
+
+Built from issue #54 (product idea 6).
+
+- **A new endpoint, `POST /courses/:id/import/rows`,** rather than a
+  `format` on the CSV import. It takes `{ unit, rows: [{ term, definition,
+  alternatives?, notes? }] }`, already parsed. Why:
+  - What the learner previewed is exactly what is imported. With a format
+    on the API, the server would parse the text a second time, and in the
+    compatibility window (ADR 0003) a client and an API from different
+    releases could read the same text differently.
+  - New formats (Anki's `.apkg`, a spreadsheet, a share sheet on mobile)
+    need no API change: they only have to produce rows.
+  - The CSV contract and route stay byte for byte as they were.
+  - "The API validates again" is the row contract: each term and
+    definition is trimmed, 1–500 characters (`ITEM_TEXT_MAX`, as answers)
+    and free of NUL, at most 5,000 rows (`IMPORT_ROWS_MAX`) and a 4 MB body
+    (under Vercel's 4.5 MB request limit). It doesn't re-run the format
+    parsers: the rows are already structured, and nothing in them is
+    trusted beyond being text.
+- **The unit is named by title,** as in the CSV import: the words join
+  the unit with that title, else a new unit at the end. The screen offers
+  the existing units and "New unit"; a new unit's name defaults to the
+  picked file's name.
+- **Parsers are pure, in `@app/shared` (`import-formats.ts`),** and report
+  rejected lines by line number with a reason code; the view model words
+  the reason. Detection: Anki when the text opens with Anki's
+  `#key:value` header, Quizlet when its rows are separated by semicolons,
+  otherwise a word list. A word list's separator is the one of tab,
+  " = ", " - " (also an en or em dash) and comma found on the most lines,
+  ties in that order, so commas inside definitions don't win. Quizlet's
+  default export (tab and newline) reads the same as a word list.
+- **Anki:** "Notes in Plain Text" with its header. `#separator:` is
+  honoured, the guid, notetype, deck and tags columns are skipped, and the
+  first two note fields are term and definition. Fields may be quoted
+  (Anki quotes fields holding the separator, a quote or a line break).
+  HTML is reduced to text unless `#html:false`; `[sound:…]` references are
+  dropped. A header-less export from Anki before 2.1.55 reads as a
+  tab-separated word list, without HTML stripping; choosing "Anki" in the
+  format select strips it.
+- **A swap switch** makes the second field the term. Exports are often
+  "English, then the word"; the term is what the learner types.
+- **A screen of its own** (`/courses/:id/import`, controller and view model
+  in `packages/client/src/import/`), linked from the course page's import
+  card. The file picker reads the file in the web view and hands its name
+  and text to the controller. The preview shows the first 50 words and the
+  first 50 skipped lines, and counts the rest.
+- **Not done:** duplicate detection (a word already in the course is
+  imported again), `.apkg`, media, several definitions per field,
+  scheduling history.
+
+## 2026-11-15: Progress stats
+
+Issue #52 (product idea 4): how a learner is doing, overall and per course.
+Built as a `/stats` screen, linked as "Stats" in the header.
+
+- **One additive, read-only endpoint:** `GET /stats?timeZone=&courseId=`.
+  Postgres computes every number from `review_logs` and `cards`
+  (`apps/api/src/routes/stats.ts`); nothing loads the logs into memory. No
+  schema change: `review_logs (user_id, reviewed_at)` serves the per-learner
+  scans and `review_logs (item_id)` the per-word counts.
+- **Days are the learner's calendar days**, through `Clock.timeZone()` as
+  for the dashboard's forecast. The calendar helpers the two share moved to
+  `apps/api/src/calendar.ts`.
+- **Retention** is the share of correct answers (exact or typo) over the
+  last 30 calendar days, today included, counting only answers to words
+  that were in FSRS state Review when answered (the log's `revlog` keeps
+  that pre-answer state). Learning and relearning answers don't count. The
+  sample size is shown with it; with none, it reads "No data".
+- **Streaks** are runs of consecutive days with at least one answer, over
+  all history. The current streak is the run ending today, or yesterday
+  while nothing is answered yet today, so it doesn't drop to zero at
+  midnight; a missed whole day ends it.
+- **Hardest words** are only words with at least one lapse or wrong
+  answer (otherwise a learner with a clean record would see a list of easy
+  words), at most 10: most lapses, then the highest share of wrong answers,
+  then the most answers, then alphabetical. Wrong answers during the
+  learning steps count toward the share.
+- **Words learned** counts cards past New (answered at least once), the
+  course list's "learned" count. **Reviews done** counts every graded
+  answer, learn mode included.
+- **Heatmap:** the last 84 days (12 weeks), drawn with plain elements and
+  tokens, no chart library: columns are weeks from Monday, and five steps
+  of `primary` opacity (none, then quarters of the busiest day). Each day is
+  a list item that says its date and count in words.
+- **The course filter** is screen state in the controller, not in the URL;
+  its options come from the course list query. Revisit if stats links need
+  to be shared or bookmarked.
+
+## 2026-11-15: Editing words
+
+The owner chose product idea 2 (#51): a course's owner adds, edits and
+deletes its words in the app, and anyone who can see a course can search
+it. Reordering items and adding or renaming units stay out of scope.
+
+- **Four additive endpoints.** `GET /courses/:id/items?q=` lists a course's
+  words in course order (unit, then position), `POST
+  /courses/:id/units/:unitId/items` appends one at the end of its unit
+  (max position + 1, with the unit row locked so two adds can't take the
+  same position), `PATCH /items/:id` changes only the named fields, and
+  `DELETE /items/:id` answers 204. Term and definition are trimmed and
+  must not be empty; alternatives are a list of non-empty strings.
+- **Only the owner may change a course, and everyone else gets 404**:
+  shared and prebuilt courses (`owner_id` null) as well as other learners'
+  courses, so an edit endpoint never tells a non-owner what exists. The
+  older course endpoints keep their 403 for shared courses; aligning them
+  is a possible follow-up.
+- **Deleting a word deletes every learner's card and review history for
+  it** through the existing `ON DELETE CASCADE`, as decided on #41. The web
+  app asks for confirmation first and says so.
+- **Search uses grading's normaliser.** `itemMatchesSearch` in
+  `@app/shared` (`search.ts`) compares with `normalizeAnswer(text, false)`:
+  case, accents, punctuation and extra spaces ignored, matching a
+  substring of the term, definition or any alternative (not notes). The
+  API's `?q=` filters with it after loading the course's items, and the
+  client filters the loaded list with it as you type, so both agree and
+  typing needs no request per keystroke. Courses are small; filter in SQL
+  if they stop being.
+- **A screen of its own: `/courses/:id/words`** (`words` controller and
+  view model in `@app/client`, route `{ to: "words" }`), linked from the
+  course page as "Search and edit words" (owner) or "Search words". The
+  word list is its own query under the course key (`["courses", id,
+  "items"]`), so invalidating the course also refreshes it; a change
+  invalidates every course query and the dashboard.
+- **One form at a time**, either adding to a unit or editing a word in
+  place. Alternatives are typed one per line. A new word can only go into
+  an existing unit, so an empty course still starts with a CSV import.
+- **CORS now allows DELETE.**
+- **The confirm button uses the primary variant**, not shadcn's
+  `destructive`: its red text on the red tint is 4.0:1 at button size,
+  below AA. Worth a look in the redesign (#48).
