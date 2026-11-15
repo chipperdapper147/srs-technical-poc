@@ -21,6 +21,7 @@ import {
   type GradingMode,
   gradeAnswer,
   ImportCsvSchema,
+  ImportRowsSchema,
   type Me,
   MeSchema,
   ReviewSessionSchema,
@@ -228,6 +229,33 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
       state.items[course.id] = items;
       setCourse({ ...course, units, itemCount: course.itemCount + itemsCreated });
       return HttpResponse.json({ unitsCreated, itemsCreated });
+    }),
+
+    http.post(url("/courses/:id/import/rows"), async ({ request, params }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const course = findCourse(String(params.id));
+      if (!course) return error(404, "Course not found");
+      if (!course.editable) return error(403, "Shared courses are read-only");
+      const body = ImportRowsSchema.safeParse(await request.json());
+      if (!body.success) return error(400, body.error.issues[0]?.message ?? "Invalid rows");
+      const { unit: unitTitle, rows } = body.data;
+      const units = course.units.map((u) => ({ ...u }));
+      let unit = units.find((u) => u.title === unitTitle);
+      if (!unit) {
+        unit = aUnit({ title: unitTitle, position: units.length + 1 });
+        units.push(unit);
+      }
+      unit.itemCount += rows.length;
+      state.items[course.id] = [
+        ...(state.items[course.id] ?? []),
+        ...rows.map((r) => ({ itemId: nextId(), unitTitle, ...r, isNew: true })),
+      ];
+      setCourse({ ...course, units, itemCount: course.itemCount + rows.length });
+      return HttpResponse.json({
+        unitsCreated: units.length - course.units.length,
+        itemsCreated: rows.length,
+      });
     }),
 
     http.get(url("/courses/:id/study"), async ({ request, params }) => {

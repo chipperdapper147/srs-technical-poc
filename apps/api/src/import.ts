@@ -1,5 +1,6 @@
 import { parse } from "csv-parse/sync";
 import type { Database } from "./db/index.ts";
+import type { ImportRow } from "./shared.ts";
 
 export class CsvImportError extends Error {}
 
@@ -49,12 +50,38 @@ export function parseVocabularyCsv(csv: string): Row[] {
   });
 }
 
+/** Append CSV rows to a course (see insertRows). */
+export async function importVocabulary(db: Database, courseId: string, csv: string) {
+  return insertRows(db, courseId, parseVocabularyCsv(csv));
+}
+
+/**
+ * Append already-parsed words to one unit of a course: the unit with this
+ * title, else a new one at the end (POST /courses/:id/import/rows).
+ */
+export async function importRows(
+  db: Database,
+  courseId: string,
+  { unit, rows }: { unit: string; rows: ImportRow[] },
+) {
+  return insertRows(
+    db,
+    courseId,
+    rows.map((r) => ({
+      unit,
+      term: r.term,
+      definition: r.definition,
+      alternatives: r.alternatives ?? [],
+      notes: r.notes ?? "",
+    })),
+  );
+}
+
 /**
  * Append rows to a course. Rows go into the existing unit with the same
- * title, or a new unit at the end, preserving CSV order.
+ * title, or a new unit at the end, preserving their order.
  */
-export async function importVocabulary(db: Database, courseId: string, csv: string) {
-  const rows = parseVocabularyCsv(csv);
+async function insertRows(db: Database, courseId: string, rows: Row[]) {
   const inTransaction = <T>(fn: (trx: Database) => Promise<T>) =>
     db.isTransaction ? fn(db) : db.transaction().execute(fn);
   return inTransaction(async (trx) => {

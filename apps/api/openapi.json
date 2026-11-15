@@ -1104,6 +1104,196 @@
         }
       }
     },
+    "/courses/{id}/import/rows": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "description": "Import words the client already parsed (a pasted list, a Quizlet or Anki export) into one unit: the unit with this title, else a new one at the end.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "rows": {
+                    "minItems": 1,
+                    "maxItems": 5000,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "term": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "definition": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "alternatives": {
+                          "default": [],
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 500
+                          }
+                        },
+                        "notes": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "term",
+                        "definition"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "unit",
+                  "rows"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unitsCreated": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "itemsCreated": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "unitsCreated",
+                    "itemsCreated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "error",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "error",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "error",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/catalog": {
       "get": {
         "tags": [

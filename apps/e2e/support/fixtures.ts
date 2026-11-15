@@ -9,6 +9,7 @@ import { AppShell } from "../pages/app-shell.ts";
 import { CoursePage } from "../pages/course-page.ts";
 import { CoursesPage } from "../pages/courses-page.ts";
 import { DashboardPage } from "../pages/dashboard-page.ts";
+import { ImportPage } from "../pages/import-page.ts";
 import { NewCoursePage } from "../pages/new-course-page.ts";
 import { SettingsPage } from "../pages/settings-page.ts";
 import { StudyPage } from "../pages/study-page.ts";
@@ -88,6 +89,7 @@ interface Fixtures {
   dashboardPage: DashboardPage;
   coursesPage: CoursesPage;
   coursePage: CoursePage;
+  importPage: ImportPage;
   newCoursePage: NewCoursePage;
   studyPage: StudyPage;
   settingsPage: SettingsPage;
@@ -108,6 +110,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
   dashboardPage: async ({ page }, use) => use(new DashboardPage(page)),
   coursesPage: async ({ page }, use) => use(new CoursesPage(page)),
   coursePage: async ({ page }, use) => use(new CoursePage(page)),
+  importPage: async ({ page }, use) => use(new ImportPage(page)),
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),
   studyPage: async ({ page }, use) => use(new StudyPage(page)),
   settingsPage: async ({ page }, use) => use(new SettingsPage(page)),

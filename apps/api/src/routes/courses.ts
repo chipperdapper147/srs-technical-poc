@@ -4,7 +4,7 @@ import { z } from "zod";
 import { copyCourse } from "../copy-course.ts";
 import type { Database } from "../db/index.ts";
 import type { DB } from "../db/types.ts";
-import { CsvImportError, importVocabulary } from "../import.ts";
+import { CsvImportError, importRows, importVocabulary } from "../import.ts";
 import {
   CourseDetailSchema,
   CourseSummarySchema,
@@ -13,6 +13,7 @@ import {
   IdParamsSchema,
   ImportCsvSchema,
   ImportResultSchema,
+  ImportRowsSchema,
   UpdateCourseSchema,
 } from "../shared.ts";
 
@@ -238,6 +239,26 @@ export const courseRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app,
         if (err instanceof CsvImportError) throw app.httpErrors.badRequest(err.message);
         throw err;
       }
+    },
+  );
+
+  app.post(
+    "/courses/:id/import/rows",
+    {
+      // Under Vercel's 4.5 MB request limit; a typical row is tens of bytes.
+      bodyLimit: 4_000_000,
+      schema: {
+        tags: ["courses"],
+        description:
+          "Import words the client already parsed (a pasted list, a Quizlet or Anki export) into one unit: the unit with this title, else a new one at the end.",
+        params: IdParamsSchema,
+        body: ImportRowsSchema,
+        response: { 200: ImportResultSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema },
+      },
+    },
+    async (request) => {
+      await requireOwned(request.params.id, request.user.id);
+      return importRows(db, request.params.id, request.body);
     },
   );
 };
