@@ -28,6 +28,8 @@ export interface CourseImportVM {
   canSubmit: boolean;
   error: string | null;
   result: string | null;
+  /** The faster import: paste a word list, or a Quizlet or Anki export. */
+  pasteLink: { label: string; route: Route };
 }
 
 export type CourseVM =
@@ -133,6 +135,10 @@ export function courseViewModel(state: CourseState): CourseVM {
             result: state.importResult
               ? `Imported ${state.importResult.itemsCreated} words (${state.importResult.unitsCreated} new units).`
               : null,
+            pasteLink: {
+              label: "Paste a word list, or import from Quizlet or Anki",
+              route: { to: "importWords", courseId: c.id },
+            },
           },
         }
       : null,

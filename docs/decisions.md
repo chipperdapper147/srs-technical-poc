@@ -542,6 +542,57 @@ Decided by the repository owner in issue #41; built here.
 - **Later:** a catalog with search, and who may own and publish prebuilt
   courses (an admin role, once Auth0 is in).
 
+## 2026-11-15: Faster import: pasted lists, Quizlet and Anki exports
+
+Built from issue #54 (product idea 6).
+
+- **A new endpoint, `POST /courses/:id/import/rows`,** rather than a
+  `format` on the CSV import. It takes `{ unit, rows: [{ term, definition,
+  alternatives?, notes? }] }`, already parsed. Why:
+  - What the learner previewed is exactly what is imported. With a format
+    on the API, the server would parse the text a second time, and in the
+    compatibility window (ADR 0003) a client and an API from different
+    releases could read the same text differently.
+  - New formats (Anki's `.apkg`, a spreadsheet, a share sheet on mobile)
+    need no API change: they only have to produce rows.
+  - The CSV contract and route stay byte for byte as they were.
+  - "The API validates again" is the row contract: each term and
+    definition is trimmed, 1–500 characters (`ITEM_TEXT_MAX`, as answers)
+    and free of NUL, at most 5,000 rows (`IMPORT_ROWS_MAX`) and a 4 MB body
+    (under Vercel's 4.5 MB request limit). It doesn't re-run the format
+    parsers: the rows are already structured, and nothing in them is
+    trusted beyond being text.
+- **The unit is named by title,** as in the CSV import: the words join
+  the unit with that title, else a new unit at the end. The screen offers
+  the existing units and "New unit"; a new unit's name defaults to the
+  picked file's name.
+- **Parsers are pure, in `@app/shared` (`import-formats.ts`),** and report
+  rejected lines by line number with a reason code; the view model words
+  the reason. Detection: Anki when the text opens with Anki's
+  `#key:value` header, Quizlet when its rows are separated by semicolons,
+  otherwise a word list. A word list's separator is the one of tab,
+  " = ", " - " (also an en or em dash) and comma found on the most lines,
+  ties in that order, so commas inside definitions don't win. Quizlet's
+  default export (tab and newline) reads the same as a word list.
+- **Anki:** "Notes in Plain Text" with its header. `#separator:` is
+  honoured, the guid, notetype, deck and tags columns are skipped, and the
+  first two note fields are term and definition. Fields may be quoted
+  (Anki quotes fields holding the separator, a quote or a line break).
+  HTML is reduced to text unless `#html:false`; `[sound:…]` references are
+  dropped. A header-less export from Anki before 2.1.55 reads as a
+  tab-separated word list, without HTML stripping; choosing "Anki" in the
+  format select strips it.
+- **A swap switch** makes the second field the term. Exports are often
+  "English, then the word"; the term is what the learner types.
+- **A screen of its own** (`/courses/:id/import`, controller and view model
+  in `packages/client/src/import/`), linked from the course page's import
+  card. The file picker reads the file in the web view and hands its name
+  and text to the controller. The preview shows the first 50 words and the
+  first 50 skipped lines, and counts the rest.
+- **Not done:** duplicate detection (a word already in the course is
+  imported again), `.apkg`, media, several definitions per field,
+  scheduling history.
+
 ## 2026-11-15: Editing words
 
 The owner chose product idea 2 (#51): a course's owner adds, edits and

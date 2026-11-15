@@ -15,6 +15,8 @@ export class CoursePage {
   readonly importButton: Locator;
   readonly importResult: Locator;
   readonly importError: Locator;
+  /** To the faster import: paste a list, or a Quizlet or Anki export. */
+  readonly pasteLink: Locator;
 
   readonly page: Page;
 
@@ -31,6 +33,7 @@ export class CoursePage {
     this.importButton = page.getByRole("button", { name: "Import", exact: true });
     this.importResult = page.getByText(/^Imported \d+ words/);
     this.importError = page.locator('[data-slot="alert"]');
+    this.pasteLink = page.getByRole("link", { name: /^Paste a word list/ });
   }
 
   async goto(courseId: string) {

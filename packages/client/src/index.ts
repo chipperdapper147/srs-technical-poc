@@ -16,6 +16,8 @@ export * from "./courses/controller.ts";
 export * from "./courses/view-model.ts";
 export * from "./dashboard/controller.ts";
 export * from "./dashboard/view-model.ts";
+export * from "./import/controller.ts";
+export * from "./import/view-model.ts";
 export * from "./new-course/controller.ts";
 export * from "./new-course/view-model.ts";
 export * from "./settings/controller.ts";

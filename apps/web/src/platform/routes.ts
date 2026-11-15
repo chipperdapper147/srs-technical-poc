@@ -12,6 +12,8 @@ export function hrefFor(route: Route): NextRoute {
       return "/courses/new";
     case "course":
       return `/courses/${route.courseId}` as NextRoute;
+    case "importWords":
+      return `/courses/${route.courseId}/import` as NextRoute;
     case "words":
       return `/courses/${route.courseId}/words` as NextRoute;
     case "study":

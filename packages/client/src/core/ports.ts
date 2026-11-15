@@ -13,6 +13,8 @@ export type Route =
   | { to: "courses" }
   | { to: "newCourse" }
   | { to: "course"; courseId: string }
+  /** Paste words or bring a Quizlet or Anki export into a course. */
+  | { to: "importWords"; courseId: string }
   /** A course's word list: search, and editing for its owner. */
   | { to: "words"; courseId: string }
   | { to: "study"; courseId: string; mode: StudyMode }

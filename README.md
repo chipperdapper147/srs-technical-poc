@@ -104,6 +104,13 @@ Around town,el ordenador,computer,la computadora|computadora,"Spain vs Latin Ame
 `term` is what the learner types (target language), `definition` is the prompt,
 `alternatives` are other accepted answers separated by `|`.
 
+For a quicker way in, the course page links to **Import words**
+(`/courses/:id/import`): paste one word per line (term and definition
+separated by a tab, a comma, " - " or " = "), or pick a Quizlet export or
+an Anki "Notes in Plain Text" `.txt`. It previews the words and the
+skipped lines before anything is imported. The parsers are in
+`packages/shared/src/import-formats.ts`.
+
 ## Learning steps
 
 A new word answered correctly is due again after 10 minutes, then after a

@@ -25,6 +25,11 @@ describe("CourseScreen", () => {
       "true",
     );
     expect(screen.getByText("1. Basics")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Paste a word list, or import from Quizlet or Anki" })
+        .getAttribute("href"),
+    ).toBe(`/courses/${mine.id}/import`);
     expect(screen.getByRole("link", { name: "Search and edit words" }).getAttribute("href")).toBe(
       `/courses/${mine.id}/words`,
     );

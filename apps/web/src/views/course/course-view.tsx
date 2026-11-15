@@ -148,6 +148,15 @@ function ImportSection({ vm, actions }: { vm: CourseImportVM; actions: CourseAct
           )}
           {vm.result && <p className="text-sm text-muted-foreground">{vm.result}</p>}
         </form>
+        <RouteLink
+          to={vm.pasteLink.route}
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "mt-6 h-auto min-h-8 whitespace-normal py-1.5 text-left",
+          )}
+        >
+          {vm.pasteLink.label}
+        </RouteLink>
       </CardContent>
     </Card>
   );
