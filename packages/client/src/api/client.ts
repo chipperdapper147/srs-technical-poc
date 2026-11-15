@@ -7,9 +7,14 @@ import {
   AnswerResultSchema,
   type CourseDetail,
   CourseDetailSchema,
+  type CourseItem,
+  CourseItemSchema,
+  type CourseItems,
+  CourseItemsSchema,
   type CourseSummary,
   CourseSummarySchema,
   type CreateCourse,
+  type CreateItem,
   type Dashboard,
   DashboardSchema,
   type ImportResult,
@@ -26,9 +31,10 @@ import {
   StudySessionSchema,
   type SubmitAnswer,
   type UpdateCourse,
+  type UpdateItem,
   type UpdateMe,
 } from "@app/shared";
-import type { z } from "zod";
+import { z } from "zod";
 import type { AccessGate } from "../core/access.ts";
 
 export class ApiError extends Error {
@@ -57,6 +63,12 @@ export interface ApiClient {
   /** Progress stats for every course, or `courseId`; days counted in `timeZone`. */
   stats(query: { timeZone: string; courseId: string | null }): Promise<Stats>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
+  /** A course's words in course order; `q` narrows them (see `itemMatchesSearch`). */
+  courseItems(courseId: string, q?: string): Promise<CourseItems>;
+  createItem(courseId: string, unitId: string, body: CreateItem): Promise<CourseItem>;
+  updateItem(itemId: string, body: UpdateItem): Promise<CourseItem>;
+  /** Deletes the word with every learner's cards and review history for it. */
+  deleteItem(itemId: string): Promise<void>;
 }
 
 export interface ApiClientOptions {
@@ -120,5 +132,21 @@ export function createApiClient({
       return request(StatsSchema, `/stats?${params}`);
     },
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
+    courseItems: (courseId, q) =>
+      request(
+        CourseItemsSchema,
+        `/courses/${courseId}/items${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      ),
+    createItem: (courseId, unitId, body) =>
+      request(CourseItemSchema, `/courses/${courseId}/units/${unitId}/items`, {
+        method: "POST",
+        body,
+      }),
+    updateItem: (itemId, body) =>
+      request(CourseItemSchema, `/items/${itemId}`, { method: "PATCH", body }),
+    // 204, no body: the response parses as null.
+    deleteItem: async (itemId) => {
+      await request(z.null(), `/items/${itemId}`, { method: "DELETE" });
+    },
   };
 }

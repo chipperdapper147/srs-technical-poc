@@ -1,7 +1,7 @@
 import { a11yViolations } from "../support/a11y.ts";
 import { makeAllCardsDue } from "../support/db.ts";
 import { expect, SAMPLE_COURSE, test } from "../support/fixtures.ts";
-import { termFor, typoFor, WORDS_CSV } from "../support/words.ts";
+import { termFor, typoFor, WORDS, WORDS_CSV } from "../support/words.ts";
 
 /**
  * Every screen and study state, scanned by axe in the browser at desktop and
@@ -18,7 +18,7 @@ for (const viewport of [
     // functional specs still run on Firefox nightly. TODO.md tracks re-enabling.
     test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox (PR #10)");
 
-    test("home, courses, course, import, new course, settings and stats", async ({
+    test("home, courses, course, import, words, new course, settings and stats", async ({
       api,
       dashboardPage,
       coursesPage,
@@ -27,6 +27,7 @@ for (const viewport of [
       newCoursePage,
       settingsPage,
       statsPage,
+      wordsPage,
       page,
     }) => {
       await dashboardPage.goto();
@@ -49,6 +50,12 @@ for (const viewport of [
       await importPage.goto(courseId);
       await importPage.paste("hola - hello\nno separator\n");
       await expect(importPage.skippedLines).toHaveCount(1);
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
+      await wordsPage.goto(courseId);
+      await wordsPage.startEdit(WORDS[0].term);
+      expect.soft(await a11yViolations(page)).toEqual([]);
+      await wordsPage.askDelete(WORDS[1].term);
       expect.soft(await a11yViolations(page)).toEqual([]);
 
       await newCoursePage.goto();

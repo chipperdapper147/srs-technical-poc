@@ -22,12 +22,13 @@ These are tracked elsewhere and are listed here only for completeness.
 - **Home dashboard.** Reviews due across all courses, one "Review all due"
   session, and a 7-day forecast (chosen and built 2026-11-14,
   `docs/decisions.md`).
+- **Editing words.** Add, edit and delete a course's words, and search
+  within a course (chosen and built 2026-11-15, #51, `docs/decisions.md`).
 
 ## Ideas
 
 1. ~~**Home dashboard.**~~ Chosen; see above.
-2. **Editing words.** Edit or delete items, manage alternatives and notes,
-   and search within a course. Today the only way in is CSV import.
+2. ~~**Editing words.**~~ Chosen; see above.
 3. **Leeches.** Words a learner keeps failing get flagged, with options to
    add a mnemonic note, suspend or reset them.
 4. ~~**Progress stats.**~~ Chosen and built 2026-11-15 (`docs/decisions.md`):

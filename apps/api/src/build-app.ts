@@ -19,6 +19,7 @@ import accessKey from "./plugins/access-key.ts";
 import auth from "./plugins/auth.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { dashboardRoutes } from "./routes/dashboard.ts";
+import { itemRoutes } from "./routes/items.ts";
 import { meRoutes } from "./routes/me.ts";
 import { statsRoutes } from "./routes/stats.ts";
 import { studyRoutes } from "./routes/study.ts";
@@ -38,7 +39,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   app.setSerializerCompiler(serializerCompiler);
 
   await app.register(sensible);
-  await app.register(cors, { origin: env.WEB_ORIGIN, methods: ["GET", "POST", "PATCH"] });
+  await app.register(cors, { origin: env.WEB_ORIGIN, methods: ["GET", "POST", "PATCH", "DELETE"] });
   await app.register(swagger, {
     openapi: { info: { title: "SRS API", version: "0.0.0" } },
     transform: jsonSchemaTransform,
@@ -65,6 +66,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   await app.register(courseRoutes, { db });
   await app.register(dashboardRoutes, { db });
   await app.register(statsRoutes, { db });
+  await app.register(itemRoutes, { db });
   await app.register(studyRoutes, { db, scheduler: scheduler ?? (await createScheduler()) });
 
   return app;
