@@ -297,13 +297,16 @@ function isTimeZone(name: string): boolean {
 /** Days in the dashboard's forecast, today included. */
 export const FORECAST_DAYS = 7;
 
+/** An IANA time zone query parameter; UTC when absent. */
+const timeZoneParam = z
+  .string()
+  .max(64)
+  .refine(isTimeZone, "Expected an IANA time zone, e.g. 'Europe/Madrid'")
+  .default("UTC");
+
 export const DashboardQuerySchema = z.object({
   /** IANA time zone the forecast's days are counted in. */
-  timeZone: z
-    .string()
-    .max(64)
-    .refine(isTimeZone, "Expected an IANA time zone, e.g. 'Europe/Madrid'")
-    .default("UTC"),
+  timeZone: timeZoneParam,
 });
 export type DashboardQuery = z.input<typeof DashboardQuerySchema>;
 
@@ -334,3 +337,79 @@ export const DashboardSchema = z.object({
   forecast: z.array(ForecastDaySchema),
 });
 export type Dashboard = z.infer<typeof DashboardSchema>;
+
+// ---- Stats ---------------------------------------------------------------
+
+/** Calendar days retention is measured over, today included. */
+export const RETENTION_DAYS = 30;
+/** Calendar days in the review heatmap, today included: 12 weeks. */
+export const HEATMAP_DAYS = 84;
+/** How many of the hardest words the stats list. */
+export const HARDEST_WORDS_LIMIT = 10;
+
+export const StatsQuerySchema = z.object({
+  /** IANA time zone the days (heatmap, streak, retention window) are counted in. */
+  timeZone: timeZoneParam,
+  /** One course's numbers; every course when absent. */
+  courseId: z.uuid().optional(),
+});
+export type StatsQuery = z.input<typeof StatsQuerySchema>;
+
+export const HeatmapDaySchema = z.object({
+  /** Calendar day in the requested time zone, YYYY-MM-DD. */
+  date: z.iso.date(),
+  reviewCount: z.number().int(),
+});
+export type HeatmapDay = z.infer<typeof HeatmapDaySchema>;
+
+export const HardWordSchema = z.object({
+  itemId: z.uuid(),
+  term: z.string(),
+  definition: z.string(),
+  courseId: z.uuid(),
+  courseTitle: z.string(),
+  /** Times the word was forgotten after it had been learned (FSRS lapses). */
+  lapses: z.number().int(),
+  /** Every graded answer to the word, and how many of them were wrong. */
+  reviewCount: z.number().int(),
+  wrongCount: z.number().int(),
+});
+export type HardWord = z.infer<typeof HardWordSchema>;
+
+export const StatsSchema = z.object({
+  /** The course these numbers are for; null for every course. */
+  courseId: z.uuid().nullable(),
+  /** Today in the requested time zone, YYYY-MM-DD. */
+  today: z.iso.date(),
+  totals: z.object({
+    /** Words past New: answered at least once. */
+    wordsLearned: z.number().int(),
+    /** Every graded answer, ever. */
+    reviewCount: z.number().int(),
+  }),
+  /**
+   * Answers in the last `days` calendar days (RETENTION_DAYS, today
+   * included) to words already past the learning steps (FSRS state Review
+   * when answered), and how many of them were correct (exact or typo).
+   */
+  retention: z.object({
+    days: z.number().int(),
+    reviewCount: z.number().int(),
+    correctCount: z.number().int(),
+  }),
+  /** Reviews per day: HEATMAP_DAYS days, oldest first, ending today. */
+  heatmap: z.array(HeatmapDaySchema),
+  /** Runs of consecutive calendar days with at least one review. */
+  streak: z.object({
+    /** The run ending today, or yesterday while nothing is reviewed yet today; else 0. */
+    current: z.number().int(),
+    longest: z.number().int(),
+    reviewedToday: z.boolean(),
+  }),
+  /**
+   * Up to HARDEST_WORDS_LIMIT words with at least one lapse or wrong
+   * answer: most lapses first, then the highest share of wrong answers.
+   */
+  hardestWords: z.array(HardWordSchema),
+});
+export type Stats = z.infer<typeof StatsSchema>;

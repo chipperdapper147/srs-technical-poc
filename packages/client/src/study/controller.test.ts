@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { queryKeys } from "../api/query-keys.ts";
 import { createTestDeps } from "../testing/deps.ts";
-import { aCourse, aMe, aStudyItem, someWords } from "../testing/fixtures.ts";
+import { aCourse, aMe, aStats, aStudyItem, someWords } from "../testing/fixtures.ts";
 import { setupFakeApi } from "../testing/server.ts";
 import { waitForState } from "../testing/wait.ts";
 import { type ActiveStudyState, createStudyController, type StudyState } from "./controller.ts";
@@ -130,15 +130,19 @@ describe("study controller", () => {
     expect(deps.queryClient.getQueryState(queryKeys.courses)?.isInvalidated).toBe(true);
   });
 
-  it("refreshes the dashboard when the session ends", async () => {
+  it("refreshes the dashboard and the stats when the session ends", async () => {
     const { controller, deps } = await startSession("review");
     const key = queryKeys.dashboard(deps.clock.timeZone());
+    const statsKey = queryKeys.stats(deps.clock.timeZone(), course.id);
     deps.queryClient.setQueryData(key, { dueCount: 1, courses: [], forecast: [] });
+    deps.queryClient.setQueryData(statsKey, aStats());
     controller.actions.setInput("hola");
     controller.actions.submit();
     await waitForState(controller.store, (s) => isActive(s) && s.session.feedback !== null);
+    expect(deps.queryClient.getQueryState(statsKey)?.isInvalidated).toBe(false);
     controller.actions.next();
     expect(deps.queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    expect(deps.queryClient.getQueryState(statsKey)?.isInvalidated).toBe(true);
   });
 
   it("ignores a load that finishes after the screen stopped", async () => {

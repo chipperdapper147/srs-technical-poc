@@ -114,10 +114,11 @@ export function createStudyController(
         stepStartedAt: clock.now(),
       };
     });
-    // Learned and due counts changed; the course list, detail and dashboard refetch.
+    // Learned and due counts changed; the course list, detail, dashboard and stats refetch.
     if (finishedNow) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.courses });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardAll });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.statsAll });
     }
   }
 

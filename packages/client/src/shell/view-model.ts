@@ -12,6 +12,7 @@ export function shellViewModel(): ShellVM {
     nav: [
       { label: "Home", route: { to: "home" } },
       { label: "Courses", route: { to: "courses" } },
+      { label: "Stats", route: { to: "stats" } },
       { label: "Settings", route: { to: "settings" } },
     ],
   };

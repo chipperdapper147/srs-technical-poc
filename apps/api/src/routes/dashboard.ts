@@ -1,5 +1,6 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { sql } from "kysely";
+import { addDays, isUnknownTimeZone, todayIn } from "../calendar.ts";
 import type { Database } from "../db/index.ts";
 import {
   DashboardQuerySchema,
@@ -10,25 +11,12 @@ import {
 } from "../shared.ts";
 import { summaries, toSummary } from "./courses.ts";
 
-/** Postgres' code for an unknown time zone name ("invalid_parameter_value"). */
-const INVALID_PARAMETER = "22023";
-
-/** `date` (YYYY-MM-DD) plus `days` calendar days. */
-function addDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * Reviews per calendar day in `timeZone`, today first. Overdue reviews count
  * as today's, so day one is everything to do by the end of today.
  */
 async function forecast(db: Database, userId: string, timeZone: string): Promise<ForecastDay[]> {
-  const { rows: todayRows } = await sql<{ today: string }>`
-    SELECT to_char((now() AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS today
-  `.execute(db);
-  const today = todayRows[0]?.today ?? new Date().toISOString().slice(0, 10);
+  const today = await todayIn(db, timeZone);
   const end = addDays(today, FORECAST_DAYS);
 
   const { rows } = await sql<{ day: string; n: string }>`
@@ -70,7 +58,7 @@ export const dashboardRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (a
         summaries(db, userId).execute(),
         forecast(db, userId, timeZone).catch((error: unknown) => {
           // Intl accepted the name but this Postgres' time zone database doesn't know it.
-          if ((error as { code?: string }).code === INVALID_PARAMETER) {
+          if (isUnknownTimeZone(error)) {
             throw app.httpErrors.badRequest(`Unknown time zone "${timeZone}"`);
           }
           throw error;

@@ -10,6 +10,8 @@
  * course's unit with the same title and their position their order in it.
  * Only `editable` courses accept edits, as only owned ones do. The dashboard's forecast is whatever the seed says
  * (zeros from FORECAST_START by default), and its due counts are the courses'.
+ * Stats are whatever the seed says too: `stats` for every course, and
+ * `courseStats` per course id (no reviews when a course has none seeded).
  */
 import {
   type CourseDetail,
@@ -31,6 +33,9 @@ import {
   MeSchema,
   ReviewSessionSchema,
   ratingForVerdict,
+  type Stats,
+  StatsQuerySchema,
+  StatsSchema,
   type StudyItem,
   StudyModeSchema,
   SubmitAnswerSchema,
@@ -39,7 +44,7 @@ import {
   UpdateMeSchema,
 } from "@app/shared";
 import { type HttpHandler, HttpResponse, http } from "msw";
-import { aMe, aUnit, nextId } from "./fixtures.ts";
+import { aMe, aStats, aUnit, nextId } from "./fixtures.ts";
 
 export const FAKE_API_URL = "http://api.test";
 export const NEXT_DUE = "2026-11-14T09:00:00.000Z";
@@ -64,6 +69,10 @@ export interface FakeApiSeed {
   due?: Record<string, string[]>;
   /** The dashboard's forecast. */
   forecast?: ForecastDay[];
+  /** Stats for every course; no reviews by default. */
+  stats?: Stats;
+  /** Stats per course id; a course without an entry has no reviews. */
+  courseStats?: Record<string, Stats>;
   /** Require `Authorization: Bearer <accessKey>` on every request, as the API does with API_ACCESS_KEY. */
   accessKey?: string;
 }
@@ -84,6 +93,8 @@ export interface FakeApi {
     items: Record<string, StudyItem[]>;
     due: Record<string, string[]>;
     forecast: ForecastDay[];
+    stats: Stats;
+    courseStats: Record<string, Stats>;
   };
   requests: RecordedRequest[];
   /** Make the next request matching method and path fail with this status and message. */
@@ -103,6 +114,8 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
     items: structuredClone(seed.items ?? {}),
     due: structuredClone(seed.due ?? {}),
     forecast: structuredClone(seed.forecast ?? aForecast()),
+    stats: structuredClone(seed.stats ?? aStats()),
+    courseStats: structuredClone(seed.courseStats ?? {}),
   };
   const requests: RecordedRequest[] = [];
   const failures: { method: string; path: string; status: number; message: string }[] = [];
@@ -408,6 +421,20 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
           forecast: state.forecast,
         }),
       );
+    }),
+
+    http.get(url("/stats"), async ({ request }) => {
+      const failed = await record(request);
+      if (failed) return failed;
+      const query = StatsQuerySchema.safeParse(
+        Object.fromEntries(new URL(request.url).searchParams),
+      );
+      if (!query.success) return error(400, query.error.issues[0]?.message ?? "Invalid query");
+      const { courseId } = query.data;
+      if (courseId === undefined) return HttpResponse.json(StatsSchema.parse(state.stats));
+      if (!findCourse(courseId)) return error(404, "Course not found");
+      const stats = state.courseStats[courseId] ?? aStats({ today: state.stats.today });
+      return HttpResponse.json(StatsSchema.parse({ ...stats, courseId }));
     }),
 
     http.post(url("/study/answers"), async ({ request }) => {

@@ -31,8 +31,8 @@ These are tracked elsewhere and are listed here only for completeness.
 2. ~~**Editing words.**~~ Chosen; see above.
 3. **Leeches.** Words a learner keeps failing get flagged, with options to
    add a mnemonic note, suspend or reset them.
-4. **Progress stats.** Retention rate, a review heatmap, streaks, and the
-   hardest words.
+4. ~~**Progress stats.**~~ Chosen and built 2026-11-15 (`docs/decisions.md`):
+   retention, a review heatmap, streaks and the hardest words.
 5. **Daily limits and pacing.** A cap on reviews per day, spreading out a
    backlog after a break, and a vacation mode.
 6. **Better import.** Anki and Quizlet exports, and pasting text directly.
