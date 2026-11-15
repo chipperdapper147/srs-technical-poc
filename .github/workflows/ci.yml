@@ -147,9 +147,19 @@ jobs:
           path: apps/e2e/playwright-report
           retention-days: 7
 
+  # Its own job: Jest on the React Native preset and a Metro bundle take
+  # longer than the other unit tests, and need nothing but the install.
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Mobile views and screens (React Native Testing Library), Metro bundle
+        run: pnpm verify --all --only test:mobile,bundle:mobile
+
   check:
     if: always()
-    needs: [commit-messages, pr-description, obligations, static, database, e2e]
+    needs: [commit-messages, pr-description, obligations, static, database, e2e, mobile]
     runs-on: ubuntu-latest
     steps:
       - name: All verification jobs passed

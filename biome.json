@@ -307,6 +307,243 @@
       }
     },
     {
+      "includes": [
+        "apps/mobile/src/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!apps/mobile/src/test/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "next",
+                      "next/*",
+                      "react-dom",
+                      "react-dom/*",
+                      "**/apps/web/**",
+                      "**/web/src/**"
+                    ],
+                    "message": "The mobile app is its own deployable (ADR 0003): it shares @app/client, @app/shared and @app/design, never the web app's code or React DOM."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/mobile/src/views/**",
+        "!apps/mobile/src/views/**/*-screen.tsx",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!apps/mobile/src/test/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "Views are stateless: state and effects belong in the controller (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "next",
+                      "next/*",
+                      "react-dom",
+                      "react-dom/*",
+                      "**/apps/web/**",
+                      "**/web/src/**"
+                    ],
+                    "message": "The mobile app is its own deployable (ADR 0003): it shares @app/client, @app/shared and @app/design, never the web app's code or React DOM."
+                  },
+                  {
+                    "group": ["@app/client/react"],
+                    "message": "Only *-screen.tsx binds a controller (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client"],
+                    "importNamePattern": "create[A-Za-z]*",
+                    "message": "Views receive a view model; they never create controllers or clients (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": [
+                      "@/platform/providers",
+                      "@/platform/navigator",
+                      "@/platform/key-storage"
+                    ],
+                    "message": "Views don't route or reach the ports: render a RouteLink or call an action (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/mobile/src/views/**/*-screen.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "A screen only calls useScreen (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "next",
+                      "next/*",
+                      "react-dom",
+                      "react-dom/*",
+                      "**/apps/web/**",
+                      "**/web/src/**"
+                    ],
+                    "message": "The mobile app is its own deployable (ADR 0003): it shares @app/client, @app/shared and @app/design, never the web app's code or React DOM."
+                  },
+                  {
+                    "group": [
+                      "@/platform/**",
+                      "@/views/**",
+                      "react-native",
+                      "react-native/*",
+                      "expo",
+                      "expo-*"
+                    ],
+                    "message": "A screen imports its controller, view model, useScreen and its own view only (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/mobile/src/app/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": {
+                    "importNames": [
+                      "useState",
+                      "useEffect",
+                      "useLayoutEffect",
+                      "useReducer",
+                      "useRef",
+                      "useMemo",
+                      "useCallback",
+                      "useContext",
+                      "useSyncExternalStore",
+                      "useTransition",
+                      "useActionState"
+                    ],
+                    "message": "Routes only render a screen (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@tanstack/*"],
+                    "message": "Only @app/client controllers use TanStack Query, through query-core (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  },
+                  {
+                    "group": ["@app/client/testing"],
+                    "message": "The testing kit (fake API, fixtures) is for tests only."
+                  },
+                  {
+                    "group": [
+                      "next",
+                      "next/*",
+                      "react-dom",
+                      "react-dom/*",
+                      "**/apps/web/**",
+                      "**/web/src/**"
+                    ],
+                    "message": "The mobile app is its own deployable (ADR 0003): it shares @app/client, @app/shared and @app/design, never the web app's code or React DOM."
+                  },
+                  {
+                    "group": ["@app/*", "@app/**", "@/views/**/*-view"],
+                    "message": "Routes render screens (@/views/**/*-screen) and platform providers only (ADR 0002, docs/adr/0002-client-architecture.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/api/src/**", "!apps/api/src/shared.ts"],
       "linter": {
         "rules": {
