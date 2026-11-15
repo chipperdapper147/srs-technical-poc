@@ -74,6 +74,14 @@ container); migrations against Neon run from CI or the deploy.
   files in `app/` only pass params to a screen. Biome enforces the imports
   per layer. Test controllers with `@app/client/testing` (MSW fake API built
   on the contracts), views with Testing Library on hand-built view models.
+- **The mobile app (`apps/mobile`, Expo) has the same layers.** Views in
+  `src/views/<screen>/`, the router in `src/app/`, ports and the theme in
+  `src/platform/`; never change a controller or view model for mobile alone.
+  Style only through `@/platform/theme` (from `@app/design`), never literals.
+  It is its own deployable: no imports from `apps/web`, Next or React DOM.
+  Tests are Jest + React Native Testing Library (`pnpm --filter @app/mobile
+  test`; `render` and `userEvent` are async in v14). It is minimal on
+  purpose: further mobile work goes with the shared mobile design (#48).
 - **Tokens come from `packages/design/tokens.json`** (`@app/design`), the one
   source for web and mobile. Edit it, run `pnpm design:build`, and commit the
   regenerated `apps/web/src/app/tokens.css` and `packages/design/src/tokens.ts`

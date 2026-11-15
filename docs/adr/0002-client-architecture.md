@@ -41,8 +41,10 @@ Glue:
   (`@tanstack/query-core`): controllers use `QueryObserver` and
   `queryClient.fetchQuery`. `@tanstack/react-query` is removed from the web
   app.
-- **Mobile** will be React Native with Expo (`apps/mobile`), writing only views,
-  screens and its own `platform/` adapters.
+- **Mobile** is React Native with Expo (`apps/mobile`), writing only views,
+  screens, its router and its own `platform/` adapters. A minimal app exists
+  since 2026-11-14 (decisions log); its tests run on Jest with React Native
+  Testing Library, because React Native's test setup is a Jest preset.
 
 ## Testing, per layer
 
