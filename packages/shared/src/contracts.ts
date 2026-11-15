@@ -244,3 +244,40 @@ export const DashboardSchema = z.object({
   forecast: z.array(ForecastDaySchema),
 });
 export type Dashboard = z.infer<typeof DashboardSchema>;
+
+// ---- Catalog -------------------------------------------------------------
+
+/** Most courses one catalog request returns (no pagination yet). */
+export const CATALOG_LIMIT = 50;
+
+/**
+ * Shared courses (no owner, prebuilt ones included), filtered by a search
+ * over title and description and by target language. Omitted or empty
+ * filters match everything.
+ */
+export const CatalogQuerySchema = z.object({
+  /** Case-insensitive substring of the title or the description. */
+  q: z.string().trim().max(200).optional(),
+  /** BCP 47 tag of the language taught, matched case-insensitively. */
+  targetLang: langCode.optional(),
+});
+export type CatalogQuery = z.input<typeof CatalogQuerySchema>;
+
+export const CatalogCourseSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string(),
+  sourceLang: z.string(),
+  targetLang: z.string(),
+  /** Words in the course. */
+  itemCount: z.number().int(),
+});
+export type CatalogCourse = z.infer<typeof CatalogCourseSchema>;
+
+export const CatalogSchema = z.object({
+  /** Matching courses by title, at most CATALOG_LIMIT. */
+  courses: z.array(CatalogCourseSchema),
+  /** Every target language in the catalog, whatever the filters, for the language filter. */
+  targetLangs: z.array(z.string()),
+});
+export type Catalog = z.infer<typeof CatalogSchema>;
