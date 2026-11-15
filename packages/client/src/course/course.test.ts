@@ -52,6 +52,7 @@ describe("course", () => {
       canSubmit: false,
       submitLabel: "Import",
       result: null,
+      pasteLink: { route: { to: "importWords", courseId: mine.id } },
     });
   });
 

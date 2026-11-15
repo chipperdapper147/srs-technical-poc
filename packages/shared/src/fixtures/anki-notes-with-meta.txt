@@ -1,0 +1,9 @@
+#separator:tab
+#html:true
+#guid column:1
+#notetype column:2
+#deck column:3
+#tags column:6
+O,pg2<}hjZ	Basic	Spanish::Food	la manzana	the apple	food
+f3J/k@y#Lq	Basic (and reversed card)	Spanish::Food	el agua	water &amp; drink	food
+b}9Fq!p2Xs	Basic	Spanish::Food	<img src="queso.jpg">	cheese	food

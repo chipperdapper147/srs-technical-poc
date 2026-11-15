@@ -714,7 +714,17 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/new/**",
       "apps/web/src/app/courses/[[]id[]]/page.tsx",
     ],
-    specs: ["course-authoring", "courses", "dashboard", "grading", "a11y"],
+    specs: ["course-authoring", "import", "courses", "dashboard", "grading", "a11y"],
+  },
+  {
+    paths: [
+      "packages/shared/src/import-formats.ts",
+      "packages/shared/src/fixtures/**",
+      "packages/client/src/import/**",
+      "apps/web/src/views/import/**",
+      "apps/web/src/app/courses/[[]id[]]/import/**",
+    ],
+    specs: ["import", "a11y"],
   },
   {
     paths: [

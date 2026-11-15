@@ -18,11 +18,12 @@ for (const viewport of [
     // functional specs still run on Firefox nightly. TODO.md tracks re-enabling.
     test.skip(({ browserName }) => browserName === "firefox", "axe crashes Firefox (PR #10)");
 
-    test("home, courses, course, new course, settings and stats", async ({
+    test("home, courses, course, import, new course, settings and stats", async ({
       api,
       dashboardPage,
       coursesPage,
       coursePage,
+      importPage,
       newCoursePage,
       settingsPage,
       statsPage,
@@ -40,8 +41,14 @@ for (const viewport of [
       await expect(coursePage.readOnlyNotice).toBeVisible();
       expect.soft(await a11yViolations(page)).toEqual([]);
 
-      await coursePage.goto(await api.createCourse({ csv: WORDS_CSV }));
+      const courseId = await api.createCourse({ csv: WORDS_CSV });
+      await coursePage.goto(courseId);
       await expect(coursePage.importButton).toBeVisible();
+      expect.soft(await a11yViolations(page)).toEqual([]);
+
+      await importPage.goto(courseId);
+      await importPage.paste("hola - hello\nno separator\n");
+      await expect(importPage.skippedLines).toHaveCount(1);
       expect.soft(await a11yViolations(page)).toEqual([]);
 
       await newCoursePage.goto();
