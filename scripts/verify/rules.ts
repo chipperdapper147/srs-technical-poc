@@ -761,7 +761,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
     ],
     // The dashboard spec runs a review of all courses through the study screen;
     // the stats spec counts answers given there.
-    specs: ["study", "grading", "dashboard", "stats", "a11y"],
+    specs: ["study", "study-aids", "grading", "dashboard", "stats", "a11y"],
   },
   {
     paths: [
@@ -798,6 +798,7 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "course-authoring",
       "import",
       "courses",
+      "catalog",
       "dashboard",
       "grading",
       "a11y",
@@ -846,6 +847,16 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/page.tsx",
     ],
     // The stats spec reaches its screen through the shell's nav link.
-    specs: ["courses", "dashboard", "prebuilt-courses", "stats", "a11y"],
+    specs: ["courses", "dashboard", "prebuilt-courses", "catalog", "stats", "a11y"],
+  },
+  {
+    paths: [
+      "apps/api/src/routes/catalog.ts",
+      "apps/api/src/copy-course.ts",
+      "packages/client/src/catalog/**",
+      "apps/web/src/views/catalog/**",
+      "apps/web/src/app/catalog/**",
+    ],
+    specs: ["catalog", "courses"],
   },
 ];

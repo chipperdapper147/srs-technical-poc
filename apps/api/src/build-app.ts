@@ -17,6 +17,7 @@ import type { Database } from "./db/index.ts";
 import type { Env } from "./env.ts";
 import accessKey from "./plugins/access-key.ts";
 import auth from "./plugins/auth.ts";
+import { catalogRoutes } from "./routes/catalog.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { dashboardRoutes } from "./routes/dashboard.ts";
 import { itemRoutes } from "./routes/items.ts";
@@ -64,6 +65,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   await app.register(auth, { db, mode: env.AUTH_MODE });
   await app.register(meRoutes, { db });
   await app.register(courseRoutes, { db });
+  await app.register(catalogRoutes, { db });
   await app.register(dashboardRoutes, { db });
   await app.register(statsRoutes, { db });
   await app.register(itemRoutes, { db });

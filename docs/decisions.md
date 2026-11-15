@@ -739,6 +739,100 @@ it. Reordering items and adding or renaming units stay out of scope.
   `destructive`: its red text on the red tint is 4.0:1 at button size,
   below AA. Worth a look in the redesign (#48).
 
+## 2026-11-15: Course catalog and "Copy to my courses"
+
+Built for issue #53, which follows the owner's "a catalog with search"
+from #41.
+
+- **The catalog is the shared courses** (`owner_id` null, so the prebuilt
+  ones too), at `GET /catalog?q=&targetLang=`: title, description,
+  languages and word count, sorted by title, at most 50 (`CATALOG_LIMIT`;
+  no pagination yet). `q` is a case-insensitive substring of the title or
+  the description, with `%` and `_` taken literally; `targetLang` matches
+  the tag case-insensitively. The response also lists every target
+  language in the catalog, whatever the filters, so the client can offer
+  the language filter without a second request.
+- **Search runs on submit, the language filter on change.** No
+  search-as-you-type: no debounce timers in the controller, and the same
+  behaviour on mobile. The previous results stay on screen while the next
+  ones load (`keepPreviousData`).
+- **`POST /courses/:id/copy` returns the new course** (201, the course
+  detail). One transaction of three set-based `INSERT … SELECT`s: the
+  course with its settings (description, languages, grading overrides),
+  its units, then its items, each joined to its new unit by position. The
+  copy has no cards or history and shares no rows with the source, so
+  either side can change or be deleted without touching the other.
+  `apps/api/src/copy-course.ts`.
+- **Only shared courses can be copied** (403 for your own course, 404 for
+  someone else's private one): publishing your own courses waits for
+  Auth0.
+- **The copy keeps the source's title,** and copying twice makes two
+  copies. No `copied_from` column, so no schema change: the UI doesn't
+  say "Copied from …" yet, and the catalog doesn't mark courses you have
+  already copied.
+- **The catalog is its own screen** (`/catalog`, `packages/client/src/catalog/`),
+  linked from the header ("Catalog") and from the course list ("Browse the
+  catalog"). The course list is unchanged otherwise. Each catalog card's
+  title opens the shared course, read-only, to look before copying. After
+  a copy, the controller refreshes the course list and the dashboard and
+  opens the copy through the `Navigator` port.
+
+## 2026-11-15: Study aids: hints, "I was right", undo last answer
+
+Issue #55 (product idea 7, plus two common SRS conveniences). The API
+decides all three; `apps/api/src/srs.ts` stays the only place that schedules.
+
+- **Hints reveal the term one letter at a time.** Letters are the term's
+  characters other than whitespace (after NFC), so "la biblioteca" takes 12
+  hints and the space comes along for free. `POST /study/answers` takes an
+  optional `hints` count (additive); the API clamps it to the term's letters
+  and rates with `ratingForAnswer` in `@app/shared`: any hint caps the rating
+  at Hard, every letter makes it Again, even for an exact answer. An Again
+  answer is re-queued in the session as a wrong one is (the session now
+  re-queues on rating 1, not on the `wrong` verdict). Hints reveal the main
+  term, never an alternative.
+- **"I was right"** (`POST /study/answers/:id/override`, `:id` the
+  `reviewId` every answer result now carries) is offered on a wrong or typo
+  verdict while its feedback shows. It rates the answer as an exact one would
+  be: Good, or Hard after hints. The API refuses it (409) when that wouldn't
+  raise the rating (a hinted typo, the whole word hinted), for an exact
+  answer, a second time, for anything but the learner's latest answer, and
+  after the window below.
+- **Override recomputes from the card before the answer**, with ts-fsrs's
+  own `rollback` on the stored revlog (`scheduler.rollback` in `srs.ts`),
+  then a review with the new rating at the answer's original time. The
+  review log row stays: `verdict` and `answer` stay the grader's,
+  `rating` and `revlog` become the recomputed review, and the new
+  `overridden_at` says when. Stats count an overridden answer as correct.
+- **Undo** (`POST /study/answers/:id/undo`) restores the card to exactly its
+  state before the answer, again through `rollback`; for a first answer the
+  card row is deleted, so the word is new again. **The review log entry is
+  deleted**, not marked: an undone answer never happened as far as
+  scheduling goes, keeping it would make every reader of `review_logs`
+  (stats, a future FSRS re-fit) filter it out, and older API versions in the
+  window wouldn't know to. An API test compares the card row before and after.
+- **Only the latest answer, within 10 minutes** (`ANSWER_WINDOW_MINUTES`),
+  for both override and undo: the learner's newest review log row across
+  all courses, so the mixed "Review all due" session works the same.
+- **The client offers undo from anywhere in the session**, including the
+  summary, once: the session state machine keeps the latest answer's review
+  id and the session just before it (one deep), and goes back there. The
+  controller waits for an override or undo before moving on, and drops the
+  offer when the API answers 409 (too late, not the latest). It doesn't
+  hide the button when the window runs out; the API's message says why.
+- **Schema (expand only):** `review_logs.hints smallint NOT NULL DEFAULT 0`
+  and `review_logs.overridden_at timestamptz NULL`. Older API versions
+  insert without them and never read them. The rehearsal seed now has
+  hinted and overridden answers, and the "rating matches verdict" invariant
+  allows for hints and overrides.
+- **Compatibility:** `reviewId` and `overridden` are optional in the
+  contract although the API always sends them, so a client still works
+  against an API from before this change (a rollback), only without
+  override and undo.
+- **Not built:** the optional "Add my answer as an alternative" after an
+  override. The item endpoints from "Editing words" make it a small client
+  change for courses the learner owns.
+
 ## 2026-11-15: playwright-core is pinned next to @playwright/test
 
 - **Why:** the nightly canary moves every exact pin to its newest release at

@@ -12,12 +12,16 @@ const item = (term: string): StudyItem => ({
   isNew: true,
 });
 
-const result = (verdict: AnswerResult["verdict"]): AnswerResult => ({
+const result = (
+  verdict: AnswerResult["verdict"],
+  overrides: Partial<AnswerResult> = {},
+): AnswerResult => ({
   verdict,
   matched: "x",
   term: "x",
   rating: verdict === "exact" ? 3 : verdict === "typo" ? 2 : 1,
   nextDue: new Date().toISOString(),
+  ...overrides,
 });
 
 describe("study session", () => {
@@ -68,5 +72,74 @@ describe("study session", () => {
     const s = initSession("learn", [item("a")]);
     expect(sessionReducer(s, { type: "next" })).toBe(s);
     expect(sessionReducer(s, { type: "graded", result: result("exact") })).toBe(s);
+  });
+
+  it("re-queues an exact answer given with the whole word hinted (rated Again)", () => {
+    let s = initSession("review", [item("a")]);
+    s = sessionReducer(s, { type: "graded", result: result("exact", { rating: 1 }) });
+    expect(s.queue).toHaveLength(2);
+    expect(s.tally.exact).toBe(1);
+  });
+});
+
+describe("study aids in the session", () => {
+  const graded = (s: ReturnType<typeof initSession>, r: AnswerResult) =>
+    sessionReducer(s, { type: "graded", result: r });
+
+  it("remembers the latest answer and the session before it, one deep", () => {
+    let s = initSession("review", [item("a"), item("b")]);
+    expect(s.last).toBeNull();
+    s = graded(s, result("exact", { reviewId: "r1" }));
+    expect(s.last).toMatchObject({ reviewId: "r1", before: { index: 0, feedback: null } });
+    s = sessionReducer(s, { type: "next" });
+    s = graded(s, result("exact", { reviewId: "r2" }));
+    expect(s.last?.reviewId).toBe("r2");
+    expect(s.last?.before.last).toBeNull();
+    // An API without review ids offers nothing to undo.
+    const old = graded(initSession("review", [item("a")]), result("exact"));
+    expect(old.last).toBeNull();
+  });
+
+  it("an override regrades the shown answer as correct: no re-queue, tallied exact", () => {
+    let s = initSession("review", [item("a")]);
+    s = graded(s, result("wrong", { reviewId: "r1" }));
+    expect(s.queue).toHaveLength(2);
+    s = sessionReducer(s, {
+      type: "overridden",
+      result: result("wrong", { reviewId: "r1", rating: 3, overridden: true }),
+    });
+    expect(s.queue).toHaveLength(1);
+    expect(s.retries).toEqual({});
+    expect(s.tally).toEqual({ exact: 1, typo: 0, wrong: 0 });
+    expect(s.feedback?.overridden).toBe(true);
+    expect(s.last?.reviewId).toBe("r1");
+    s = sessionReducer(s, { type: "next" });
+    expect(isFinished(s)).toBe(true);
+  });
+
+  it("ignores an override for another answer, or once it moved on", () => {
+    let s = initSession("review", [item("a"), item("b")]);
+    s = graded(s, result("wrong", { reviewId: "r1" }));
+    const other = result("wrong", { reviewId: "r9", rating: 3, overridden: true });
+    expect(sessionReducer(s, { type: "overridden", result: other })).toBe(s);
+    const moved = sessionReducer(s, { type: "next" });
+    const late = result("wrong", { reviewId: "r1", rating: 3, overridden: true });
+    expect(sessionReducer(moved, { type: "overridden", result: late })).toBe(moved);
+  });
+
+  it("undo goes back to just before the latest answer, even from the summary", () => {
+    let s = initSession("review", [item("a")]);
+    const start = s;
+    s = graded(s, result("wrong", { reviewId: "r1" }));
+    s = sessionReducer(s, { type: "next" });
+    s = graded(s, result("exact", { reviewId: "r2" }));
+    s = sessionReducer(s, { type: "next" });
+    expect(isFinished(s)).toBe(true);
+    s = sessionReducer(s, { type: "undone" });
+    expect(s).toMatchObject({ index: 1, feedback: null, last: null });
+    expect(s.tally).toEqual({ exact: 0, typo: 0, wrong: 1 });
+    // Only one answer: a second undo does nothing.
+    expect(sessionReducer(s, { type: "undone" })).toBe(s);
+    expect(start.last).toBeNull();
   });
 });

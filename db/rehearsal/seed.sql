@@ -130,6 +130,25 @@ SELECT
   c.due_at - k * interval '1 day'
 FROM cards AS c, generate_series(1, 2) AS k;
 
+-- Study aids: some answers were given after hints (capped at Hard, or Again
+-- when the whole word showed), and some wrong or typo ones overridden ("I was right",
+-- rated Good). Deterministic: picked by card counters, not random().
+UPDATE review_logs AS r
+SET hints = CASE WHEN c.lapses = 2 THEN 30 ELSE 1 END,
+    rating = CASE WHEN c.lapses = 2 THEN 1 ELSE LEAST(r.rating, 2) END,
+    revlog = jsonb_set(r.revlog, '{rating}', to_jsonb(CASE WHEN c.lapses = 2 THEN 1 ELSE LEAST(r.rating, 2) END))
+FROM cards AS c
+WHERE c.user_id = r.user_id AND c.item_id = r.item_id AND c.reps % 10 = 6 AND r.verdict = 'exact';
+
+UPDATE review_logs AS r
+SET overridden_at = r.reviewed_at + interval '5 seconds',
+    rating = 3,
+    revlog = jsonb_set(r.revlog, '{rating}', '3')
+FROM cards AS c
+WHERE c.user_id = r.user_id AND c.item_id = r.item_id AND (
+  (c.reps % 10 = 6 AND r.verdict = 'wrong') OR (c.reps % 10 = 8 AND r.verdict = 'typo')
+);
+
 COMMIT;
 
 ANALYZE;

@@ -104,3 +104,41 @@ export function ratingForVerdict(verdict: Verdict): 1 | 2 | 3 {
       return 1;
   }
 }
+
+// ---- Hints -------------------------------------------------------------------
+
+/** The letters a hint can reveal: the term's characters other than whitespace. */
+function hintLetters(term: string): string[] {
+  return [...term.normalize("NFC").trim()].filter((ch) => !/\s/u.test(ch));
+}
+
+/** How many hints reveal the whole term (one letter each). */
+export function maxHints(term: string): number {
+  return hintLetters(term).length;
+}
+
+/**
+ * What `hints` hints show of the term: its start, up to and including the
+ * `hints`-th letter (whitespace between letters comes along). Empty for 0.
+ */
+export function hintText(term: string, hints: number): string {
+  const chars = [...term.normalize("NFC").trim()];
+  let letters = 0;
+  for (let i = 0; i < chars.length; i++) {
+    if (letters >= hints) return chars.slice(0, i).join("").trimEnd();
+    if (!/\s/u.test(chars[i] ?? "")) letters += 1;
+  }
+  return chars.join("");
+}
+
+/**
+ * FSRS rating for an answer given after `hints` hints at `term`. Any hint
+ * caps it at Hard (2), even for an exact answer; revealing every letter makes
+ * it Again (1). The API applies this; the client only previews it.
+ */
+export function ratingForAnswer(verdict: Verdict, hints: number, term: string): 1 | 2 | 3 {
+  const rating = ratingForVerdict(verdict);
+  if (hints <= 0) return rating;
+  if (hints >= maxHints(term)) return 1;
+  return rating === 3 ? 2 : rating;
+}

@@ -33,9 +33,21 @@ export function StudyView({ vm, actions }: { vm: StudyVM; actions: StudyActions 
               ← {vm.backLabel}
             </RouteLink>
             <Progress value={vm.progress} aria-label={vm.progressLabel} className="flex-1" />
+            {vm.undo && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={vm.undo.busy}
+                onClick={actions.undo}
+              >
+                {vm.undo.label}
+              </Button>
+            )}
           </div>
+          {vm.aidError && <ErrorMessage message={vm.aidError} />}
           {/* Keyed by step so each step mounts fresh and its input takes focus. */}
-          <Step key={vm.stepIndex} step={vm.step} lang={vm.lang} actions={actions} />
+          <Step key={vm.stepKey} step={vm.step} lang={vm.lang} actions={actions} />
         </div>
       );
   }
@@ -95,6 +107,16 @@ function Step({ step, lang, actions }: { step: StudyStepVM; lang: string; action
             <p data-testid="study-prompt" className="text-2xl font-semibold">
               {step.prompt}
             </p>
+            {step.hint?.text && (
+              <div className="space-y-1" data-testid="study-hint">
+                <p lang={lang} className="text-lg font-semibold">
+                  {step.hint.text}
+                </p>
+                {step.hint.note && (
+                  <p className="text-sm text-muted-foreground">{step.hint.note}</p>
+                )}
+              </div>
+            )}
             <form onSubmit={onSubmit} className="space-y-3">
               <AnswerInput
                 lang={lang}
@@ -107,14 +129,38 @@ function Step({ step, lang, actions }: { step: StudyStepVM; lang: string; action
               {step.feedback ? (
                 <FeedbackPanel feedback={step.feedback} lang={lang} />
               ) : (
-                <Button type="submit" disabled={!step.canCheck}>
-                  {step.checkLabel}
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button type="submit" disabled={!step.canCheck}>
+                    {step.checkLabel}
+                  </Button>
+                  {step.hint && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!step.hint.canHint}
+                      onClick={actions.hint}
+                    >
+                      {step.hint.label}
+                    </Button>
+                  )}
+                </div>
               )}
               {step.feedback && (
-                <Button type="submit" autoFocus>
-                  {step.continueLabel}
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button type="submit" autoFocus>
+                    {step.continueLabel}
+                  </Button>
+                  {step.feedback.override && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={step.feedback.override.busy}
+                      onClick={actions.override}
+                    >
+                      {step.feedback.override.label}
+                    </Button>
+                  )}
+                </div>
               )}
               {step.error && <ErrorMessage message={step.error} />}
             </form>
@@ -180,6 +226,7 @@ function FeedbackPanel({ feedback, lang }: { feedback: FeedbackVM; lang: string 
           </span>
         </p>
       )}
+      {feedback.note && <p>{feedback.note}</p>}
       <p className="text-xs text-muted-foreground">{feedback.nextReview}</p>
     </div>
   );

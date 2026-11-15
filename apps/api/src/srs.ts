@@ -38,7 +38,29 @@ export async function createScheduler(steps: LearningSteps = LEARNING_STEPS) {
       const { card, revlog } = fsrs.review({ card: fromRow(row), grade, now });
       return { row: toRow(row.userId, row.itemId, card), revlog };
     },
+    /**
+     * The card as it was before the review `stored` records (a `revlog` as
+     * saved in `review_logs`), using ts-fsrs's own rollback. `row` must be
+     * the card that review left, or an override of it: the latest answer.
+     * `isNew` means the card was new then, i.e. it had no row before.
+     */
+    rollback(row: CardRow, stored: unknown): { row: CardRow; isNew: boolean } {
+      const card = fsrs.rollback({ card: fromRow(row), revlog: parseRevlog(stored) });
+      return { row: toRow(row.userId, row.itemId, card), isNew: card.state === State.New };
+    },
   };
+}
+
+type Revlog = ReturnType<Fsrs["review"]>["revlog"];
+
+/** A revlog read back from jsonb: its instants are ISO strings again. */
+function parseRevlog(stored: unknown): Revlog {
+  const revlog = { ...(stored as Record<string, unknown>) };
+  for (const key of ["dueAt", "lastReviewAt", "reviewTime"]) {
+    const value = revlog[key];
+    if (typeof value === "string") revlog[key] = new Date(value);
+  }
+  return revlog as Revlog;
 }
 
 function createFsrs(steps: LearningSteps) {

@@ -5,6 +5,9 @@
 import {
   type AnswerResult,
   AnswerResultSchema,
+  type Catalog,
+  type CatalogQuery,
+  CatalogSchema,
   type CourseDetail,
   CourseDetailSchema,
   type CourseItem,
@@ -30,6 +33,8 @@ import {
   type StudySession,
   StudySessionSchema,
   type SubmitAnswer,
+  type UndoResult,
+  UndoResultSchema,
   type UpdateCourse,
   type UpdateItem,
   type UpdateMe,
@@ -55,6 +60,10 @@ export interface ApiClient {
   importCsv(id: string, csv: string): Promise<ImportResult>;
   /** Words already parsed on the client (paste, Quizlet, Anki), into one unit. */
   importRows(id: string, body: ImportRows): Promise<ImportResult>;
+  /** Shared courses matching the filters; empty filters are left out. */
+  catalog(query: CatalogQuery): Promise<Catalog>;
+  /** Copy a shared course into a new course the learner owns. */
+  copyCourse(id: string): Promise<CourseDetail>;
   study(id: string, mode: StudyMode): Promise<StudySession>;
   /** Due items across every course, for one mixed review session. */
   reviewAll(): Promise<ReviewSession>;
@@ -63,6 +72,10 @@ export interface ApiClient {
   /** Progress stats for every course, or `courseId`; days counted in `timeZone`. */
   stats(query: { timeZone: string; courseId: string | null }): Promise<Stats>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
+  /** "I was right": count the latest answer (`reviewId` from its result) as correct. */
+  overrideAnswer(reviewId: string): Promise<AnswerResult>;
+  /** Take back the latest answer: its card goes back to how it was. */
+  undoAnswer(reviewId: string): Promise<UndoResult>;
   /** A course's words in course order; `q` narrows them (see `itemMatchesSearch`). */
   courseItems(courseId: string, q?: string): Promise<CourseItems>;
   createItem(courseId: string, unitId: string, body: CreateItem): Promise<CourseItem>;
@@ -122,6 +135,14 @@ export function createApiClient({
       request(ImportResultSchema, `/courses/${id}/import`, { method: "POST", body: { csv } }),
     importRows: (id, body) =>
       request(ImportResultSchema, `/courses/${id}/import/rows`, { method: "POST", body }),
+    catalog: (query) => {
+      const params = new URLSearchParams();
+      if (query.q?.trim()) params.set("q", query.q.trim());
+      if (query.targetLang) params.set("targetLang", query.targetLang);
+      const search = params.toString();
+      return request(CatalogSchema, `/catalog${search ? `?${search}` : ""}`);
+    },
+    copyCourse: (id) => request(CourseDetailSchema, `/courses/${id}/copy`, { method: "POST" }),
     study: (id, mode) => request(StudySessionSchema, `/courses/${id}/study?mode=${mode}`),
     reviewAll: () => request(ReviewSessionSchema, "/study/review"),
     dashboard: (timeZone) =>
@@ -132,6 +153,10 @@ export function createApiClient({
       return request(StatsSchema, `/stats?${params}`);
     },
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
+    overrideAnswer: (reviewId) =>
+      request(AnswerResultSchema, `/study/answers/${reviewId}/override`, { method: "POST" }),
+    undoAnswer: (reviewId) =>
+      request(UndoResultSchema, `/study/answers/${reviewId}/undo`, { method: "POST" }),
     courseItems: (courseId, q) =>
       request(
         CourseItemsSchema,

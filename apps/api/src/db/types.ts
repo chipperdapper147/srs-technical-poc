@@ -74,8 +74,10 @@ export interface PrebuiltCourses {
 export interface ReviewLogs {
   answer: string;
   durationMs: number | null;
+  hints: Generated<number>;
   id: Generated<string>;
   itemId: string;
+  overriddenAt: Timestamp | null;
   rating: number;
   reviewedAt: Generated<Timestamp>;
   revlog: Json;

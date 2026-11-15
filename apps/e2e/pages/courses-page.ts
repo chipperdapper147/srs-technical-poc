@@ -5,6 +5,7 @@ import { open } from "./navigation.ts";
 export class CoursesPage {
   readonly heading: Locator;
   readonly newCourseLink: Locator;
+  readonly catalogLink: Locator;
 
   readonly page: Page;
 
@@ -12,6 +13,7 @@ export class CoursesPage {
     this.page = page;
     this.heading = page.getByRole("heading", { name: "Courses" });
     this.newCourseLink = page.getByRole("link", { name: "New course" });
+    this.catalogLink = page.getByRole("link", { name: "Browse the catalog" });
   }
 
   async goto() {

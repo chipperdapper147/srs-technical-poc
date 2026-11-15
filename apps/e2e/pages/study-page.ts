@@ -24,6 +24,11 @@ export class StudyPage {
   readonly continueButton: Locator;
   readonly summary: Locator;
   readonly emptyState: Locator;
+  /** Study aids: a hint during a quiz step, "I was right" on feedback, undo from anywhere. */
+  readonly hintButton: Locator;
+  readonly hint: Locator;
+  readonly overrideButton: Locator;
+  readonly undoButton: Locator;
   private readonly session: Locator;
 
   readonly page: Page;
@@ -43,6 +48,11 @@ export class StudyPage {
     this.continueButton = page.getByRole("button", { name: "Continue" });
     this.summary = page.getByTestId("session-summary");
     this.emptyState = page.getByText(/No new words left|Nothing due right now/);
+    this.hintButton = page.getByRole("button", { name: "Hint" });
+    // The revealed letters and what they cost; no accessible handle groups them.
+    this.hint = page.getByTestId("study-hint");
+    this.overrideButton = page.getByRole("button", { name: "I was right" });
+    this.undoButton = page.getByRole("button", { name: "Undo last answer" });
   }
 
   async goto(courseId: string, mode: "learn" | "review") {
@@ -86,6 +96,26 @@ export class StudyPage {
     await this.answerInput.press("Enter");
     await expect(this.feedback).toBeVisible();
     return (await this.feedback.getAttribute("data-verdict")) as Verdict;
+  }
+
+  /** Quiz step: take `count` hints, each revealing one more letter. */
+  async takeHints(count: number) {
+    for (let i = 0; i < count; i++) await this.hintButton.click();
+  }
+
+  /** Feedback on a wrong or typo answer: "I was right", then wait until it counts as correct. */
+  async overrideVerdict() {
+    await this.overrideButton.click();
+    await expect(this.feedback).toHaveAttribute("data-verdict", "exact");
+    await expect(this.overrideButton).toBeHidden();
+  }
+
+  /** Take back the latest answer; the session goes back to that quiz step. */
+  async undoLastAnswer() {
+    await this.undoButton.click();
+    await expect(this.undoButton).toBeHidden();
+    await expect(this.feedback).toBeHidden();
+    await expect(this.answerInput).toBeEditable();
   }
 
   async continue() {
