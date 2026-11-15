@@ -228,3 +228,180 @@ describe("study controller, all courses", () => {
     expect((await startAll()).state).toMatchObject({ status: "error", message: "Database down" });
   });
 });
+
+describe("study controller, study aids", () => {
+  const feedbackShown = (s: StudyState) => isActive(s) && s.session.feedback !== null;
+
+  /** A review of the one due word, "hola". */
+  async function review() {
+    const started = await startSession("review");
+    return started;
+  }
+
+  async function answerWith(
+    controller: Awaited<ReturnType<typeof review>>["controller"],
+    text: string,
+  ) {
+    controller.actions.setInput(text);
+    controller.actions.submit();
+    return waitForState(controller.store, feedbackShown);
+  }
+
+  const answers = () => fake.current.requests.filter((r) => r.path === "/study/answers");
+
+  it("reveals a letter per hint, up to the whole word, and sends the count with the answer", async () => {
+    const { controller } = await review();
+    controller.actions.hint();
+    controller.actions.hint();
+    expect(controller.store.get()).toMatchObject({ hints: 2 });
+    for (let i = 0; i < 5; i++) controller.actions.hint();
+    expect(controller.store.get()).toMatchObject({ hints: 4 }); // "hola" has four letters
+    const graded = await answerWith(controller, "hola");
+    expect(answers().at(-1)?.body).toMatchObject({ answer: "hola", hints: 4 });
+    expect(isActive(graded) && graded.session.feedback).toMatchObject({
+      verdict: "exact",
+      rating: 1,
+    });
+    controller.actions.hint(); // no hints once graded
+    expect(controller.store.get()).toMatchObject({ hints: 4 });
+  });
+
+  it("starts each step without hints", async () => {
+    const { controller } = await startSession("learn");
+    for (const w of words) {
+      controller.actions.setInput(w.term);
+      controller.actions.submit();
+    }
+    controller.actions.hint();
+    await answerWith(controller, "hola");
+    controller.actions.next();
+    expect(controller.store.get()).toMatchObject({ hints: 0, input: "" });
+  });
+
+  it('"I was right" regrades the shown answer on the server', async () => {
+    const { controller } = await review();
+    const wrong = await answerWith(controller, "adiós");
+    if (!isActive(wrong)) throw new Error("expected an active session");
+    expect(wrong.session.queue).toHaveLength(2); // re-queued
+    const reviewId = wrong.session.feedback?.reviewId;
+    controller.actions.override();
+    expect(controller.store.get()).toMatchObject({ aidPending: "override" });
+    const overridden = await waitForState(
+      controller.store,
+      (s) => isActive(s) && s.session.feedback?.overridden === true,
+    );
+    expect(fake.current.requests.at(-1)).toMatchObject({
+      method: "POST",
+      path: `/study/answers/${reviewId}/override`,
+    });
+    expect(overridden).toMatchObject({
+      aidPending: null,
+      session: { tally: { exact: 1, wrong: 0 }, feedback: { rating: 3 } },
+    });
+    expect(isActive(overridden) && overridden.session.queue).toHaveLength(1);
+    controller.actions.next();
+    expect(step(controller.store.get())).toBeUndefined();
+  });
+
+  it("waits for an override before moving on", async () => {
+    const { controller } = await review();
+    await answerWith(controller, "adiós");
+    controller.actions.override();
+    controller.actions.submit();
+    controller.actions.next();
+    await waitForState(controller.store, (s) => isActive(s) && s.aidPending === null);
+    expect(controller.store.get()).toMatchObject({ session: { index: 0 } });
+  });
+
+  it("undoes the latest answer from the next step and goes back to it", async () => {
+    const { controller, deps } = await startSession("learn");
+    for (const w of words) {
+      controller.actions.setInput(w.term);
+      controller.actions.submit();
+    }
+    const graded = await answerWith(controller, "hola");
+    const reviewId = isActive(graded) ? graded.session.feedback?.reviewId : undefined;
+    controller.actions.next();
+    controller.actions.setInput("bibli");
+    deps.queryClient.setQueryData(queryKeys.courses, []);
+
+    controller.actions.undo();
+    const back = await waitForState(
+      controller.store,
+      (s) => isActive(s) && s.session.index === 3 && s.aidPending === null,
+    );
+    expect(fake.current.requests.at(-1)).toMatchObject({
+      path: `/study/answers/${reviewId}/undo`,
+    });
+    expect(back).toMatchObject({
+      input: "",
+      hints: 0,
+      session: { feedback: null, last: null, tally: { exact: 0 } },
+    });
+    expect(step(back)).toMatchObject({ kind: "quiz", item: { term: "hola" } });
+    // The word is new again on the (fake) server, and the course data refetches.
+    expect(fake.current.state.items[course.id]?.[0]?.isNew).toBe(true);
+    expect(deps.queryClient.getQueryState(queryKeys.courses)?.isInvalidated).toBe(true);
+  });
+
+  it("undoes while the feedback shows, restarting the step", async () => {
+    const { controller } = await review();
+    await answerWith(controller, "hola");
+    const before = controller.store.get();
+    controller.actions.undo();
+    const back = await waitForState(controller.store, (s) => isActive(s) && !s.session.feedback);
+    expect(back).toMatchObject({ session: { index: 0 }, input: "" });
+    expect(isActive(back) && isActive(before) && back.attempt).toBe(
+      isActive(before) ? before.attempt + 1 : -1,
+    );
+  });
+
+  it("stops offering an aid the server refuses as too late, and says why", async () => {
+    const { controller } = await review();
+    const graded = await answerWith(controller, "hola");
+    const reviewId = isActive(graded) ? graded.session.feedback?.reviewId : "";
+    fake.current.failNext(
+      "POST",
+      `/study/answers/${reviewId}/undo`,
+      409,
+      "Answers can only be changed for 10 minutes.",
+    );
+    controller.actions.undo();
+    const refused = await waitForState(controller.store, (s) => isActive(s) && s.aidError !== null);
+    expect(refused).toMatchObject({
+      aidError: "Answers can only be changed for 10 minutes.",
+      session: { last: null, index: 0 },
+    });
+  });
+
+  it("keeps the aid on any other failure", async () => {
+    const { controller } = await review();
+    const graded = await answerWith(controller, "adiós");
+    const reviewId = isActive(graded) ? graded.session.feedback?.reviewId : "";
+    fake.current.failNext("POST", `/study/answers/${reviewId}/override`, 500, "Server down");
+    controller.actions.override();
+    const failed = await waitForState(controller.store, (s) => isActive(s) && s.aidError !== null);
+    expect(failed).toMatchObject({ aidError: "Server down", session: { last: { reviewId } } });
+  });
+
+  it("works in a review of all courses", async () => {
+    const deps = createTestDeps();
+    const controller = createStudyController(deps, { courseId: null, mode: null });
+    controller.start();
+    await waitForState(controller.store, isActive);
+    controller.actions.hint();
+    const wrong = await answerWith(controller, "adiós");
+    expect(answers().at(-1)?.body).toMatchObject({ hints: 1 });
+    expect(isActive(wrong) && wrong.session.feedback?.rating).toBe(1);
+    controller.actions.override();
+    const overridden = await waitForState(
+      controller.store,
+      (s) => isActive(s) && s.session.feedback?.overridden === true,
+    );
+    // One hint: the override counts as Hard, not Good.
+    expect(isActive(overridden) && overridden.session.feedback?.rating).toBe(2);
+    controller.actions.undo();
+    await waitForState(controller.store, (s) => isActive(s) && !s.session.feedback);
+    expect(fake.current.requests.at(-1)?.path).toMatch(/\/undo$/);
+  });
+});

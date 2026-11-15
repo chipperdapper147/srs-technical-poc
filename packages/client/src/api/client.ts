@@ -33,6 +33,8 @@ import {
   type StudySession,
   StudySessionSchema,
   type SubmitAnswer,
+  type UndoResult,
+  UndoResultSchema,
   type UpdateCourse,
   type UpdateItem,
   type UpdateMe,
@@ -70,6 +72,10 @@ export interface ApiClient {
   /** Progress stats for every course, or `courseId`; days counted in `timeZone`. */
   stats(query: { timeZone: string; courseId: string | null }): Promise<Stats>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
+  /** "I was right": count the latest answer (`reviewId` from its result) as correct. */
+  overrideAnswer(reviewId: string): Promise<AnswerResult>;
+  /** Take back the latest answer: its card goes back to how it was. */
+  undoAnswer(reviewId: string): Promise<UndoResult>;
   /** A course's words in course order; `q` narrows them (see `itemMatchesSearch`). */
   courseItems(courseId: string, q?: string): Promise<CourseItems>;
   createItem(courseId: string, unitId: string, body: CreateItem): Promise<CourseItem>;
@@ -147,6 +153,10 @@ export function createApiClient({
       return request(StatsSchema, `/stats?${params}`);
     },
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
+    overrideAnswer: (reviewId) =>
+      request(AnswerResultSchema, `/study/answers/${reviewId}/override`, { method: "POST" }),
+    undoAnswer: (reviewId) =>
+      request(UndoResultSchema, `/study/answers/${reviewId}/undo`, { method: "POST" }),
     courseItems: (courseId, q) =>
       request(
         CourseItemsSchema,

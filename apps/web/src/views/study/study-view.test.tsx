@@ -5,7 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { expectNoA11yViolations } from "@/test/a11y";
 import { StudyView } from "./study-view";
 
-const actions = (): StudyActions => ({ setInput: vi.fn(), submit: vi.fn(), next: vi.fn() });
+const actions = (): StudyActions => ({
+  setInput: vi.fn(),
+  submit: vi.fn(),
+  next: vi.fn(),
+  hint: vi.fn(),
+  override: vi.fn(),
+  undo: vi.fn(),
+});
 const session = (step: StudyStepVM): Extract<StudyVM, { kind: "session" }> => ({
   kind: "session",
   heading: "Study: Spanish",
@@ -14,6 +21,9 @@ const session = (step: StudyStepVM): Extract<StudyVM, { kind: "session" }> => ({
   progress: 40,
   progressLabel: "Session progress",
   stepIndex: 2,
+  stepKey: "2.0",
+  undo: null,
+  aidError: null,
   lang: "es",
   step,
 });
@@ -46,6 +56,7 @@ const quiz = (over: Partial<Extract<StudyStepVM, { kind: "quiz" }>> = {}): Study
   canCheck: true,
   checkLabel: "Check",
   continueLabel: "Continue",
+  hint: { label: "Hint", canHint: true, text: null, note: null },
   feedback: null,
   error: null,
   ...over,
@@ -115,7 +126,9 @@ describe("StudyView", () => {
               verdict: "typo",
               title: "Almost: watch the spelling",
               answer: "biblioteca",
+              note: null,
               nextReview: "Next review soon",
+              override: null,
             },
           }),
         )}
@@ -190,5 +203,133 @@ describe("StudyView", () => {
     expect(screen.getByTestId("tally-exact").textContent).toBe("2");
     expect(screen.getByTestId("tally-typo").textContent).toBe("1");
     await expectNoA11yViolations(container);
+  });
+
+  describe("study aids", () => {
+    const wrong = {
+      verdict: "wrong" as const,
+      title: "Not quite",
+      answer: "la biblioteca",
+      note: null,
+      nextReview: "Next review soon",
+      override: { label: "I was right", busy: false },
+    };
+
+    it("offers a hint without submitting, and shows the revealed letters and their cost", async () => {
+      const a = actions();
+      const { container, rerender } = render(<StudyView vm={session(quiz())} actions={a} />);
+      expect(screen.queryByTestId("study-hint")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "Hint" }));
+      expect(a.hint).toHaveBeenCalledOnce();
+      expect(a.submit).not.toHaveBeenCalled();
+      rerender(
+        <StudyView
+          vm={session(
+            quiz({
+              hint: {
+                label: "Hint",
+                canHint: false,
+                text: "la biblioteca",
+                note: "The whole word is shown: this answer will count as not known yet.",
+              },
+            }),
+          )}
+          actions={a}
+        />,
+      );
+      const hint = screen.getByTestId("study-hint");
+      expect(hint.textContent).toContain("la biblioteca");
+      expect(hint.textContent).toContain("count as not known yet");
+      expect(hint.querySelector("[lang]")?.getAttribute("lang")).toBe("es");
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: "Hint" }).disabled).toBe(true);
+      await expectNoA11yViolations(container);
+    });
+
+    it('offers "I was right" next to Continue, and explains a capped rating', async () => {
+      const a = actions();
+      const { container, rerender } = render(
+        <StudyView vm={session(quiz({ locked: true, hint: null, feedback: wrong }))} actions={a} />,
+      );
+      expect(screen.queryByRole("button", { name: "Hint" })).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "I was right" }));
+      expect(a.override).toHaveBeenCalledOnce();
+      expect(a.submit).not.toHaveBeenCalled();
+      await expectNoA11yViolations(container);
+
+      rerender(
+        <StudyView
+          vm={session(
+            quiz({
+              locked: true,
+              hint: null,
+              feedback: { ...wrong, override: { label: "I was right", busy: true } },
+            }),
+          )}
+          actions={a}
+        />,
+      );
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: "I was right" }).disabled).toBe(
+        true,
+      );
+      rerender(
+        <StudyView
+          vm={session(
+            quiz({
+              locked: true,
+              hint: null,
+              feedback: {
+                ...wrong,
+                verdict: "exact",
+                title: "Counted as correct",
+                note: "Rated hard because you used a hint.",
+                override: null,
+              },
+            }),
+          )}
+          actions={a}
+        />,
+      );
+      const status = screen.getByRole("status");
+      expect(status.dataset.verdict).toBe("exact");
+      expect(status.textContent).toContain("Counted as correct");
+      expect(status.textContent).toContain("Rated hard because you used a hint.");
+      expect(screen.queryByRole("button", { name: "I was right" })).toBeNull();
+    });
+
+    it("offers undo from any step, and shows why it failed", async () => {
+      const a = actions();
+      const summary: StudyStepVM = {
+        kind: "summary",
+        title: "Session complete",
+        tally: [],
+        backLabel: "Back to course",
+        back: { to: "course", courseId: "c1" },
+      };
+      const { container, rerender } = render(<StudyView vm={session(summary)} actions={a} />);
+      expect(screen.queryByRole("button", { name: "Undo last answer" })).toBeNull();
+      rerender(
+        <StudyView
+          vm={{ ...session(summary), undo: { label: "Undo last answer", busy: false } }}
+          actions={a}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Undo last answer" }));
+      expect(a.undo).toHaveBeenCalledOnce();
+      await expectNoA11yViolations(container);
+      rerender(
+        <StudyView
+          vm={{
+            ...session(summary),
+            undo: { label: "Undo last answer", busy: true },
+            aidError: "Answers can only be changed for 10 minutes.",
+          }}
+          actions={a}
+        />,
+      );
+      expect(
+        screen.getByRole<HTMLButtonElement>("button", { name: "Undo last answer" }).disabled,
+      ).toBe(true);
+      expect(screen.getByText("Answers can only be changed for 10 minutes.")).toBeTruthy();
+    });
   });
 });

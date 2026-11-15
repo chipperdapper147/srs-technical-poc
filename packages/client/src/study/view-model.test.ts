@@ -26,6 +26,10 @@ function active(overrides: Partial<ActiveStudyState> = {}): ActiveStudyState {
     submitting: false,
     answerError: null,
     stepStartedAt: 0,
+    hints: 0,
+    attempt: 0,
+    aidPending: null,
+    aidError: null,
     ...overrides,
   };
 }
@@ -106,7 +110,9 @@ describe("studyViewModel", () => {
         verdict: "exact",
         title: "Correct",
         answer: null,
+        note: null,
         nextReview: "Next review <2026-11-14T09:00:00.000Z>",
+        override: null,
       },
     });
     expect(
@@ -189,6 +195,110 @@ describe("studyViewModel", () => {
       message: "Nothing due right now.",
       backLabel: "Back to home",
       back: { to: "home" },
+    });
+  });
+
+  describe("study aids", () => {
+    /** The quiz step for "la biblioteca", after the copy step. */
+    function quiz(overrides: Partial<ActiveStudyState> = {}): ActiveStudyState {
+      const s = active(overrides);
+      return { ...s, session: sessionReducer(s.session, { type: "presented" }) };
+    }
+    const graded = (s: ActiveStudyState, result: ReturnType<typeof anAnswerResult>) => ({
+      ...s,
+      session: sessionReducer(s.session, { type: "graded", result }),
+    });
+
+    it("offers a hint, showing one more letter each time, and says what it costs", () => {
+      expect(step(quiz())).toMatchObject({
+        hint: { label: "Hint", canHint: true, text: null, note: null },
+      });
+      expect(step(quiz({ hints: 3 }))).toMatchObject({
+        hint: {
+          canHint: true,
+          text: "la b…",
+          note: "With a hint, a correct answer counts as hard.",
+        },
+      });
+      expect(step(quiz({ hints: 12 }))).toMatchObject({
+        hint: {
+          canHint: false,
+          text: "la biblioteca",
+          note: "The whole word is shown: this answer will count as not known yet.",
+        },
+      });
+      expect(step(quiz({ hints: 1, submitting: true }))).toMatchObject({
+        hint: { canHint: false },
+      });
+      expect(step(graded(quiz(), anAnswerResult()))).toMatchObject({ hint: null });
+    });
+
+    it("explains a rating the hints capped", () => {
+      expect(step(graded(quiz({ hints: 1 }), anAnswerResult({ rating: 2 })))).toMatchObject({
+        feedback: {
+          verdict: "exact",
+          title: "Correct",
+          note: "Rated hard because you used a hint.",
+        },
+      });
+      expect(step(graded(quiz({ hints: 12 }), anAnswerResult({ rating: 1 })))).toMatchObject({
+        feedback: { note: "The whole word was shown, so it counts as not known yet." },
+      });
+    });
+
+    it('offers "I was right" for a wrong or typo answer while it would raise the rating', () => {
+      const wrong = anAnswerResult({ verdict: "wrong", rating: 1, term: "la biblioteca" });
+      const typo = anAnswerResult({ verdict: "typo", rating: 2, matched: "biblioteca" });
+      expect(step(graded(quiz(), wrong))).toMatchObject({
+        feedback: { override: { label: "I was right", busy: false } },
+      });
+      expect(step(graded(quiz(), typo))).toMatchObject({ feedback: { override: { busy: false } } });
+      expect(step(graded(quiz({ aidPending: "override" }), wrong))).toMatchObject({
+        feedback: { override: { busy: true } },
+      });
+      // A hinted typo is Hard already, and the whole word shown stays Again.
+      expect(step(graded(quiz({ hints: 1 }), typo))).toMatchObject({
+        feedback: { override: null },
+      });
+      expect(step(graded(quiz({ hints: 12 }), wrong))).toMatchObject({
+        feedback: { override: null },
+      });
+      // Not against an API without review ids.
+      const old = anAnswerResult({ verdict: "wrong", rating: 1, reviewId: undefined });
+      expect(step(graded(quiz(), old))).toMatchObject({ feedback: { override: null } });
+    });
+
+    it("shows an overridden answer as counted correct", () => {
+      const wrong = anAnswerResult({ verdict: "wrong", rating: 1, term: "la biblioteca" });
+      const s = graded(quiz(), wrong);
+      const overridden = {
+        ...s,
+        session: sessionReducer(s.session, {
+          type: "overridden",
+          result: { ...wrong, rating: 3, overridden: true },
+        }),
+      };
+      expect(step(overridden)).toMatchObject({
+        feedback: {
+          verdict: "exact",
+          title: "Counted as correct",
+          answer: "la biblioteca",
+          note: null,
+          override: null,
+        },
+      });
+    });
+
+    it("offers undo once there is an answer, from any later step, and reports failures", () => {
+      expect(vm(quiz())).toMatchObject({ undo: null, aidError: null, stepKey: "1.0" });
+      const s = graded(quiz(), anAnswerResult());
+      expect(vm(s)).toMatchObject({ undo: { label: "Undo last answer", busy: false } });
+      const done = { ...s, session: sessionReducer(s.session, { type: "next" }), attempt: 1 };
+      expect(vm(done)).toMatchObject({ stepKey: "2.1", undo: { busy: false } });
+      expect(vm({ ...done, aidPending: "undo", aidError: "Too late" })).toMatchObject({
+        undo: { busy: true },
+        aidError: "Too late",
+      });
     });
   });
 });

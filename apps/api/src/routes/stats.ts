@@ -65,7 +65,9 @@ async function totals(db: Database, scope: Scope) {
 async function retention(db: Database, scope: Scope, today: string) {
   const { rows } = await sql<{ reviews: string; correct: string }>`
     SELECT count(*) AS reviews,
-           count(*) FILTER (WHERE review_logs.verdict IN ('exact', 'typo')) AS correct
+           count(*) FILTER (
+             WHERE review_logs.verdict IN ('exact', 'typo') OR review_logs.overridden_at IS NOT NULL
+           ) AS correct
     FROM ${from("review_logs", scope)}
       AND (review_logs.revlog ->> 'state')::int = ${REVIEW_STATE}
       AND review_logs.reviewed_at >= ${startOf(addDays(today, 1 - RETENTION_DAYS), scope.timeZone)}
@@ -120,7 +122,10 @@ async function streak(db: Database, scope: Scope, today: string) {
 }
 
 async function hardestWords(db: Database, { userId, courseId }: Scope) {
-  const wrong = sql`count(review_logs.id) FILTER (WHERE review_logs.verdict = 'wrong')`;
+  // An overridden answer ("I was right") counts as correct here, as in retention.
+  const wrong = sql`count(review_logs.id) FILTER (
+    WHERE review_logs.verdict = 'wrong' AND review_logs.overridden_at IS NULL
+  )`;
   // Result keys arrive camelCase (CamelCasePlugin maps raw rows too).
   const { rows } = await sql<{
     itemId: string;
