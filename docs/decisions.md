@@ -738,3 +738,41 @@ it. Reordering items and adding or renaming units stay out of scope.
 - **The confirm button uses the primary variant**, not shadcn's
   `destructive`: its red text on the red tint is 4.0:1 at button size,
   below AA. Worth a look in the redesign (#48).
+
+## 2026-11-15: Course catalog and "Copy to my courses"
+
+Built for issue #53, which follows the owner's "a catalog with search"
+from #41.
+
+- **The catalog is the shared courses** (`owner_id` null, so the prebuilt
+  ones too), at `GET /catalog?q=&targetLang=`: title, description,
+  languages and word count, sorted by title, at most 50 (`CATALOG_LIMIT`;
+  no pagination yet). `q` is a case-insensitive substring of the title or
+  the description, with `%` and `_` taken literally; `targetLang` matches
+  the tag case-insensitively. The response also lists every target
+  language in the catalog, whatever the filters, so the client can offer
+  the language filter without a second request.
+- **Search runs on submit, the language filter on change.** No
+  search-as-you-type: no debounce timers in the controller, and the same
+  behaviour on mobile. The previous results stay on screen while the next
+  ones load (`keepPreviousData`).
+- **`POST /courses/:id/copy` returns the new course** (201, the course
+  detail). One transaction of three set-based `INSERT … SELECT`s: the
+  course with its settings (description, languages, grading overrides),
+  its units, then its items, each joined to its new unit by position. The
+  copy has no cards or history and shares no rows with the source, so
+  either side can change or be deleted without touching the other.
+  `apps/api/src/copy-course.ts`.
+- **Only shared courses can be copied** (403 for your own course, 404 for
+  someone else's private one): publishing your own courses waits for
+  Auth0.
+- **The copy keeps the source's title,** and copying twice makes two
+  copies. No `copied_from` column, so no schema change: the UI doesn't
+  say "Copied from …" yet, and the catalog doesn't mark courses you have
+  already copied.
+- **The catalog is its own screen** (`/catalog`, `packages/client/src/catalog/`),
+  linked from the header ("Catalog") and from the course list ("Browse the
+  catalog"). The course list is unchanged otherwise. Each catalog card's
+  title opens the shared course, read-only, to look before copying. After
+  a copy, the controller refreshes the course list and the dashboard and
+  opens the copy through the `Navigator` port.

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { type ExpressionBuilder, sql } from "kysely";
 import { z } from "zod";
+import { copyCourse } from "../copy-course.ts";
 import type { Database } from "../db/index.ts";
 import type { DB } from "../db/types.ts";
 import { CsvImportError, importRows, importVocabulary } from "../import.ts";
@@ -139,6 +140,38 @@ export const courseRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app,
         .values({ ...request.body, ownerId: request.user.id })
         .returning("id")
         .executeTakeFirstOrThrow();
+      reply.code(201);
+      return (await loadDetail(id, request.user.id)) as NonNullable<
+        Awaited<ReturnType<typeof loadDetail>>
+      >;
+    },
+  );
+
+  app.post(
+    "/courses/:id/copy",
+    {
+      schema: {
+        tags: ["courses"],
+        description:
+          "Copy a shared course into a new course the caller owns: same settings, units and words, no progress.",
+        params: IdParamsSchema,
+        response: { 201: CourseDetailSchema, 403: ErrorSchema, 404: ErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const source = await db
+        .selectFrom("courses")
+        .select("ownerId")
+        .where("id", "=", request.params.id)
+        .where(visibleTo(request.user.id))
+        .executeTakeFirst();
+      if (!source) throw app.httpErrors.notFound("Course not found");
+      // Publishing your own courses waits for Auth0, so only shared ones are copied.
+      if (source.ownerId !== null) {
+        throw app.httpErrors.forbidden("Only shared courses can be copied");
+      }
+      const id = await copyCourse(db, request.params.id, request.user.id);
+      if (!id) throw app.httpErrors.notFound("Course not found");
       reply.code(201);
       return (await loadDetail(id, request.user.id)) as NonNullable<
         Awaited<ReturnType<typeof loadDetail>>

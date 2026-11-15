@@ -8,6 +8,8 @@ export function hrefFor(route: Route): NextRoute {
       return "/";
     case "courses":
       return "/courses";
+    case "catalog":
+      return "/catalog";
     case "newCourse":
       return "/courses/new";
     case "course":

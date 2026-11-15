@@ -5,6 +5,9 @@
 import {
   type AnswerResult,
   AnswerResultSchema,
+  type Catalog,
+  type CatalogQuery,
+  CatalogSchema,
   type CourseDetail,
   CourseDetailSchema,
   type CourseItem,
@@ -55,6 +58,10 @@ export interface ApiClient {
   importCsv(id: string, csv: string): Promise<ImportResult>;
   /** Words already parsed on the client (paste, Quizlet, Anki), into one unit. */
   importRows(id: string, body: ImportRows): Promise<ImportResult>;
+  /** Shared courses matching the filters; empty filters are left out. */
+  catalog(query: CatalogQuery): Promise<Catalog>;
+  /** Copy a shared course into a new course the learner owns. */
+  copyCourse(id: string): Promise<CourseDetail>;
   study(id: string, mode: StudyMode): Promise<StudySession>;
   /** Due items across every course, for one mixed review session. */
   reviewAll(): Promise<ReviewSession>;
@@ -122,6 +129,14 @@ export function createApiClient({
       request(ImportResultSchema, `/courses/${id}/import`, { method: "POST", body: { csv } }),
     importRows: (id, body) =>
       request(ImportResultSchema, `/courses/${id}/import/rows`, { method: "POST", body }),
+    catalog: (query) => {
+      const params = new URLSearchParams();
+      if (query.q?.trim()) params.set("q", query.q.trim());
+      if (query.targetLang) params.set("targetLang", query.targetLang);
+      const search = params.toString();
+      return request(CatalogSchema, `/catalog${search ? `?${search}` : ""}`);
+    },
+    copyCourse: (id) => request(CourseDetailSchema, `/courses/${id}/copy`, { method: "POST" }),
     study: (id, mode) => request(StudySessionSchema, `/courses/${id}/study?mode=${mode}`),
     reviewAll: () => request(ReviewSessionSchema, "/study/review"),
     dashboard: (timeZone) =>

@@ -27,6 +27,7 @@ export interface CourseCardVM {
 export interface CoursesVM {
   heading: string;
   newCourse: { label: string; route: Route };
+  catalog: { label: string; route: Route };
   body:
     | { kind: "loading" }
     | { kind: "error"; message: string }
@@ -38,6 +39,7 @@ export function coursesViewModel({ courses, environment }: CoursesState): Course
   return {
     heading: "Courses",
     newCourse: { label: "New course", route: { to: "newCourse" } },
+    catalog: { label: "Browse the catalog", route: { to: "catalog" } },
     body:
       courses.status === "loading"
         ? { kind: "loading" }
