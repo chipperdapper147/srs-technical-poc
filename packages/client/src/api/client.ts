@@ -19,6 +19,8 @@ import {
   MeSchema,
   type ReviewSession,
   ReviewSessionSchema,
+  type Stats,
+  StatsSchema,
   type StudyMode,
   type StudySession,
   StudySessionSchema,
@@ -52,6 +54,8 @@ export interface ApiClient {
   reviewAll(): Promise<ReviewSession>;
   /** Home screen summary; `timeZone` sets the forecast's calendar days. */
   dashboard(timeZone: string): Promise<Dashboard>;
+  /** Progress stats for every course, or `courseId`; days counted in `timeZone`. */
+  stats(query: { timeZone: string; courseId: string | null }): Promise<Stats>;
   answer(body: SubmitAnswer): Promise<AnswerResult>;
 }
 
@@ -110,6 +114,11 @@ export function createApiClient({
     reviewAll: () => request(ReviewSessionSchema, "/study/review"),
     dashboard: (timeZone) =>
       request(DashboardSchema, `/dashboard?timeZone=${encodeURIComponent(timeZone)}`),
+    stats: ({ timeZone, courseId }) => {
+      const params = new URLSearchParams({ timeZone });
+      if (courseId !== null) params.set("courseId", courseId);
+      return request(StatsSchema, `/stats?${params}`);
+    },
     answer: (body) => request(AnswerResultSchema, "/study/answers", { method: "POST", body }),
   };
 }
