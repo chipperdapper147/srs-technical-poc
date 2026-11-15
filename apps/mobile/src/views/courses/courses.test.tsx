@@ -12,6 +12,7 @@ const fake = setupFakeApi(() => ({
 const header: Omit<CoursesVM, "body"> = {
   heading: "Courses",
   newCourse: { label: "New course", route: { to: "newCourse" } },
+  catalog: { label: "Browse the catalog", route: { to: "catalog" } },
 };
 
 describe("CoursesView", () => {
