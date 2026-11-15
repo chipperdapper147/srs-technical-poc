@@ -9,7 +9,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="border-b">
-        <nav className="mx-auto flex max-w-3xl items-center gap-6 px-4 py-3 text-sm">
+        <nav className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm sm:gap-x-6">
           <RouteLink to={vm.brand.route} className="font-semibold">
             {vm.brand.label}
           </RouteLink>
