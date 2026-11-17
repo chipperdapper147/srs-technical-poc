@@ -5,15 +5,12 @@ items come from [`docs/verification.md`](docs/verification.md), which stays the
 source of truth for the target state. When an item is done, update its row
 under "Where we are today" there and delete it here.
 
-## Priorities (owner, 2026-11-14)
+## Priorities
 
-1. **Auth0 integration** (section 7) comes next: it unblocks the environment
-   secrets, the Auth0 mock, real-integration tests and removing the shared
-   access key. It waits on the owner creating the Auth0 tenant and
-   application.
-2. **Postponed:** preview pairing (#43) and deployed integration tests (#42).
-3. **Kept open, not scheduled:** the controller-style comparison (#3),
-   reverse and listening modes (#24), the proper mobile app (its own issue).
+Product order, owner decisions and small follow-ups live in the roadmap issue
+[#64](https://github.com/chipperdapper147/srs-technical-poc/issues/64), which
+the owner edits directly. This file keeps the engineering and verification
+backlog below.
 
 ## 1. GitHub setup (unblocks the merge gate)
 

@@ -3,10 +3,14 @@
 Prototype suite of SRS language-learning tools. The first tool is a typed-recall
 vocabulary trainer. Start with `README.md` (stack, layout, commands) and
 `docs/decisions.md` (what was chosen and why, plus open questions). How to
-verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`. Open
-follow-up work is in `TODO.md`; candidate features that aren't chosen yet
-are in `docs/product-ideas.md`. Check the decisions log before proposing
-alternatives to anything listed there.
+verify changes is in `docs/verification.md`; ADRs live in `docs/adr/`.
+**What to work on next is the roadmap issue
+[#64](https://github.com/chipperdapper147/srs-technical-poc/issues/64)**:
+product order, owner decisions and small follow-ups, with feature specs as
+its sub-issues. Read it at the start of a session and tick items off as PRs
+merge. The engineering and verification backlog is in `TODO.md`; candidate
+features that aren't chosen yet are in `docs/product-ideas.md`. Check the
+decisions log before proposing alternatives to anything listed there.
 
 ## Environment
 
