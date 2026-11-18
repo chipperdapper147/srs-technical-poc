@@ -408,11 +408,7 @@
                     "message": "Views receive a view model; they never create controllers or clients (ADR 0002, docs/adr/0002-client-architecture.md)."
                   },
                   {
-                    "group": [
-                      "@/platform/providers",
-                      "@/platform/navigator",
-                      "@/platform/key-storage"
-                    ],
+                    "group": ["@/platform/providers", "@/platform/navigator"],
                     "message": "Views don't route or reach the ports: render a RouteLink or call an action (ADR 0002, docs/adr/0002-client-architecture.md)."
                   }
                 ]

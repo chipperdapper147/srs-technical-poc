@@ -13,8 +13,9 @@ function buildUnderVercelLimits(vercelEnv: string | undefined): string {
     const { createDb } = await import("./src/db/index.ts");
     const app = await buildApp({
       db: createDb("postgres://u:p@127.0.0.1:1/none"),
-      env: { WEB_ORIGIN: "http://localhost:3000", AUTH_MODE: "dev", LOG_LEVEL: "silent",
-             API_ACCESS_KEY: "${"k".repeat(40)}", VERCEL_ENV: ${JSON.stringify(vercelEnv)} },
+      env: { WEB_ORIGIN: "http://localhost:3000", AUTH_MODE: "jwt", LOG_LEVEL: "silent",
+             AUTH0_DOMAIN: "tenant.test.auth0.com", AUTH0_AUDIENCE: "https://api.test",
+             VERCEL_ENV: ${JSON.stringify(vercelEnv)} },
     });
     await app.ready();
     console.log("ready");
@@ -79,7 +80,9 @@ function serveLikeVercel(): string {
         env: {
           ...process.env,
           VERCEL_ENV: "production",
-          API_ACCESS_KEY: "k".repeat(40),
+          AUTH_MODE: "jwt",
+          AUTH0_DOMAIN: "tenant.test.auth0.com",
+          AUTH0_AUDIENCE: "https://api.test",
           DATABASE_URL: "postgres://u:p@127.0.0.1:1/none",
           LOG_LEVEL: "silent",
         },

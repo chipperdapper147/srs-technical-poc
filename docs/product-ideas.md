@@ -16,7 +16,7 @@ These are tracked elsewhere and are listed here only for completeness.
 - **Learning steps before FSRS.** New words come back within minutes or
   hours instead of about 5 days, with the steps in one config that's easy
   to change (decided 2026-11-11, `docs/decisions.md`).
-- **Auth0 login.** Required for real accounts (`TODO.md`, section 7).
+- **Auth0 login.** Built 2026-11-18 (issue #70, `docs/decisions.md`).
 - **Reverse and listening modes.** First to be thought through: issue #24.
 - **Mobile app (Expo)** on the shared client: a minimal app exists; the
   full one, with a mobile design shared by the web app, is issue #48.

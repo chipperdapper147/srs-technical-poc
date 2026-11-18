@@ -847,7 +847,17 @@ export const E2E_MAP: { paths: string[]; specs: string[] }[] = [
       "apps/web/src/app/courses/page.tsx",
     ],
     // The stats spec reaches its screen through the shell's nav link.
-    specs: ["courses", "dashboard", "prebuilt-courses", "catalog", "stats", "a11y"],
+    specs: ["courses", "dashboard", "prebuilt-courses", "catalog", "stats", "a11y", "auth"],
+  },
+  {
+    paths: [
+      "apps/api/src/plugins/auth.ts",
+      "packages/client/src/auth/**",
+      "packages/client/src/core/auth.ts",
+      "apps/web/src/views/sign-in/**",
+    ],
+    // Every spec signs in through the dev auth port; these two exercise it most.
+    specs: ["auth", "courses", "a11y"],
   },
   {
     paths: [

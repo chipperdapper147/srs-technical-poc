@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Providers } from "@/platform/providers";
-import { AppShell } from "@/views/app-shell/app-shell";
+import { AppShellScreen } from "@/views/app-shell/app-shell-screen";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`font-sans ${geist.variable}`}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
-          <AppShell>{children}</AppShell>
+          <AppShellScreen>{children}</AppShellScreen>
         </Providers>
       </body>
     </html>

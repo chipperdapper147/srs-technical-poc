@@ -13,6 +13,7 @@ import { DashboardPage } from "../pages/dashboard-page.ts";
 import { ImportPage } from "../pages/import-page.ts";
 import { NewCoursePage } from "../pages/new-course-page.ts";
 import { SettingsPage } from "../pages/settings-page.ts";
+import { SignInPage } from "../pages/sign-in-page.ts";
 import { StatsPage } from "../pages/stats-page.ts";
 import { StudyPage } from "../pages/study-page.ts";
 import { WordsPage } from "../pages/words-page.ts";
@@ -107,6 +108,7 @@ interface Fixtures {
   newCoursePage: NewCoursePage;
   studyPage: StudyPage;
   settingsPage: SettingsPage;
+  signInPage: SignInPage;
   statsPage: StatsPage;
   wordsPage: WordsPage;
 }
@@ -131,6 +133,7 @@ export const test = base.extend<Fixtures, { dbCleanup: void }>({
   newCoursePage: async ({ page }, use) => use(new NewCoursePage(page)),
   studyPage: async ({ page }, use) => use(new StudyPage(page)),
   settingsPage: async ({ page }, use) => use(new SettingsPage(page)),
+  signInPage: async ({ page }, use) => use(new SignInPage(page)),
   statsPage: async ({ page }, use) => use(new StatsPage(page)),
   wordsPage: async ({ page }, use) => use(new WordsPage(page)),
   dbCleanup: [

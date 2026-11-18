@@ -1,7 +1,7 @@
 import {
   type ClientDeps,
-  createAccessGate,
   createApiClient,
+  createDevAuth,
   createQueryClient,
   type Route,
 } from "@app/client";
@@ -16,7 +16,6 @@ import {
 } from "react";
 import { BackHandler, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { secureKeyStorage } from "./key-storage";
 import { createStackNavigator, type StackNavigator } from "./navigator";
 
 /**
@@ -28,13 +27,15 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
 /** Mobile's implementation of the client ports, created once per app start. */
 export function createPlatform(): { deps: ClientDeps; navigator: StackNavigator } {
-  const access = createAccessGate(secureKeyStorage);
+  // The dev auth port: no sign-in, so the app runs against a local API in
+  // dev mode. Mobile sign-in (react-native-auth0) comes with issue #48.
+  const auth = createDevAuth();
   const navigator = createStackNavigator();
   return {
     navigator,
     deps: {
-      api: createApiClient({ baseUrl: API_URL, access }),
-      access,
+      api: createApiClient({ baseUrl: API_URL, auth }),
+      auth,
       queryClient: createQueryClient(),
       navigator,
       clock: {
