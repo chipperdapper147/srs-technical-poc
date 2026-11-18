@@ -49,6 +49,23 @@ export function createPlatform(): { deps: ClientDeps; navigator: StackNavigator 
 
 const NavigatorContext = createContext<StackNavigator | null>(null);
 
+/** Supplies the stack navigator to `useCurrentRoute` and `useBack`. */
+export function NavigatorProvider({
+  navigator,
+  children,
+}: {
+  navigator: StackNavigator;
+  children: ReactNode;
+}) {
+  return <NavigatorContext.Provider value={navigator}>{children}</NavigatorContext.Provider>;
+}
+
+function useNavigator(hook: string): StackNavigator {
+  const navigator = useContext(NavigatorContext);
+  if (!navigator) throw new Error(`${hook}: wrap the app in <Providers>`);
+  return navigator;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   const [platform] = useState(createPlatform);
   // Android's back button pops the stack; at the root it leaves the app.
@@ -60,7 +77,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SafeAreaProvider>
       <ClientProvider deps={platform.deps}>
-        <NavigatorContext.Provider value={platform.navigator}>{children}</NavigatorContext.Provider>
+        <NavigatorProvider navigator={platform.navigator}>{children}</NavigatorProvider>
       </ClientProvider>
     </SafeAreaProvider>
   );
@@ -68,8 +85,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
 /** The route on top of the stack. */
 export function useCurrentRoute(): Route {
-  const navigator = useContext(NavigatorContext);
-  if (!navigator) throw new Error("useCurrentRoute: wrap the app in <Providers>");
+  const navigator = useNavigator("useCurrentRoute");
   const routes = useSyncExternalStore(
     navigator.stack.subscribe,
     navigator.stack.get,
@@ -78,8 +94,14 @@ export function useCurrentRoute(): Route {
   return routes.at(-1) ?? { to: "home" };
 }
 
-/** Back one route (the placeholder for screens the app doesn't have yet). */
+/**
+ * Back one route (the placeholder for screens the app doesn't have yet).
+ * Throws outside <Providers>, like useCurrentRoute, rather than returning a
+ * Back that silently does nothing.
+ */
 export function useBack(): () => void {
-  const navigator = useContext(NavigatorContext);
-  return () => navigator?.back();
+  const navigator = useNavigator("useBack");
+  return () => {
+    navigator.back();
+  };
 }

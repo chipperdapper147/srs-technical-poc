@@ -76,8 +76,12 @@ container); migrations against Neon run from CI or the deploy.
   the Expo app reuses it. Web views (`apps/web/src/views/<screen>/`) only
   render `{ vm, actions }`; `*-screen.tsx` binds them with `useScreen`; route
   files in `app/` only pass params to a screen. Biome enforces the imports
-  per layer. Test controllers with `@app/client/testing` (MSW fake API built
-  on the contracts), views with Testing Library on hand-built view models.
+  per layer. The query cache is the state screens share: only controllers
+  write to it, always through the keys in
+  `packages/client/src/api/query-keys.ts`, and a write that refreshes another
+  screen's data (e.g. a finished session invalidating stats) has a controller
+  test. Test controllers with `@app/client/testing` (MSW fake API built on
+  the contracts), views with Testing Library on hand-built view models.
 - **The mobile app (`apps/mobile`, Expo) has the same layers.** Views in
   `src/views/<screen>/`, the router in `src/app/`, ports and the theme in
   `src/platform/`; never change a controller or view model for mobile alone.
