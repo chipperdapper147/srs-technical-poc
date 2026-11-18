@@ -1,15 +1,25 @@
+import type { JWTVerifyGetKey } from "jose";
 import { sql } from "kysely";
 import { buildApp } from "../src/build-app.ts";
 import { createDb, type Database } from "../src/db/index.ts";
 import type { Scheduler } from "../src/srs.ts";
 
+/** `jwt` mode against a local key set, as production runs against the tenant's JWKS. */
+export interface TestJwt {
+  domain: string;
+  audience: string;
+  keys: JWTVerifyGetKey;
+  legacyOwnerEmail?: string;
+}
+
 export async function setupTestApp({
   scheduler,
-  accessKey,
+  jwt,
   vercelEnv,
 }: {
   scheduler?: Scheduler;
-  accessKey?: string;
+  /** Verify Auth0 access tokens instead of using the dev stub. */
+  jwt?: TestJwt;
   /** Build the app as on a Vercel deploy (no Swagger UI). */
   vercelEnv?: string;
 } = {}) {
@@ -20,12 +30,15 @@ export async function setupTestApp({
     db,
     env: {
       WEB_ORIGIN: "http://localhost:3000",
-      AUTH_MODE: "dev",
+      AUTH_MODE: jwt ? "jwt" : "dev",
       LOG_LEVEL: "silent",
-      API_ACCESS_KEY: accessKey,
+      AUTH0_DOMAIN: jwt?.domain,
+      AUTH0_AUDIENCE: jwt?.audience,
+      AUTH_LEGACY_OWNER_EMAIL: jwt?.legacyOwnerEmail,
       VERCEL_ENV: vercelEnv,
     },
     scheduler,
+    jwtKeys: jwt?.keys,
   });
   const reset = () =>
     sql`TRUNCATE users, courses, units, items, cards, review_logs, prebuilt_courses RESTART IDENTITY CASCADE`.execute(

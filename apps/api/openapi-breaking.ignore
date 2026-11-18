@@ -1,0 +1,25 @@
+# Accepted on purpose (issue #70, Auth0 login): every endpoint now needs an
+# Auth0 access token. Production already required a bearer, the shared access
+# key, which this change removes; the web and API deploy together
+# (docs/decisions.md, 2026-11-18).
+DELETE /items/{id} the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /catalog the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /courses the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /courses/{id} the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /courses/{id}/items the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /courses/{id}/study the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /dashboard the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /me the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /stats the endpoint no longer allows anonymous access and now only accepts `auth0`
+GET /study/review the endpoint no longer allows anonymous access and now only accepts `auth0`
+PATCH /courses/{id} the endpoint no longer allows anonymous access and now only accepts `auth0`
+PATCH /items/{id} the endpoint no longer allows anonymous access and now only accepts `auth0`
+PATCH /me the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /courses the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /courses/{id}/copy the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /courses/{id}/import the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /courses/{id}/import/rows the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /courses/{id}/units/{unitId}/items the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /study/answers the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /study/answers/{id}/override the endpoint no longer allows anonymous access and now only accepts `auth0`
+POST /study/answers/{id}/undo the endpoint no longer allows anonymous access and now only accepts `auth0`

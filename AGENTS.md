@@ -96,8 +96,15 @@ container); migrations against Neon run from CI or the deploy.
   (never edit those two). Views use Tailwind token utilities (`bg-primary`,
   `border-verdict-exact/40`), never colour or size literals. The usage rules
   are the design system's README (`packages/design/system/README.md`).
-- **Auth is a dev stub** (`apps/api/src/plugins/auth.ts`). Route code should
-  only rely on `request.user.id`; Auth0 replaces the stub later.
+- **Auth is Auth0 in production, a dev stub everywhere else**
+  (`apps/api/src/plugins/auth.ts`). Route code only relies on
+  `request.user.id`. `AUTH_MODE=jwt` (Vercel) verifies Auth0 access tokens;
+  `dev` (local dev, tests, e2e) uses `x-dev-user`, so no work needs a tenant.
+  Clients reach auth only through the auth port in `@app/client`
+  (`core/auth.ts`): the web wraps `@auth0/auth0-spa-js` in
+  `apps/web/src/platform/`, and without the `NEXT_PUBLIC_AUTH0_*` variables
+  (and on mobile, for now) the dev auth port stands in. API tests sign
+  tokens with a generated key; never call the real tenant from a test.
 
 ## Before committing
 

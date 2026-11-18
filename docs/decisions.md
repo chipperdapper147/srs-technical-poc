@@ -371,6 +371,9 @@ in ADR 0001 open. If lefthook is adopted, move both hooks into it.
 
 ## 2026-11-14: A shared access key until Auth0
 
+> **Superseded 2026-11-18** ("Auth0 login" below): the key, its plugin,
+> `AccessGate`, `KeyStorage` and the access screens are gone.
+
 - **Why:** the API is about to be public on Vercel, and auth is still the
   dev stub: whoever sends `x-dev-user: <anyone>` acts as that user, and each
   new name creates a user. A deploy would be open to anyone who finds it.
@@ -550,7 +553,9 @@ hold on React Native. The full app is designed together with a mobile
 design shared by the responsive web app and the native app (issue #48),
 which supersedes the scope in #25.
 
-- **Scope:** the app shell, the course list and the access-key screen.
+- **Scope:** the app shell, the course list and the access-key screen
+  (the access-key screen and `expo-secure-store` went with Auth0 on
+  2026-11-18; the app now runs on the dev auth port).
   Controllers and view models come from `@app/client` unchanged; the app
   writes only views, screens, routes and `platform/` adapters, as the web
   does.
@@ -870,3 +875,79 @@ Decided by the repository owner.
   covers both, as it does for the rest of the repo.
 - Supersedes "skips releases under 14 days old" in the canary entry, and
   the "Not solved by this" bullet of the playwright-core entry.
+
+## 2026-11-18: Auth0 login, replacing the access key
+
+Built from issue #70 on the tenant set up the same day (roadmap #64). The
+owner confirms removing the shared access key by approving the PR.
+
+- **API, `AUTH_MODE=jwt`** (`apps/api/src/plugins/auth.ts`): the bearer
+  access token is verified with `jose` (`createRemoteJWKSet`, `jwtVerify`):
+  RS256 only, issuer `https://<AUTH0_DOMAIN>/`, audience `AUTH0_AUDIENCE`,
+  expiry, and `sub` required. The JWKS is fetched on the first request and
+  cached by jose. A missing or bad token is a 401 that says which ("no
+  access token", "expired", "invalid"); a JWKS timeout is a 503. `/health`,
+  `/docs` and CORS preflights stay open. Routes still read only
+  `request.user.id`.
+- **Users by `sub`**, created on first sign-in and named from the Action's
+  namespaced `name` claim, else `email`, else "Learner". Later sign-ins
+  don't rename, so a name changed in Settings sticks.
+- **`dev` mode is unchanged** and stays the default: local dev, API tests
+  and e2e need no tenant. `env.ts` refuses dev mode on any Vercel deploy
+  (it used to refuse a missing access key), and `jwt` mode needs both
+  `AUTH0_*` variables. Previews therefore need them too.
+- **`jose` and Vercel's loader:** `jose` 6.2.17 is ESM-only (`"type":
+  "module"`, its `exports` have only a `default` condition, no `require`)
+  and has no dependencies. The API imports it with `import`, so nothing
+  `require()`s an ES module; `test/vercel-runtime.test.ts` now builds the
+  app in `jwt` mode under `--no-experimental-require-module`.
+- **The owner's progress:** before Auth0 every production request was
+  `dev|local`. With `AUTH_LEGACY_OWNER_EMAIL` set (Vercel only, kept out of
+  the repository), the first sign-in whose `email` claim matches it
+  (case-insensitive) takes over that row: its `auth_sub` becomes the new
+  `sub`, and it is renamed from the claim. It matches only while `dev|local`
+  exists, so it happens once; a second account with the same email gets its
+  own user. Unset, nothing happens. The email claim is trusted because sign-up is
+  invite-only (database sign-ups off, Google behind the Action's allowlist).
+- **Client, an auth port** (`packages/client/src/core/auth.ts`) replaces
+  `AccessGate`. A platform supplies an `AuthSession` (restore, get a token,
+  log in, log out); `createAuth` keeps the state (`loading`, `signedIn`,
+  `signedOut` with a reason) and gives the API client its header. A failed
+  silent renewal or a 401 signs out with "Your session has ended". The
+  auth controller drops the query cache whenever the session ends, so the
+  next account never sees the last one's data. `createDevAuth` is signed
+  in from the start, sends no token, and signs out and in in memory.
+- **Web:** `@auth0/auth0-spa-js` 2.30.0, only in `apps/web/src/platform/`,
+  loaded with a dynamic `import()` on first use, so server rendering never
+  touches it. Both buttons redirect to Universal Login: "Continue with
+  Google" passes the `google-oauth2` connection, "Continue with email and
+  password" passes none (the page shows both ways in), so it doesn't depend
+  on the database connection's name. Where the learner was rides along in
+  `appState`. Without all three `NEXT_PUBLIC_AUTH0_*` variables the web
+  uses the dev port.
+- **Tokens in localStorage, with rotating refresh tokens.** The SDK's
+  in-memory cache loses the session on every reload, and its fallback, an
+  iframe with Auth0's cookie, fails where third-party cookies are blocked.
+  The cost: script injected into the page could read the tokens (it could
+  read the access key there too). Refresh-token rotation with reuse
+  detection limits what a stolen one is worth. Revisit with a backend for
+  frontend if the app ever holds anything more sensitive.
+- **Shell:** navigation shows only once signed in; the account name comes
+  from the SDK's profile (`name`, else `email`), so `/me` and the contracts
+  are unchanged. The OpenAPI document now declares the bearer scheme
+  (`auth0`) as a top-level requirement. oasdiff reports that as a break on
+  every endpoint ("no longer allows anonymous access"); it is accepted in
+  `apps/api/openapi-breaking.ignore`, since production already required a
+  bearer (the access key) and the old document just didn't say so.
+- **Mobile** keeps the dev auth port until its own sign-in
+  (react-native-auth0, #48): no Sign out, the access screen and
+  `expo-secure-store` removed (react-native-auth0 keeps its own
+  credentials).
+- **Compatibility window (ADR 0003):** the API and web deploy together, and
+  no schema changes. A web tab still open on the old version gets a 401
+  and shows its old access-key screen; a reload loads the new app and its
+  sign-in. The rollback target is the old API, which needs
+  `API_ACCESS_KEY`, so that variable stays in Vercel until this release is
+  the rollback target. Roll back with Vercel's instant rollback (the old
+  deployment as it was built): a fresh build of the old commit would read
+  `AUTH_MODE=jwt`, which the old API doesn't know, and refuse to start.

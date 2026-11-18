@@ -81,8 +81,11 @@ export interface FakeApiSeed {
   stats?: Stats;
   /** Stats per course id; a course without an entry has no reviews. */
   courseStats?: Record<string, Stats>;
-  /** Require `Authorization: Bearer <accessKey>` on every request, as the API does with API_ACCESS_KEY. */
-  accessKey?: string;
+  /**
+   * Require `Authorization: Bearer <token>` with one of these tokens on every
+   * request, as the API does in `jwt` mode; 401 otherwise. Unset: dev mode.
+   */
+  tokens?: string[];
 }
 
 export interface RecordedRequest {
@@ -91,6 +94,8 @@ export interface RecordedRequest {
   /** The query string, with its "?", or "". */
   search: string;
   body: unknown;
+  /** The `Authorization` header sent, or null. */
+  authorization: string | null;
 }
 
 export interface FakeApi {
@@ -205,9 +210,16 @@ export function createFakeApi(seed: FakeApiSeed = {}, baseUrl = FAKE_API_URL): F
       path: pathname,
       search,
       body: text ? JSON.parse(text) : null,
+      authorization: request.headers.get("authorization"),
     });
-    if (seed.accessKey && request.headers.get("authorization") !== `Bearer ${seed.accessKey}`) {
-      return HttpResponse.json({ message: "Access key required" }, { status: 401 });
+    if (seed.tokens) {
+      const token = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
+      if (!token || !seed.tokens.includes(token)) {
+        return HttpResponse.json(
+          { message: token ? "Invalid access token. Sign in again." : "Sign in required." },
+          { status: 401 },
+        );
+      }
     }
     const i = failures.findIndex((f) => f.method === request.method && f.path === pathname);
     if (i === -1) return undefined;

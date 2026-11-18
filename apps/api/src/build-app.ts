@@ -13,10 +13,10 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
+import type { JWTVerifyGetKey } from "jose";
 import type { Database } from "./db/index.ts";
 import type { Env } from "./env.ts";
-import accessKey from "./plugins/access-key.ts";
-import auth from "./plugins/auth.ts";
+import auth, { type AuthOptions } from "./plugins/auth.ts";
 import { catalogRoutes } from "./routes/catalog.ts";
 import { courseRoutes } from "./routes/courses.ts";
 import { dashboardRoutes } from "./routes/dashboard.ts";
@@ -29,12 +29,33 @@ import { createScheduler, type Scheduler } from "./srs.ts";
 export interface AppOptions {
   db: Database;
   env: Pick<Env, "WEB_ORIGIN" | "AUTH_MODE" | "LOG_LEVEL"> &
-    Partial<Pick<Env, "API_ACCESS_KEY" | "VERCEL_ENV">>;
+    Partial<
+      Pick<Env, "AUTH0_DOMAIN" | "AUTH0_AUDIENCE" | "AUTH_LEGACY_OWNER_EMAIL" | "VERCEL_ENV">
+    >;
   /** Defaults to the learning steps in `learning-steps.ts`; tests pass their own. */
   scheduler?: Scheduler;
+  /** `jwt` mode's signing keys. Defaults to the tenant's JWKS; tests pass a local key set. */
+  jwtKeys?: JWTVerifyGetKey;
 }
 
-export async function buildApp({ db, env, scheduler }: AppOptions) {
+function authOptions(db: Database, env: AppOptions["env"], keys?: JWTVerifyGetKey): AuthOptions {
+  if (env.AUTH_MODE === "dev") return { db, mode: "dev" };
+  if (!env.AUTH0_DOMAIN || !env.AUTH0_AUDIENCE) {
+    throw new Error("AUTH_MODE=jwt needs AUTH0_DOMAIN and AUTH0_AUDIENCE");
+  }
+  return {
+    db,
+    mode: "jwt",
+    jwt: {
+      issuer: `https://${env.AUTH0_DOMAIN}/`,
+      audience: env.AUTH0_AUDIENCE,
+      keys,
+      legacyOwnerEmail: env.AUTH_LEGACY_OWNER_EMAIL,
+    },
+  };
+}
+
+export async function buildApp({ db, env, scheduler, jwtKeys }: AppOptions) {
   const app = Fastify({ logger: { level: env.LOG_LEVEL } }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
@@ -42,7 +63,21 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
   await app.register(sensible);
   await app.register(cors, { origin: env.WEB_ORIGIN, methods: ["GET", "POST", "PATCH", "DELETE"] });
   await app.register(swagger, {
-    openapi: { info: { title: "SRS API", version: "0.0.0" } },
+    openapi: {
+      info: { title: "SRS API", version: "0.0.0" },
+      components: {
+        securitySchemes: {
+          auth0: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+            description:
+              "An Auth0 access token for the API's audience. Production only: local dev and tests run AUTH_MODE=dev, where the x-dev-user header picks the user.",
+          },
+        },
+      },
+      security: [{ auth0: [] }],
+    },
     transform: jsonSchemaTransform,
   });
   // Swagger UI (the browsable /docs page) only off Vercel. It needs
@@ -61,8 +96,7 @@ export async function buildApp({ db, env, scheduler }: AppOptions) {
     return { ok: true };
   });
 
-  await app.register(accessKey, { key: env.API_ACCESS_KEY });
-  await app.register(auth, { db, mode: env.AUTH_MODE });
+  await app.register(auth, authOptions(db, env, jwtKeys));
   await app.register(meRoutes, { db });
   await app.register(courseRoutes, { db });
   await app.register(catalogRoutes, { db });

@@ -1,3 +1,4 @@
+export * from "./auth.ts";
 export * from "./deps.ts";
 export * from "./fake-api.ts";
 export * from "./fixtures.ts";

@@ -11,22 +11,35 @@ const EnvSchema = z
       .default("info"),
     /**
      * `dev`: every request acts as a local stub user (override with the
-     * `x-dev-user` header). Replaced by Auth0 JWT verification later.
+     * `x-dev-user` header). Local dev, tests and e2e.
+     * `jwt`: every request needs an Auth0 access token (plugins/auth.ts).
+     * Required on Vercel.
      */
-    AUTH_MODE: z.enum(["dev"]).default("dev"),
+    AUTH_MODE: z.enum(["dev", "jwt"]).default("dev"),
+    /** The Auth0 tenant, e.g. `hallavo.eu.auth0.com`; the issuer is `https://<domain>/`. */
+    AUTH0_DOMAIN: z
+      .string()
+      .regex(/^[a-z0-9.-]+$/i, "a host name, without https:// or a path")
+      .optional(),
+    /** The Auth0 API's identifier: access tokens must carry it as `aud`. */
+    AUTH0_AUDIENCE: z.string().min(1).optional(),
     /**
-     * Shared key every request must send as `Authorization: Bearer <key>`
-     * (except /health and /docs). A stopgap that keeps a deploy closed while
-     * auth is the dev stub; removed when Auth0 lands. Unset locally and in tests.
+     * Optional, Vercel only: the first sign-in with this email takes over the
+     * `dev|local` user, which holds the owner's progress from before Auth0.
+     * Kept out of the repository.
      */
-    API_ACCESS_KEY: z.string().min(32).optional(),
+    AUTH_LEGACY_OWNER_EMAIL: z.email().optional(),
     /** Set by Vercel on every deploy (production, preview, development). */
     VERCEL_ENV: z.string().optional(),
   })
-  .refine((env) => !env.VERCEL_ENV || env.API_ACCESS_KEY, {
+  .refine((env) => env.AUTH_MODE !== "jwt" || (env.AUTH0_DOMAIN && env.AUTH0_AUDIENCE), {
+    message: "AUTH_MODE=jwt needs AUTH0_DOMAIN and AUTH0_AUDIENCE",
+    path: ["AUTH_MODE"],
+  })
+  .refine((env) => !env.VERCEL_ENV || env.AUTH_MODE === "jwt", {
     message:
-      "API_ACCESS_KEY is required on Vercel: auth is still the dev stub, so an open deploy would let anyone act as any user",
-    path: ["API_ACCESS_KEY"],
+      "AUTH_MODE=jwt is required on Vercel: in dev mode anyone could act as any user with the x-dev-user header",
+    path: ["AUTH_MODE"],
   });
 
 export type Env = z.infer<typeof EnvSchema>;

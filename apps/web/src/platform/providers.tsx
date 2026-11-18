@@ -2,34 +2,17 @@
 
 import {
   type ClientDeps,
-  createAccessGate,
   createApiClient,
+  createAuth,
+  createDevAuth,
   createQueryClient,
-  type KeyStorage,
 } from "@app/client";
 import { ClientProvider } from "@app/client/react";
+import type { Route as NextRoute } from "next";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { auth0Config, createAuth0Session } from "./auth0-session";
 import { hrefFor } from "./routes";
-
-const ACCESS_KEY_STORAGE = "srs.access-key";
-
-/** The access key in localStorage; unavailable storage (private mode, SSR) keeps nothing. */
-const localKeyStorage: KeyStorage = {
-  read() {
-    try {
-      return window.localStorage.getItem(ACCESS_KEY_STORAGE);
-    } catch {
-      return null;
-    }
-  },
-  write(key) {
-    try {
-      if (key === null) window.localStorage.removeItem(ACCESS_KEY_STORAGE);
-      else window.localStorage.setItem(ACCESS_KEY_STORAGE, key);
-    } catch {}
-  },
-};
 
 /** The web's implementation of the client ports, created once per page load. */
 export function Providers({ children }: { children: ReactNode }) {
@@ -37,13 +20,21 @@ export function Providers({ children }: { children: ReactNode }) {
   const routerRef = useRef(router);
   routerRef.current = router;
   const [deps] = useState<ClientDeps>(() => {
-    const access = createAccessGate(localKeyStorage);
+    const config = auth0Config();
+    // Auth0 when the build has its variables (production); the dev auth port otherwise.
+    const auth = config
+      ? createAuth(
+          createAuth0Session(config, {
+            replace: (href) => routerRef.current.replace(href as NextRoute),
+          }),
+        )
+      : createDevAuth();
     return {
       api: createApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
-        access,
+        auth,
       }),
-      access,
+      auth,
       queryClient: createQueryClient(),
       navigator: { navigate: (route) => routerRef.current.push(hrefFor(route)) },
       clock: {

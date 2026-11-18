@@ -35,7 +35,8 @@ Done by hand in the repo's Settings, as `chipperdapper147` (admin).
   rely on "up to date before merging" plus auto-merge.
 - [ ] **Environments** `preview` and `production`, holding the Auth0 and deploy
   secrets, with `production` limited to `main`. Blocked on the deploy setup
-  (section 4) and the Auth0 integration (section 7).
+  (section 4). Auth0 is in; its CI app's secret goes in an `auth0`
+  environment once CI tests run against the real tenant (#42).
 
 ## 2. Housekeeping after the move
 
@@ -88,8 +89,10 @@ Grouped by the stages in `docs/verification.md`. Each new check lands in
 - [ ] **Mobile device e2e** (Maestro or Detox) and EAS builds in CI. The
   minimal app (`apps/mobile`) has `mobile-*` classes, view tests and a
   bundle check; the rest is in issue #48.
-- [ ] **Auth0 mock** for local and PR runs: sign test tokens with a local key.
-  Needs the Auth0 integration first.
+- [ ] **Auth0 mock in e2e:** the API tests already sign tokens with a
+  generated key (`apps/api/test/auth.test.ts`), but e2e runs the API in dev
+  mode. Run one e2e project in `jwt` mode against a local JWKS, with the web
+  on a test auth port, so the bearer path is covered in a browser too.
 
 ### Across repositories (ADR 0003)
 
@@ -157,7 +160,7 @@ Not blocked, can start now:
   `pnpm.overrides` entry for minimatch, then lower the nightly
   `--audit-level`.
 
-Blocked on the deploy setup (section 4) and the Auth0 integration:
+Blocked on the deploy setup (section 4) and Auth0 credentials in CI (#42):
 
 - [ ] **Stage 4, merge gate:** deploy a preview and run the real-integration
   smoke with real Auth0. Run migrations on a production-like copy of the data.
@@ -184,12 +187,9 @@ Blocked on the deploy setup (section 4) and the Auth0 integration:
   publish prebuilt courses (an admin role, once Auth0 is in), and
   publishing your own courses to the catalog (#53 built the catalog and
   copying). The empty-state hint is #40.
-- [ ] **Auth0 integration:** replace the dev stub in
-  `apps/api/src/plugins/auth.ts` and the web client, and remove the shared
-  access key (`plugins/access-key.ts`, the client's `AccessGate` and the web
-  access screen; decisions log, 2026-11-14). Auth0 is required, not
-  to be replaced by Neon Auth or similar (decided 2026-11-11). This unblocks
-  the Auth0 mock, real integration and the environment secrets.
+- [ ] **Auth0, later parts** (the login itself landed 2026-11-18, decisions
+  log): sign-in on mobile with react-native-auth0 (#48), roles and an
+  admin, account settings and deletion.
 - [ ] **Reverse and listening modes** (issue #24).
 - [ ] **Mobile app** (issue #48, after the minimal app): designed together
   with a mobile design for the web app; its verification is under "Missing
